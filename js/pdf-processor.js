@@ -1,4 +1,4 @@
-// Processador de PDF CNIS: extrai dados sensíveis e os substitui nos content streams
+// Processador de PDF CNIS
 
 const REGEX_CPF = /\d{3}\.\d{3}\.\d{3}-\d{2}/;
 const REGEX_NIT = /\d{3}\.\d{5}\.\d{2}-\d/;
