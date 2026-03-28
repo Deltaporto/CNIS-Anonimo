@@ -1,5 +1,10 @@
+# PDFs — nunca commitar extratos CNIS reais ou anonimizados
+*.pdf
+
+# Metadados do Windows/WSL (Zone.Identifier)
+*:Zone.Identifier
+
+# Dependências Node.js (usadas só para testes locais)
 node_modules/
 package.json
 package-lock.json
-*_anonimizado.pdf
-*.Zone.Identifier
