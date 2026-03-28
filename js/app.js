@@ -151,21 +151,53 @@ function setProgresso(item, pct, completo = false, erro = false) {
 
 function mostrarSubs(item, originais, ficticios) {
   const el = item.querySelector('.arquivo-subs');
+
+  const tabela = document.createElement('div');
+  tabela.className = 'subs-tabela';
+
+  const header = document.createElement('div');
+  header.className = 'subs-header';
+  ['Campo', 'Original', '', 'Substituído'].forEach((txt, i) => {
+    const s = document.createElement('span');
+    s.textContent = txt;
+    if (i === 1) s.className = 'col-original';
+    if (i === 3) s.className = 'col-novo';
+    header.appendChild(s);
+  });
+  tabela.appendChild(header);
+
   const pares = [
     ['Nome', originais.nome,    ficticios.nome],
     ['CPF',  originais.cpf,     ficticios.cpf],
     ['NIT',  originais.nit,     ficticios.nit],
     ['Mãe',  originais.nomeMae, ficticios.nomeMae],
   ];
+
   pares.filter(([, orig]) => orig).forEach(([label, orig, fake]) => {
-    const tag = document.createElement('span');
-    tag.className = 'sub-tag';
-    tag.textContent = label + ': ' + orig + ' → ';
-    const dest = document.createElement('span');
-    dest.textContent = fake.toUpperCase();
-    tag.appendChild(dest);
-    el.appendChild(tag);
+    const linha = document.createElement('div');
+    linha.className = 'sub-linha';
+
+    const lbl = document.createElement('span');
+    lbl.className = 'sub-label';
+    lbl.textContent = label;
+
+    const original = document.createElement('span');
+    original.className = 'sub-original';
+    original.textContent = orig;
+
+    const seta = document.createElement('span');
+    seta.className = 'sub-seta';
+    seta.textContent = '→';
+
+    const novo = document.createElement('span');
+    novo.className = 'sub-novo';
+    novo.textContent = fake.toUpperCase();
+
+    linha.append(lbl, original, seta, novo);
+    tabela.appendChild(linha);
   });
+
+  el.appendChild(tabela);
 }
 
 // ── DOWNLOAD ──────────────────────────────────────────────────────────────────
