@@ -1,0 +1,67 @@
+// Gerador de dados fictícios brasileiros
+
+// Nomes são intencionalmente identificáveis como fictícios (contêm "FAKE")
+// CPF e NIT são os únicos campos que precisam ser numericamente convincentes
+
+const PRIMEIROS_MASC = ['JOAO', 'CARLOS', 'JOSE', 'PEDRO', 'PAULO'];
+const PRIMEIROS_FEM  = ['MARIA', 'ANA', 'FRANCISCA', 'JULIA', 'SANDRA'];
+const SOBRENOMES     = ['SILVA', 'SANTOS', 'OLIVEIRA', 'FERREIRA', 'LIMA'];
+
+function escolha(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// Gera nome claramente fictício: "JOAO FAKE DA SILVA" / "MARIA FAKE DA SILVA"
+function gerarNomeCompleto(feminino = null) {
+  if (feminino === null) feminino = Math.random() < 0.5;
+  const primeiro = feminino ? escolha(PRIMEIROS_FEM) : escolha(PRIMEIROS_MASC);
+  const sobrenome = escolha(SOBRENOMES);
+  return `${primeiro} FAKE DA ${sobrenome}`;
+}
+
+// CPF: 11 dígitos, formato XXX.XXX.XXX-XX
+function gerarCPF() {
+  const digitos = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10));
+
+  // Primeiro dígito verificador
+  let soma = digitos.reduce((acc, d, i) => acc + d * (10 - i), 0);
+  let resto = soma % 11;
+  digitos.push(resto < 2 ? 0 : 11 - resto);
+
+  // Segundo dígito verificador
+  soma = digitos.reduce((acc, d, i) => acc + d * (11 - i), 0);
+  resto = soma % 11;
+  digitos.push(resto < 2 ? 0 : 11 - resto);
+
+  const n = digitos.join('');
+  return `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6, 9)}-${n.slice(9)}`;
+}
+
+// NIT/PIS: 11 dígitos, formato XXX.XXXXX.XX-X
+function gerarNIT() {
+  const pesos = [3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let digitos;
+
+  // Garante NIT válido
+  do {
+    digitos = Array.from({ length: 10 }, () => Math.floor(Math.random() * 10));
+  } while (digitos.every(d => d === digitos[0])); // evita todos iguais
+
+  const soma = digitos.reduce((acc, d, i) => acc + d * pesos[i], 0);
+  const resto = soma % 11;
+  const verificador = resto < 2 ? 0 : 11 - resto;
+  digitos.push(verificador);
+
+  const n = digitos.join('');
+  return `${n.slice(0, 3)}.${n.slice(3, 8)}.${n.slice(8, 10)}-${n.slice(10)}`;
+}
+
+function gerarDadosFicticios() {
+  const feminino = Math.random() < 0.5;
+  return {
+    nome: gerarNomeCompleto(feminino),
+    cpf: gerarCPF(),
+    nit: gerarNIT(),
+    nomeMae: gerarNomeCompleto(true)
+  };
+}
