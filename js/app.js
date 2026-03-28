@@ -69,7 +69,7 @@ async function carregarArquivo(file) {
     exibirMae.textContent  = dadosOriginais.nomeMae || '(não encontrado)';
 
     // Gera dados fictícios e preenche campos editáveis
-    const ficticios = gerarDadosFicticios();
+    const ficticios = gerarDadosFicticios(dadosOriginais.nome);
     inputNome.value = ficticios.nome;
     inputCPF.value  = ficticios.cpf;
     inputNIT.value  = ficticios.nit;

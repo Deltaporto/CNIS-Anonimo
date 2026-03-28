@@ -11,10 +11,12 @@ function escolha(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// Gera nome claramente fictício: "JOAO FAKE DA SILVA" / "MARIA FAKE DA SILVA"
-function gerarNomeCompleto(feminino = null) {
-  if (feminino === null) feminino = Math.random() < 0.5;
-  const primeiro = feminino ? escolha(PRIMEIROS_FEM) : escolha(PRIMEIROS_MASC);
+// Gera nome fictício preservando o primeiro nome original: "ROSALINA FAKE DA SILVA"
+// Se não houver primeiro nome, usa um genérico.
+function gerarNomeCompleto(nomeOriginal = null) {
+  const primeiro = nomeOriginal
+    ? nomeOriginal.trim().split(/\s+/)[0].toUpperCase()
+    : escolha([...PRIMEIROS_MASC, ...PRIMEIROS_FEM]);
   const sobrenome = escolha(SOBRENOMES);
   return `${primeiro} FAKE DA ${sobrenome}`;
 }
@@ -56,12 +58,11 @@ function gerarNIT() {
   return `${n.slice(0, 3)}.${n.slice(3, 8)}.${n.slice(8, 10)}-${n.slice(10)}`;
 }
 
-function gerarDadosFicticios() {
-  const feminino = Math.random() < 0.5;
+function gerarDadosFicticios(nomeOriginal = null) {
   return {
-    nome: gerarNomeCompleto(feminino),
+    nome: gerarNomeCompleto(nomeOriginal),
     cpf: gerarCPF(),
     nit: gerarNIT(),
-    nomeMae: gerarNomeCompleto(true)
+    nomeMae: gerarNomeCompleto()  // mãe: sem preservar nome
   };
 }
