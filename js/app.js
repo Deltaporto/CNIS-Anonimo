@@ -1,176 +1,204 @@
-// Orquestração da interface
+// Lógica de lote: processa múltiplos PDFs e baixa como ZIP automaticamente
 
-let arquivoAtual = null;
-let bytesOriginais = null;
-
-// Elementos DOM
-const zonaUpload = document.getElementById('zona-upload');
+const zonaUpload   = document.getElementById('zona-upload');
 const inputArquivo = document.getElementById('input-arquivo');
-const secaoDados = document.getElementById('secao-dados');
-const secaoUpload = document.getElementById('secao-upload');
-const spinner = document.getElementById('spinner');
-const msgSucesso = document.getElementById('msg-sucesso');
-const msgErro = document.getElementById('msg-erro');
+const listaEl      = document.getElementById('lista-arquivos');
+const acoesEl      = document.getElementById('acoes-globais');
+const btnBaixarZip = document.getElementById('btn-baixar-zip');
+const btnLimpar    = document.getElementById('btn-limpar');
 
-// Campos de exibição (dados originais)
-const exibirNome = document.getElementById('exibir-nome');
-const exibirCPF = document.getElementById('exibir-cpf');
-const exibirNIT = document.getElementById('exibir-nit');
-const exibirMae = document.getElementById('exibir-mae');
+let resultados = [];
 
-// Campos de edição (dados fictícios)
-const inputNome = document.getElementById('input-nome');
-const inputCPF = document.getElementById('input-cpf');
-const inputNIT = document.getElementById('input-nit');
-const inputMae = document.getElementById('input-mae');
-
-// ── UPLOAD ──────────────────────────────────────────────
+// ── UPLOAD ────────────────────────────────────────────────────────────────────
 
 zonaUpload.addEventListener('click', () => inputArquivo.click());
 
-inputArquivo.addEventListener('change', (e) => {
-  if (e.target.files[0]) carregarArquivo(e.target.files[0]);
+inputArquivo.addEventListener('change', e => {
+  if (e.target.files.length) iniciarLote(Array.from(e.target.files));
 });
 
-zonaUpload.addEventListener('dragover', (e) => {
+zonaUpload.addEventListener('dragover', e => {
   e.preventDefault();
   zonaUpload.classList.add('drag-over');
 });
-
-zonaUpload.addEventListener('dragleave', () => {
-  zonaUpload.classList.remove('drag-over');
-});
-
-zonaUpload.addEventListener('drop', (e) => {
+zonaUpload.addEventListener('dragleave', () => zonaUpload.classList.remove('drag-over'));
+zonaUpload.addEventListener('drop', e => {
   e.preventDefault();
   zonaUpload.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type === 'application/pdf') {
-    carregarArquivo(file);
-  } else {
-    mostrarErro('Apenas arquivos PDF são aceitos.');
-  }
+  const pdfs = Array.from(e.dataTransfer.files)
+    .filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
+  if (pdfs.length) iniciarLote(pdfs);
 });
 
-async function carregarArquivo(file) {
-  ocultarMensagens();
-  mostrarSpinner('Lendo PDF e identificando dados sensíveis…');
+// ── LOTE ──────────────────────────────────────────────────────────────────────
+
+async function iniciarLote(arquivos) {
+  resultados = [];
+  listaEl.textContent = '';
+  listaEl.classList.remove('oculto');
+  acoesEl.classList.add('oculto');
+
+  const itens = arquivos.map(f => criarItemLista(f.name));
+
+  for (let i = 0; i < arquivos.length; i++) {
+    await processarArquivo(arquivos[i], itens[i]);
+  }
+
+  if (resultados.length === 0) return;
+
+  if (resultados.length === 1) {
+    baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
+  } else {
+    const zip = new JSZip();
+    for (const r of resultados) zip.file(r.nome, r.bytes);
+    const zipBytes = await zip.generateAsync({ type: 'uint8array' });
+    baixarBlob(zipBytes, 'application/zip', 'CNIS_anonimizados.zip');
+  }
+
+  // Mostra botão para baixar de novo
+  acoesEl.classList.remove('oculto');
+  const label = resultados.length === 1 ? 'Baixar novamente' : 'Baixar ZIP novamente';
+  btnBaixarZip.textContent = '⬇ ' + label;
+  btnBaixarZip.disabled = false;
+}
+
+async function processarArquivo(file, item) {
+  setStatus(item, 'processando', 'Processando…');
+  setProgresso(item, 30);
 
   try {
-    bytesOriginais = await file.arrayBuffer();
-    arquivoAtual = file;
+    const pdfBytes    = await file.arrayBuffer();
+    setProgresso(item, 50);
 
-    const dadosOriginais = await extrairDadosSensiveis(bytesOriginais);
+    const dadosOriginais = await extrairDadosSensiveis(pdfBytes);
+    setProgresso(item, 70);
 
-    // Preenche exibição dos dados originais
-    exibirNome.textContent = dadosOriginais.nome || '(não encontrado)';
-    exibirCPF.textContent  = dadosOriginais.cpf  || '(não encontrado)';
-    exibirNIT.textContent  = dadosOriginais.nit  || '(não encontrado)';
-    exibirMae.textContent  = dadosOriginais.nomeMae || '(não encontrado)';
+    const dadosFicticios = gerarDadosFicticios(dadosOriginais.nome);
+    const pdfAnonimizado = await substituirDadosNoPDF(pdfBytes, dadosOriginais, dadosFicticios);
+    setProgresso(item, 100, true);
 
-    // Gera dados fictícios e preenche campos editáveis
-    const ficticios = gerarDadosFicticios(dadosOriginais.nome);
-    inputNome.value = ficticios.nome;
-    inputCPF.value  = ficticios.cpf;
-    inputNIT.value  = ficticios.nit;
-    inputMae.value  = ficticios.nomeMae;
+    const ausentes = ['nome', 'cpf', 'nit', 'nomeMae']
+      .filter(k => !dadosOriginais[k])
+      .map(k => ({ nome: 'Nome', cpf: 'CPF', nit: 'NIT', nomeMae: 'Nome da mãe' }[k]));
 
-    // Armazena dados originais para uso posterior
-    document.getElementById('secao-dados').dataset.original = JSON.stringify(dadosOriginais);
+    if (ausentes.length) {
+      setStatus(item, 'aviso', 'Concluído (não encontrado: ' + ausentes.join(', ') + ')');
+    } else {
+      setStatus(item, 'ok', 'Anonimizado ✓');
+    }
 
-    ocultarSpinner();
-    secaoUpload.classList.add('oculto');
-    secaoDados.classList.remove('oculto');
+    mostrarSubs(item, dadosOriginais, dadosFicticios);
+
+    const nomeAnon = file.name.replace(/\.pdf$/i, '_anonimizado.pdf');
+    resultados.push({ nome: nomeAnon, bytes: pdfAnonimizado });
+
   } catch (err) {
-    ocultarSpinner();
-    mostrarErro('Erro ao processar o PDF: ' + err.message);
-    console.error(err);
+    setProgresso(item, 100, false, true);
+    setStatus(item, 'erro', 'Erro: ' + err.message);
+    console.error('[CNIS]', file.name, err);
   }
 }
 
-// ── AÇÕES ──────────────────────────────────────────────
+// ── DOM HELPERS ───────────────────────────────────────────────────────────────
 
-document.getElementById('btn-novo-pdf').addEventListener('click', () => {
-  secaoDados.classList.add('oculto');
-  secaoUpload.classList.remove('oculto');
-  inputArquivo.value = '';
-  ocultarMensagens();
-  bytesOriginais = null;
-  arquivoAtual = null;
-});
+function criarItemLista(nomeArquivo) {
+  const item = document.createElement('div');
+  item.className = 'arquivo-item';
 
-document.getElementById('btn-regenerar').addEventListener('click', () => {
-  const ficticios = gerarDadosFicticios();
-  inputNome.value = ficticios.nome;
-  inputCPF.value  = ficticios.cpf;
-  inputNIT.value  = ficticios.nit;
-  inputMae.value  = ficticios.nomeMae;
-});
+  const cab = document.createElement('div');
+  cab.className = 'arquivo-cabecalho';
 
-document.getElementById('btn-gerar').addEventListener('click', async () => {
-  const dadosOriginais = JSON.parse(secaoDados.dataset.original || '{}');
-  const dadosFicticios = {
-    nome:     inputNome.value.trim().toUpperCase(),
-    cpf:      inputCPF.value.trim(),
-    nit:      inputNIT.value.trim(),
-    nomeMae:  inputMae.value.trim().toUpperCase(),
-  };
+  const icone = document.createElement('span');
+  icone.className = 'arquivo-icone';
+  icone.textContent = '📄';
 
-  ocultarMensagens();
-  mostrarSpinner('Gerando PDF anonimizado…');
-  document.getElementById('btn-gerar').disabled = true;
+  const nome = document.createElement('span');
+  nome.className = 'arquivo-nome';
+  nome.textContent = nomeArquivo;
 
-  try {
-    const pdfAnonimizado = await substituirDadosNoPDF(bytesOriginais, dadosOriginais, dadosFicticios);
-    baixarPDF(pdfAnonimizado, arquivoAtual.name);
-    ocultarSpinner();
-    mostrarSucesso('PDF anonimizado gerado com sucesso! O download iniciou automaticamente.');
-  } catch (err) {
-    ocultarSpinner();
-    mostrarErro('Erro ao gerar o PDF: ' + err.message);
-    console.error(err);
-  } finally {
-    document.getElementById('btn-gerar').disabled = false;
-  }
-});
+  const status = document.createElement('span');
+  status.className = 'arquivo-status status-aguardando';
+  status.textContent = 'Aguardando';
 
-// ── DOWNLOAD ──────────────────────────────────────────
+  cab.append(icone, nome, status);
 
-function baixarPDF(bytes, nomeOriginal) {
-  const blob = new Blob([bytes], { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const base = nomeOriginal.replace(/\.pdf$/i, '');
-  a.download = `${base}_anonimizado.pdf`;
+  const progressoWrap = document.createElement('div');
+  progressoWrap.className = 'progresso-wrap';
+  const progressoBarra = document.createElement('div');
+  progressoBarra.className = 'progresso-barra';
+  progressoWrap.appendChild(progressoBarra);
+
+  const subs = document.createElement('div');
+  subs.className = 'arquivo-subs';
+
+  item.append(cab, progressoWrap, subs);
+  listaEl.appendChild(item);
+  return item;
+}
+
+function setStatus(item, tipo, texto) {
+  const el = item.querySelector('.arquivo-status');
+  el.className = 'arquivo-status status-' + tipo;
+  el.textContent = texto;
+}
+
+function setProgresso(item, pct, completo = false, erro = false) {
+  const barra = item.querySelector('.progresso-barra');
+  barra.style.width = pct + '%';
+  if (completo) barra.classList.add('completo');
+  if (erro)     barra.classList.add('erro');
+}
+
+function mostrarSubs(item, originais, ficticios) {
+  const el = item.querySelector('.arquivo-subs');
+  const pares = [
+    ['Nome', originais.nome,    ficticios.nome],
+    ['CPF',  originais.cpf,     ficticios.cpf],
+    ['NIT',  originais.nit,     ficticios.nit],
+    ['Mãe',  originais.nomeMae, ficticios.nomeMae],
+  ];
+  pares.filter(([, orig]) => orig).forEach(([label, orig, fake]) => {
+    const tag = document.createElement('span');
+    tag.className = 'sub-tag';
+    tag.textContent = label + ': ' + orig + ' → ';
+    const dest = document.createElement('span');
+    dest.textContent = fake.toUpperCase();
+    tag.appendChild(dest);
+    el.appendChild(tag);
+  });
+}
+
+// ── DOWNLOAD ──────────────────────────────────────────────────────────────────
+
+function baixarBlob(bytes, tipo, nome) {
+  const blob = new Blob([bytes], { type: tipo });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = nome;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-// ── HELPERS UI ────────────────────────────────────────
+// ── BOTÕES ────────────────────────────────────────────────────────────────────
 
-function mostrarSpinner(msg) {
-  document.getElementById('spinner-msg').textContent = msg;
-  spinner.classList.remove('oculto');
-}
+btnBaixarZip.addEventListener('click', async () => {
+  if (resultados.length === 1) {
+    baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
+    return;
+  }
+  const zip = new JSZip();
+  for (const r of resultados) zip.file(r.nome, r.bytes);
+  const zipBytes = await zip.generateAsync({ type: 'uint8array' });
+  baixarBlob(zipBytes, 'application/zip', 'CNIS_anonimizados.zip');
+});
 
-function ocultarSpinner() {
-  spinner.classList.add('oculto');
-}
-
-function mostrarSucesso(msg) {
-  msgSucesso.textContent = msg;
-  msgSucesso.classList.remove('oculto');
-}
-
-function mostrarErro(msg) {
-  msgErro.textContent = msg;
-  msgErro.classList.remove('oculto');
-}
-
-function ocultarMensagens() {
-  msgSucesso.classList.add('oculto');
-  msgErro.classList.add('oculto');
-}
+btnLimpar.addEventListener('click', () => {
+  resultados = [];
+  listaEl.textContent = '';
+  listaEl.classList.add('oculto');
+  acoesEl.classList.add('oculto');
+  inputArquivo.value = '';
+});
