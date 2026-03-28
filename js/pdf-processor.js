@@ -120,9 +120,11 @@ async function substituirDadosNoPDF(pdfBytes, dadosOriginais, dadosFicticios) {
 
   if (subs.length === 0) return await pdfDoc.save({ useObjectStreams: false });
 
-  // Itera TODOS os objetos indiretos do PDF e processa os streams
+  // Itera TODOS os objetos indiretos do PDF e processa os streams.
+  // Usa duck typing (obj.contents instanceof Uint8Array) em vez de
+  // constructor.name, que fica ilegível no bundle minificado do pdf-lib.
   for (const [, obj] of pdfDoc.context.enumerateIndirectObjects()) {
-    if (obj.constructor.name === 'PDFRawStream') {
+    if (obj.contents instanceof Uint8Array && obj.dict) {
       _processarRawStream(obj, subs);
     }
   }
