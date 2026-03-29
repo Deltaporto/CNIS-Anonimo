@@ -7,8 +7,12 @@ const PRIMEIROS_MASC = ['JOAO', 'CARLOS', 'JOSE', 'PEDRO', 'PAULO'];
 const PRIMEIROS_FEM  = ['MARIA', 'ANA', 'FRANCISCA', 'JULIA', 'SANDRA'];
 const SOBRENOMES     = ['SILVA', 'SANTOS', 'OLIVEIRA', 'FERREIRA', 'LIMA'];
 
+function randomInt(max) {
+  return crypto.getRandomValues(new Uint32Array(1))[0] % max;
+}
+
 function escolha(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[randomInt(arr.length)];
 }
 
 // Gera nome fictício preservando o primeiro nome original: "ROSALINA FAKE DA SILVA"
@@ -23,7 +27,7 @@ function gerarNomeCompleto(nomeOriginal = null) {
 
 // CPF: 11 dígitos, formato XXX.XXX.XXX-XX
 function gerarCPF() {
-  const digitos = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10));
+  const digitos = Array.from(crypto.getRandomValues(new Uint8Array(9)), b => b % 10);
 
   // Primeiro dígito verificador
   let soma = digitos.reduce((acc, d, i) => acc + d * (10 - i), 0);
@@ -46,7 +50,7 @@ function gerarNIT() {
 
   // Garante NIT válido
   do {
-    digitos = Array.from({ length: 10 }, () => Math.floor(Math.random() * 10));
+    digitos = Array.from(crypto.getRandomValues(new Uint8Array(10)), b => b % 10);
   } while (digitos.every(d => d === digitos[0])); // evita todos iguais
 
   const soma = digitos.reduce((acc, d, i) => acc + d * pesos[i], 0);

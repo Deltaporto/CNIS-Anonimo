@@ -62,8 +62,26 @@ async function iniciarLote(arquivos) {
   btnBaixarZip.disabled = false;
 }
 
+const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50 MB
+
 async function processarArquivo(file, item) {
   setStatus(item, 'processando', 'Processando…');
+
+  if (file.size > MAX_PDF_SIZE) {
+    setProgresso(item, 100, false, true);
+    setStatus(item, 'erro', 'Arquivo muito grande (máx. 50 MB)');
+    return;
+  }
+
+  const header = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+  const isPDF = header[0] === 0x25 && header[1] === 0x50 &&
+                header[2] === 0x44 && header[3] === 0x46; // %PDF
+  if (!isPDF) {
+    setProgresso(item, 100, false, true);
+    setStatus(item, 'erro', 'Arquivo não é um PDF válido');
+    return;
+  }
+
   setProgresso(item, 30);
 
   try {
@@ -98,8 +116,8 @@ async function processarArquivo(file, item) {
 
   } catch (err) {
     setProgresso(item, 100, false, true);
-    setStatus(item, 'erro', 'Erro: ' + err.message);
-    console.error('[CNIS]', file.name, err);
+    setStatus(item, 'erro', 'Erro ao processar o PDF. Verifique se o arquivo é válido.');
+    console.error('[CNIS]', err);
   }
 }
 
@@ -153,6 +171,15 @@ function setProgresso(item, pct, completo = false, erro = false) {
   if (erro)     barra.classList.add('erro');
 }
 
+function mascarar(valor, campo) {
+  if (!valor) return valor;
+  if (campo === 'cpf') return valor.slice(0, 4) + '***.***-**';
+  if (campo === 'nit') return valor.slice(0, 4) + '*****.** -*';
+  if (campo === 'nome' || campo === 'mae')
+    return valor.split(' ')[0] + ' ****';
+  return valor;
+}
+
 function mostrarSubs(item, originais, ficticios) {
   const el = item.querySelector('.arquivo-subs');
 
@@ -171,13 +198,13 @@ function mostrarSubs(item, originais, ficticios) {
   tabela.appendChild(header);
 
   const pares = [
-    ['Nome', originais.nome,    ficticios.nome],
-    ['CPF',  originais.cpf,     ficticios.cpf],
-    ['NIT',  originais.nit,     ficticios.nit],
-    ['Mãe',  originais.nomeMae, ficticios.nomeMae],
+    ['Nome', originais.nome,    ficticios.nome,    'nome'],
+    ['CPF',  originais.cpf,     ficticios.cpf,     'cpf'],
+    ['NIT',  originais.nit,     ficticios.nit,     'nit'],
+    ['Mãe',  originais.nomeMae, ficticios.nomeMae,  'mae'],
   ];
 
-  pares.filter(([, orig]) => orig).forEach(([label, orig, fake]) => {
+  pares.filter(([, orig]) => orig).forEach(([label, orig, fake, campo]) => {
     const linha = document.createElement('div');
     linha.className = 'sub-linha';
 
@@ -187,7 +214,7 @@ function mostrarSubs(item, originais, ficticios) {
 
     const original = document.createElement('span');
     original.className = 'sub-original';
-    original.textContent = orig;
+    original.textContent = mascarar(orig, campo);
 
     const seta = document.createElement('span');
     seta.className = 'sub-seta';
@@ -215,7 +242,7 @@ function baixarBlob(bytes, tipo, nome) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  URL.revokeObjectURL(url);
 }
 
 // ── BOTÕES ────────────────────────────────────────────────────────────────────
