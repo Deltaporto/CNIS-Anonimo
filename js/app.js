@@ -89,7 +89,11 @@ async function processarArquivo(file, item) {
 
     mostrarSubs(item, dadosOriginais, dadosFicticios);
 
-    const nomeAnon = file.name.replace(/\.pdf$/i, '_anonimizado.pdf');
+    const primeiroNome = dadosOriginais.nome
+      ? dadosOriginais.nome.trim().split(/\s+/)[0]
+      : 'Anonimizado';
+    const nomeTitleCase = primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase();
+    const nomeAnon = `CNIS ${nomeTitleCase}.pdf`;
     resultados.push({ nome: nomeAnon, bytes: pdfAnonimizado });
 
   } catch (err) {
