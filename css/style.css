@@ -29,12 +29,16 @@
 }
 
 body {
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
   background: var(--paper);
   color: var(--ink);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.018'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
@@ -65,23 +69,22 @@ header::before {
   margin: 0 auto;
 }
 .logo-inss {
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
-  letter-spacing: .03em;
-  text-transform: uppercase;
+  letter-spacing: -.01em;
 }
 .logo-badge {
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 10px;
   font-weight: 600;
-  background: rgba(255,255,255,.12);
-  color: rgba(255,255,255,.75);
-  border: 1px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.65);
+  border: 1px solid rgba(255,255,255,.12);
   border-radius: 4px;
-  padding: 2px 7px;
-  letter-spacing: .08em;
+  padding: 3px 8px;
+  letter-spacing: .06em;
   text-transform: uppercase;
   align-self: center;
 }
@@ -90,12 +93,12 @@ header::before {
 main {
   flex: 1;
   max-width: 700px;
-  margin: 28px auto;
+  margin: 32px auto;
   padding: 0 16px;
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 /* ── AVISO LGPD ── */
@@ -106,10 +109,11 @@ main {
   background: var(--blue-bg);
   border: 1px solid #bfdbfe;
   border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  font-size: 12.5px;
+  padding: 11px 16px;
+  font-size: 13px;
   color: #1e3a8a;
   font-weight: 500;
+  line-height: 1.5;
 }
 .aviso-lgpd svg { flex-shrink: 0; }
 
@@ -136,14 +140,14 @@ main {
 .zona-upload svg { opacity: .35; margin-bottom: 16px; transition: opacity .2s, transform .2s; }
 .zona-upload:hover svg { opacity: .6; transform: translateY(-3px); }
 .upload-titulo {
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--ink);
   margin-bottom: 6px;
-  letter-spacing: .01em;
+  letter-spacing: -.02em;
 }
-.upload-sub { font-size: 13px; line-height: 1.5; }
+.upload-sub { font-size: 13px; line-height: 1.6; color: var(--ink-soft); }
 .upload-sub strong { color: var(--navy-light); font-weight: 600; }
 #input-arquivo { display: none; }
 
@@ -175,22 +179,22 @@ main {
 }
 .arquivo-icone { font-size: 18px; flex-shrink: 0; }
 .arquivo-nome {
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   flex: 1;
   word-break: break-all;
   color: var(--ink);
-  letter-spacing: .01em;
+  letter-spacing: -.01em;
 }
 .arquivo-status {
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 11px;
-  font-weight: 700;
-  padding: 3px 9px;
+  font-weight: 600;
+  padding: 3px 10px;
   border-radius: 20px;
   white-space: nowrap;
-  letter-spacing: .05em;
+  letter-spacing: .03em;
   text-transform: uppercase;
 }
 .status-aguardando  { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
@@ -226,11 +230,11 @@ main {
   border-bottom: 1px solid var(--border);
 }
 .subs-header span {
-  font-family: 'Archivo Narrow', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: .08em;
+  letter-spacing: .06em;
   color: var(--ink-muted);
 }
 .subs-header .col-original { color: var(--amber); }
@@ -247,11 +251,11 @@ main {
 .sub-linha:last-child { border-bottom: none; }
 
 .sub-label {
-  font-family: 'Archivo Narrow', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: .06em;
+  letter-spacing: .04em;
   color: var(--ink-muted);
 }
 
@@ -307,41 +311,42 @@ main {
   padding-top: 4px;
 }
 .btn {
-  font-family: 'Archivo Narrow', sans-serif;
-  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
   font-size: 14px;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  padding: 11px 22px;
-  border-radius: var(--radius-sm);
+  letter-spacing: .01em;
+  padding: 12px 24px;
+  border-radius: var(--radius);
   border: none;
   cursor: pointer;
-  transition: background .15s, transform .1s, box-shadow .15s;
+  transition: background .15s, transform .1s, box-shadow .15s, opacity .15s;
 }
 .btn:active { transform: scale(.98); }
-.btn:disabled { opacity: .4; cursor: default; }
+.btn:disabled { opacity: .35; cursor: default; }
 .btn-primario  {
   background: var(--navy);
   color: #fff;
   box-shadow: 0 2px 8px rgba(15,45,94,.25);
+  font-size: 14px;
 }
-.btn-primario:hover:not(:disabled)  { background: var(--navy-light); box-shadow: 0 4px 14px rgba(15,45,94,.3); }
+.btn-primario:hover:not(:disabled)  { background: var(--navy-light); box-shadow: 0 6px 20px rgba(15,45,94,.3); }
 .btn-secundario {
   background: transparent;
-  color: var(--ink-soft);
+  color: var(--ink-muted);
   border: 1px solid var(--border);
+  font-size: 13px;
 }
-.btn-secundario:hover:not(:disabled) { background: #f1f5f9; }
-.btn-grande { font-size: 15px; padding: 13px 28px; }
+.btn-secundario:hover:not(:disabled) { background: #f1f5f9; color: var(--ink-soft); }
+.btn-grande { font-size: 14px; padding: 13px 28px; }
 
 /* ── FOOTER ── */
 footer {
   text-align: center;
-  padding: 14px;
-  font-size: 11.5px;
+  padding: 16px;
+  font-size: 12px;
   color: var(--ink-muted);
   border-top: 1px solid var(--border);
-  letter-spacing: .03em;
+  letter-spacing: .01em;
 }
 
 .oculto { display: none !important; }
