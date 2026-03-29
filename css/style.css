@@ -30,7 +30,7 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
   background: var(--paper);
   color: var(--ink);
@@ -70,7 +70,7 @@ header::before {
 }
 .logo-inss {
   font-family: 'Inter', sans-serif;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
   color: #ffffff;
   letter-spacing: -.01em;
@@ -110,7 +110,7 @@ main {
   border: 1px solid #bfdbfe;
   border-radius: var(--radius-sm);
   padding: 11px 16px;
-  font-size: 13.5px;
+  font-size: 13px;
   color: #1e3a8a;
   font-weight: 500;
   line-height: 1.5;
@@ -141,13 +141,13 @@ main {
 .zona-upload:hover svg { opacity: .6; transform: translateY(-3px); }
 .upload-titulo {
   font-family: 'Inter', sans-serif;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--ink);
   margin-bottom: 6px;
   letter-spacing: -.02em;
 }
-.upload-sub { font-size: 14px; line-height: 1.6; color: var(--ink-soft); }
+.upload-sub { font-size: 13px; line-height: 1.6; color: var(--ink-soft); }
 .upload-sub strong { color: var(--navy-light); font-weight: 600; }
 #input-arquivo { display: none; }
 
@@ -327,7 +327,7 @@ main {
   background: var(--navy);
   color: #fff;
   box-shadow: 0 2px 8px rgba(15,45,94,.25);
-  font-size: 15px;
+  font-size: 14px;
 }
 .btn-primario:hover:not(:disabled)  { background: var(--navy-light); box-shadow: 0 6px 20px rgba(15,45,94,.3); }
 .btn-secundario {
@@ -337,13 +337,13 @@ main {
   font-size: 13px;
 }
 .btn-secundario:hover:not(:disabled) { background: #f1f5f9; color: var(--ink-soft); }
-.btn-grande { font-size: 15px; padding: 14px 32px; }
+.btn-grande { font-size: 14px; padding: 13px 28px; }
 
 /* ── FOOTER ── */
 footer {
   text-align: center;
   padding: 16px;
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--ink-muted);
   border-top: 1px solid var(--border);
   letter-spacing: .01em;
