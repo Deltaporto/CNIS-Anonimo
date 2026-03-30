@@ -70,14 +70,14 @@ function coletarNitsDoTexto(texto) {
 
 function extrairNomeDoTexto(texto) {
   const match = texto.match(
-    /\bNome(?!\s+da\s+m(?:ã|a)e)\s*:?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s'`.-]+?)(?=\s+(?:Nome da m(?:ã|a)e|M(?:ã|a)e|CPF|NIT|NIS|PIS|PASEP|Data\b)|$)/i
+    /\bNome(?!\s+da\s+m(?:ã|a)e)\s*:?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s'`.-]+?)(?=\s+(?:Nome da m(?:ã|a)e|M(?:ã|a)e|CPF|NIT|NIS|PIS|PASEP|Data\b|P(?:á|a)gina\b|Identifica(?:ç|c)ão\b|Origem\b|C(?:ó|o)digo\b)|$)/i
   );
   return match ? limparNomeExtraido(match[1]) : '';
 }
 
 function extrairNomeMaeDoTexto(texto) {
   const match = texto.match(
-    /\b(?:Nome da m(?:ã|a)e|M(?:ã|a)e)\s*:?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s'`.-]+?)(?=\s+(?:Nome\b|CPF|NIT|NIS|PIS|PASEP|Data\b)|$)/i
+    /\b(?:Nome da m(?:ã|a)e|M(?:ã|a)e)\s*:?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s'`.-]+?)(?=\s+(?:Nome\b|CPF|NIT|NIS|PIS|PASEP|Data\b|P(?:á|a)gina\b|Identifica(?:ç|c)ão\b|Origem\b|C(?:ó|o)digo\b)|$)/i
   );
   return match ? limparNomeExtraido(match[1]) : '';
 }

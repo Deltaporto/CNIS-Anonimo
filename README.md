@@ -29,6 +29,21 @@ Substitui os dados sensíveis do segurado por dados fictícios, mantendo toda a 
 
 100% client-side — o PDF é processado diretamente no navegador. Nenhum dado é enviado para servidores externos.
 
+## Testes
+
+Execute a suíte local com:
+
+```bash
+npm test
+```
+
+A bateria cobre:
+
+- geração de dados fictícios, incluindo a regra de que o nome da mãe sempre começa com `MARIA`
+- parsing de nome, CPF e múltiplos NITs
+- helpers de nomeação e exibição do lote
+- regressão do pipeline completo com os PDFs reais `2_CNIS2.pdf`, `3_CNIS2.pdf`, `3_CNIS3.pdf` e `4_CNIS2.pdf`
+
 ## Tecnologias
 
 - [pdf-lib](https://pdf-lib.js.org/) — manipulação de PDFs no browser
