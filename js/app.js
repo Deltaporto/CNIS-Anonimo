@@ -1,11 +1,11 @@
 // Lógica de lote: processa múltiplos PDFs e baixa como ZIP automaticamente
 
-const zonaUpload   = document.getElementById('zona-upload');
+const zonaUpload = document.getElementById('zona-upload');
 const inputArquivo = document.getElementById('input-arquivo');
-const listaEl      = document.getElementById('lista-arquivos');
-const acoesEl      = document.getElementById('acoes-globais');
+const listaEl = document.getElementById('lista-arquivos');
+const acoesEl = document.getElementById('acoes-globais');
 const btnBaixarZip = document.getElementById('btn-baixar-zip');
-const btnLimpar    = document.getElementById('btn-limpar');
+const btnLimpar = document.getElementById('btn-limpar');
 
 let resultados = [];
 
@@ -13,20 +13,24 @@ let resultados = [];
 
 zonaUpload.addEventListener('click', () => inputArquivo.click());
 
-inputArquivo.addEventListener('change', e => {
-  if (e.target.files.length) iniciarLote(Array.from(e.target.files));
+inputArquivo.addEventListener('change', event => {
+  if (event.target.files.length) iniciarLote(Array.from(event.target.files));
 });
 
-zonaUpload.addEventListener('dragover', e => {
-  e.preventDefault();
+zonaUpload.addEventListener('dragover', event => {
+  event.preventDefault();
   zonaUpload.classList.add('drag-over');
 });
+
 zonaUpload.addEventListener('dragleave', () => zonaUpload.classList.remove('drag-over'));
-zonaUpload.addEventListener('drop', e => {
-  e.preventDefault();
+
+zonaUpload.addEventListener('drop', event => {
+  event.preventDefault();
   zonaUpload.classList.remove('drag-over');
-  const pdfs = Array.from(e.dataTransfer.files)
-    .filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
+
+  const pdfs = Array.from(event.dataTransfer.files)
+    .filter(file => file.type === 'application/pdf' || file.name.endsWith('.pdf'));
+
   if (pdfs.length) iniciarLote(pdfs);
 });
 
@@ -38,10 +42,10 @@ async function iniciarLote(arquivos) {
   listaEl.classList.remove('oculto');
   acoesEl.classList.add('oculto');
 
-  const itens = arquivos.map(f => criarItemLista(f.name));
+  const itens = arquivos.map(file => criarItemLista(file.name));
 
   for (let i = 0; i < arquivos.length; i++) {
-    await processarArquivo(arquivos[i], itens[i]);
+    await processarArquivo(arquivos[i], itens[i], i, arquivos.length);
   }
 
   if (resultados.length === 0) return;
@@ -50,12 +54,11 @@ async function iniciarLote(arquivos) {
     baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
   } else {
     const zip = new JSZip();
-    for (const r of resultados) zip.file(r.nome, r.bytes);
+    for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
     const zipBytes = await zip.generateAsync({ type: 'uint8array' });
     baixarBlob(zipBytes, 'application/zip', 'CNIS_anonimizados.zip');
   }
 
-  // Mostra botão para baixar de novo
   acoesEl.classList.remove('oculto');
   const label = resultados.length === 1 ? 'Baixar novamente' : 'Baixar ZIP novamente';
   btnBaixarZip.textContent = '⬇ ' + label;
@@ -64,7 +67,7 @@ async function iniciarLote(arquivos) {
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50 MB
 
-async function processarArquivo(file, item) {
+async function processarArquivo(file, item, indice, totalArquivos) {
   setStatus(item, 'processando', 'Processando…');
 
   if (file.size > MAX_PDF_SIZE) {
@@ -75,7 +78,8 @@ async function processarArquivo(file, item) {
 
   const header = new Uint8Array(await file.slice(0, 5).arrayBuffer());
   const isPDF = header[0] === 0x25 && header[1] === 0x50 &&
-                header[2] === 0x44 && header[3] === 0x46; // %PDF
+                header[2] === 0x44 && header[3] === 0x46;
+
   if (!isPDF) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Arquivo não é um PDF válido');
@@ -85,40 +89,81 @@ async function processarArquivo(file, item) {
   setProgresso(item, 30);
 
   try {
-    const pdfBytes    = await file.arrayBuffer();
+    const pdfBytes = await file.arrayBuffer();
     setProgresso(item, 50);
 
     const dadosOriginais = await extrairDadosSensiveis(pdfBytes);
     setProgresso(item, 70);
 
-    const dadosFicticios = gerarDadosFicticios(dadosOriginais.nome);
-    const pdfAnonimizado = await substituirDadosNoPDF(pdfBytes, dadosOriginais, dadosFicticios);
+    const dadosFicticios = gerarDadosFicticios(dadosOriginais);
+    const resultadoPdf = await substituirDadosNoPDF(pdfBytes, dadosOriginais, dadosFicticios);
+
+    mostrarSubs(item, dadosOriginais, dadosFicticios);
+
+    if (!resultadoPdf.ok) {
+      setProgresso(item, 100, false, true);
+
+      if (resultadoPdf.unreplacedFields.length) {
+        setStatus(
+          item,
+          'erro',
+          'Falha segura: restaram dados no PDF (' + resultadoPdf.unreplacedFields.join(', ') + ')'
+        );
+      } else {
+        setStatus(item, 'erro', 'Falha segura: nenhuma substituição pôde ser confirmada');
+      }
+
+      return;
+    }
+
     setProgresso(item, 100, true);
 
-    const ausentes = ['nome', 'cpf', 'nit', 'nomeMae']
-      .filter(k => !dadosOriginais[k])
-      .map(k => ({ nome: 'Nome', cpf: 'CPF', nit: 'NIT', nomeMae: 'Nome da mãe' }[k]));
-
-    if (ausentes.length) {
-      setStatus(item, 'aviso', 'Concluído (não encontrado: ' + ausentes.join(', ') + ')');
+    const observacoes = coletarObservacoes(dadosOriginais, resultadoPdf);
+    if (observacoes.length) {
+      setStatus(item, 'aviso', 'Concluído (' + observacoes.join('; ') + ')');
     } else {
       setStatus(item, 'ok', 'Anonimizado ✓');
     }
 
-    mostrarSubs(item, dadosOriginais, dadosFicticios);
-
-    const primeiroNome = dadosOriginais.nome
-      ? dadosOriginais.nome.trim().split(/\s+/)[0]
-      : 'Anonimizado';
-    const nomeTitleCase = primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase();
-    const nomeAnon = `CNIS ${nomeTitleCase}.pdf`;
-    resultados.push({ nome: nomeAnon, bytes: pdfAnonimizado });
-
+    resultados.push({
+      nome: gerarNomeSaida(dadosOriginais.nome, indice, totalArquivos),
+      bytes: resultadoPdf.bytes
+    });
   } catch (err) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Erro ao processar o PDF. Verifique se o arquivo é válido.');
     console.error('[CNIS]', err);
   }
+}
+
+function coletarObservacoes(dadosOriginais, resultadoPdf) {
+  const observacoes = [];
+  const ausentes = [];
+
+  if (!dadosOriginais.nome) ausentes.push('Nome');
+  if (!dadosOriginais.cpf) ausentes.push('CPF');
+  if (!Array.isArray(dadosOriginais.nits) || dadosOriginais.nits.length === 0) ausentes.push('NIT');
+  if (!dadosOriginais.nomeMae) ausentes.push('Nome da mãe');
+
+  if (ausentes.length) observacoes.push('não encontrado: ' + ausentes.join(', '));
+  if (resultadoPdf.unmatchedFields.length) {
+    observacoes.push('substituição não confirmada no stream: ' + resultadoPdf.unmatchedFields.join(', '));
+  }
+
+  return observacoes;
+}
+
+function gerarNomeSaida(nomeOriginal, indice, totalArquivos) {
+  const primeiroNome = nomeOriginal
+    ? nomeOriginal.trim().split(/\s+/)[0]
+    : 'Anonimizado';
+
+  const nomeTitleCase = primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase();
+  if (totalArquivos === 1) return `CNIS ${nomeTitleCase}.pdf`;
+
+  const largura = Math.max(2, String(totalArquivos).length);
+  const sequencia = String(indice + 1).padStart(largura, '0');
+  return `CNIS ${nomeTitleCase} ${sequencia}.pdf`;
 }
 
 // ── DOM HELPERS ───────────────────────────────────────────────────────────────
@@ -146,6 +191,7 @@ function criarItemLista(nomeArquivo) {
 
   const progressoWrap = document.createElement('div');
   progressoWrap.className = 'progresso-wrap';
+
   const progressoBarra = document.createElement('div');
   progressoBarra.className = 'progresso-barra';
   progressoWrap.appendChild(progressoBarra);
@@ -168,43 +214,61 @@ function setProgresso(item, pct, completo = false, erro = false) {
   const barra = item.querySelector('.progresso-barra');
   barra.style.width = pct + '%';
   if (completo) barra.classList.add('completo');
-  if (erro)     barra.classList.add('erro');
+  if (erro) barra.classList.add('erro');
 }
 
 function mascarar(valor, campo) {
   if (!valor) return valor;
   if (campo === 'cpf') return valor.slice(0, 4) + '***.***-**';
-  if (campo === 'nit') return valor.slice(0, 4) + '*****.** -*';
-  if (campo === 'nome' || campo === 'mae')
-    return valor.split(' ')[0] + ' ****';
+  if (campo === 'nit') return valor.slice(0, 4) + '*****.**-*';
+  if (campo === 'nome' || campo === 'mae') return valor.split(' ')[0] + ' ****';
   return valor;
+}
+
+function construirParesSubstituicao(originais, ficticios) {
+  const pares = [
+    ['Nome', originais.nome, ficticios.nome, 'nome'],
+    ['CPF', originais.cpf, ficticios.cpf, 'cpf']
+  ];
+
+  const nitsOriginais = Array.isArray(originais.nits) ? originais.nits : [];
+  const nitsFicticios = Array.isArray(ficticios.nits) ? ficticios.nits : [];
+
+  for (let i = 0; i < nitsOriginais.length; i++) {
+    pares.push([
+      nitsOriginais.length > 1 ? `NIT ${i + 1}` : 'NIT',
+      nitsOriginais[i],
+      nitsFicticios[i] || '',
+      'nit'
+    ]);
+  }
+
+  pares.push(['Mãe', originais.nomeMae, ficticios.nomeMae, 'mae']);
+  return pares;
 }
 
 function mostrarSubs(item, originais, ficticios) {
   const el = item.querySelector('.arquivo-subs');
+  el.textContent = '';
 
   const tabela = document.createElement('div');
   tabela.className = 'subs-tabela';
 
   const header = document.createElement('div');
   header.className = 'subs-header';
+
   ['Campo', 'Original', '', 'Substituído'].forEach((txt, i) => {
-    const s = document.createElement('span');
-    s.textContent = txt;
-    if (i === 1) s.className = 'col-original';
-    if (i === 3) s.className = 'col-novo';
-    header.appendChild(s);
+    const span = document.createElement('span');
+    span.textContent = txt;
+    if (i === 1) span.className = 'col-original';
+    if (i === 3) span.className = 'col-novo';
+    header.appendChild(span);
   });
+
   tabela.appendChild(header);
 
-  const pares = [
-    ['Nome', originais.nome,    ficticios.nome,    'nome'],
-    ['CPF',  originais.cpf,     ficticios.cpf,     'cpf'],
-    ['NIT',  originais.nit,     ficticios.nit,     'nit'],
-    ['Mãe',  originais.nomeMae, ficticios.nomeMae,  'mae'],
-  ];
-
-  pares.filter(([, orig]) => orig).forEach(([label, orig, fake, campo]) => {
+  const pares = construirParesSubstituicao(originais, ficticios);
+  pares.filter(([, original]) => original).forEach(([label, original, fake, campo]) => {
     const linha = document.createElement('div');
     linha.className = 'sub-linha';
 
@@ -212,9 +276,9 @@ function mostrarSubs(item, originais, ficticios) {
     lbl.className = 'sub-label';
     lbl.textContent = label;
 
-    const original = document.createElement('span');
-    original.className = 'sub-original';
-    original.textContent = mascarar(orig, campo);
+    const originalEl = document.createElement('span');
+    originalEl.className = 'sub-original';
+    originalEl.textContent = mascarar(original, campo);
 
     const seta = document.createElement('span');
     seta.className = 'sub-seta';
@@ -222,9 +286,9 @@ function mostrarSubs(item, originais, ficticios) {
 
     const novo = document.createElement('span');
     novo.className = 'sub-novo';
-    novo.textContent = fake.toUpperCase();
+    novo.textContent = fake ? fake.toUpperCase() : '—';
 
-    linha.append(lbl, original, seta, novo);
+    linha.append(lbl, originalEl, seta, novo);
     tabela.appendChild(linha);
   });
 
@@ -235,9 +299,9 @@ function mostrarSubs(item, originais, ficticios) {
 
 function baixarBlob(bytes, tipo, nome) {
   const blob = new Blob([bytes], { type: tipo });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
   a.download = nome;
   document.body.appendChild(a);
   a.click();
@@ -252,8 +316,9 @@ btnBaixarZip.addEventListener('click', async () => {
     baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
     return;
   }
+
   const zip = new JSZip();
-  for (const r of resultados) zip.file(r.nome, r.bytes);
+  for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
   const zipBytes = await zip.generateAsync({ type: 'uint8array' });
   baixarBlob(zipBytes, 'application/zip', 'CNIS_anonimizados.zip');
 });

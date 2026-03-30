@@ -12,8 +12,8 @@ Substitui os dados sensíveis do segurado por dados fictícios, mantendo toda a 
 |-------|-----------|
 | Nome | Substituído por nome fictício identificável (ex: "JOAO FAKE DA SILVA") |
 | CPF | Substituído por CPF fictício com dígitos verificadores válidos |
-| NIT | Substituído por NIT fictício com dígito verificador válido |
-| Nome da mãe | Substituído por nome fictício |
+| NIT | Cada NIT encontrado no PDF é substituído por um NIT fictício válido e consistente no arquivo |
+| Nome da mãe | Substituído por nome fictício sempre iniciado por "MARIA" |
 | Data de nascimento | **Preservada** |
 | Vínculos, salários, contribuições, indicadores | **Preservados** |
 
@@ -21,9 +21,9 @@ Substitui os dados sensíveis do segurado por dados fictícios, mantendo toda a 
 
 1. Acesse o site
 2. Arraste ou selecione o PDF do CNIS
-3. Confira os dados identificados e os substitutos gerados automaticamente
-4. Edite os dados fictícios se necessário
-5. Clique em **Gerar PDF Anonimizado** e faça o download
+3. Aguarde o processamento local no navegador
+4. Confira os dados identificados e os substitutos gerados automaticamente
+5. O download do PDF anonimizado ou do ZIP começa automaticamente ao final
 
 ## Privacidade
 

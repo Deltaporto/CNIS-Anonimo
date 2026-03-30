@@ -15,6 +15,10 @@ function escolha(arr) {
   return arr[randomInt(arr.length)];
 }
 
+function soDigitos(valor = '') {
+  return String(valor).replace(/\D/g, '');
+}
+
 // Gera nome fictício preservando o primeiro nome original: "ROSALINA FAKE DA SILVA"
 // Se não houver primeiro nome, usa um genérico.
 function gerarNomeCompleto(nomeOriginal = null) {
@@ -23,6 +27,10 @@ function gerarNomeCompleto(nomeOriginal = null) {
     : escolha([...PRIMEIROS_MASC, ...PRIMEIROS_FEM]);
   const sobrenome = escolha(SOBRENOMES);
   return `${primeiro} FAKE DA ${sobrenome}`;
+}
+
+function gerarNomeMaeFicticio() {
+  return `MARIA FAKE DA ${escolha(SOBRENOMES)}`;
 }
 
 // CPF: 11 dígitos, formato XXX.XXX.XXX-XX
@@ -62,11 +70,38 @@ function gerarNIT() {
   return `${n.slice(0, 3)}.${n.slice(3, 8)}.${n.slice(8, 10)}-${n.slice(10)}`;
 }
 
-function gerarDadosFicticios(nomeOriginal = null) {
+function gerarCPFUnico(cpfOriginal = '') {
+  const proibidos = new Set();
+  const cpfOriginalDigitos = soDigitos(cpfOriginal);
+  if (cpfOriginalDigitos) proibidos.add(cpfOriginalDigitos);
+
+  let cpf;
+  do {
+    cpf = gerarCPF();
+  } while (proibidos.has(soDigitos(cpf)));
+
+  return cpf;
+}
+
+function gerarNITUnico(proibidosDigitos) {
+  let nit;
+  do {
+    nit = gerarNIT();
+  } while (proibidosDigitos.has(soDigitos(nit)));
+
+  proibidosDigitos.add(soDigitos(nit));
+  return nit;
+}
+
+function gerarDadosFicticios(originais = {}) {
+  const nitsOriginais = Array.isArray(originais.nits) ? originais.nits : [];
+  const proibidosNIT = new Set(nitsOriginais.map(soDigitos).filter(Boolean));
+  const nitsFicticios = nitsOriginais.map(() => gerarNITUnico(proibidosNIT));
+
   return {
-    nome: gerarNomeCompleto(nomeOriginal),
-    cpf: gerarCPF(),
-    nit: gerarNIT(),
-    nomeMae: gerarNomeCompleto()  // mãe: sem preservar nome
+    nome: gerarNomeCompleto(originais.nome || null),
+    cpf: gerarCPFUnico(originais.cpf || ''),
+    nits: nitsFicticios,
+    nomeMae: gerarNomeMaeFicticio()
   };
 }
