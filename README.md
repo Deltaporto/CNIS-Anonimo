@@ -10,7 +10,7 @@ Substitui os dados sensíveis do segurado por dados fictícios, mantendo toda a 
 
 | Campo | Tratamento |
 |-------|-----------|
-| Nome | Substituído por nome fictício identificável (ex: "JOAO FAKE DA SILVA") |
+| Nome | Substituído por nome fictício identificável (ex: "JOAO FAKE DOS SANTOS") |
 | CPF | Substituído por CPF fictício com dígitos verificadores válidos |
 | NIT | Cada NIT encontrado no PDF é substituído por um NIT fictício válido e consistente no arquivo |
 | Nome da mãe | Substituído por nome fictício sempre iniciado por "MARIA" |
@@ -39,7 +39,7 @@ npm test
 
 A bateria cobre:
 
-- geração de dados fictícios, incluindo a regra de que o nome da mãe sempre começa com `MARIA`
+- geração de dados fictícios, incluindo a regra de que titular e mãe usam o sobrenome fixo `FAKE DOS SANTOS`
 - parsing de nome, CPF e múltiplos NITs
 - helpers de nomeação e exibição do lote
 - regressão do pipeline completo com os PDFs reais `2_CNIS2.pdf`, `3_CNIS2.pdf`, `3_CNIS3.pdf` e `4_CNIS2.pdf`

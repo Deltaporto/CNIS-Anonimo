@@ -22,7 +22,8 @@ for (const fixture of CNIS_FIXTURES) {
     assert.ok(extraidos.nits.length >= 1, 'deve extrair ao menos um NIT');
 
     const ficticios = fakeDataApi.gerarDadosFicticios(extraidos);
-    assert.match(ficticios.nomeMae, /^MARIA\b/);
+    assert.equal(ficticios.nome, `${extraidos.nome.split(/\s+/)[0]} FAKE DOS SANTOS`);
+    assert.equal(ficticios.nomeMae, 'MARIA FAKE DOS SANTOS');
     assert.equal(ficticios.nits.length, extraidos.nits.length);
 
     const processado = await pdfProcessorApi.substituirDadosNoPDF(
@@ -43,6 +44,6 @@ for (const fixture of CNIS_FIXTURES) {
     assert.equal(reextraidos.cpf, ficticios.cpf);
     assert.equal(reextraidos.nomeMae, ficticios.nomeMae);
     assert.deepEqual(reextraidos.nits, ficticios.nits);
-    assert.match(reextraidos.nomeMae, /^MARIA\b/);
+    assert.equal(reextraidos.nomeMae, 'MARIA FAKE DOS SANTOS');
   });
 }

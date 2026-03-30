@@ -5,7 +5,7 @@
 
 const PRIMEIROS_MASC = ['JOAO', 'CARLOS', 'JOSE', 'PEDRO', 'PAULO'];
 const PRIMEIROS_FEM  = ['MARIA', 'ANA', 'FRANCISCA', 'JULIA', 'SANDRA'];
-const SOBRENOMES     = ['SILVA', 'SANTOS', 'OLIVEIRA', 'FERREIRA', 'LIMA'];
+const SOBRENOME_FICTICIO = 'FAKE DOS SANTOS';
 
 function randomInt(max) {
   return crypto.getRandomValues(new Uint32Array(1))[0] % max;
@@ -19,18 +19,17 @@ function soDigitos(valor = '') {
   return String(valor).replace(/\D/g, '');
 }
 
-// Gera nome fictício preservando o primeiro nome original: "ROSALINA FAKE DA SILVA"
+// Gera nome fictício preservando o primeiro nome original: "ROSALINA FAKE DOS SANTOS"
 // Se não houver primeiro nome, usa um genérico.
 function gerarNomeCompleto(nomeOriginal = null) {
   const primeiro = nomeOriginal
     ? nomeOriginal.trim().split(/\s+/)[0].toUpperCase()
     : escolha([...PRIMEIROS_MASC, ...PRIMEIROS_FEM]);
-  const sobrenome = escolha(SOBRENOMES);
-  return `${primeiro} FAKE DA ${sobrenome}`;
+  return `${primeiro} ${SOBRENOME_FICTICIO}`;
 }
 
 function gerarNomeMaeFicticio() {
-  return `MARIA FAKE DA ${escolha(SOBRENOMES)}`;
+  return `MARIA ${SOBRENOME_FICTICIO}`;
 }
 
 // CPF: 11 dígitos, formato XXX.XXX.XXX-XX

@@ -20,10 +20,10 @@ test('monta pares de substituição com NIT 1, NIT 2 e nome da mãe', () => {
       nomeMae: 'MARIA APARECIDA DOS SANTOS'
     },
     {
-      nome: 'ROSALINA FAKE DA SILVA',
+      nome: 'ROSALINA FAKE DOS SANTOS',
       cpf: '123.456.789-09',
       nits: ['333.44444.55-6', '777.88888.99-0'],
-      nomeMae: 'MARIA FAKE DA LIMA'
+      nomeMae: 'MARIA FAKE DOS SANTOS'
     }
   );
 
