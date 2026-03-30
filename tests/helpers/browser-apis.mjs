@@ -87,7 +87,12 @@ export async function loadPdfProcessorApi() {
       coletarNitsDoTexto,
       extrairNomeDoTexto,
       extrairNomeMaeDoTexto,
-      extrairCpfDoTexto
+      extrairCpfDoTexto,
+      parseToUnicodeCMap,
+      encodeTextWithCMap,
+      montarEspecificacoesSubstituicao,
+      montarEspecificacoesHex,
+      aplicarEspecificacoesEmHex
     };
   `)({
     TextDecoder,
