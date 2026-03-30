@@ -1,5 +1,10 @@
 // Processador de PDF CNIS
 
+if (typeof window !== 'undefined' && typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+}
+
 const decoderLatin1 = new TextDecoder('latin1');
 
 function encodeLatin1(str) {
