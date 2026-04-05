@@ -126,6 +126,10 @@ function normalizarListaValores(valores) {
   return unicos;
 }
 
+function precompilarPares(pares) {
+  return pares.map(([orig, repl]) => [new RegExp(escapeRegex(orig), 'g'), repl]);
+}
+
 function criarEspecificacaoNominal(id, label, original, ficticio) {
   const fakeUpper = ficticio.toUpperCase();
   return {
@@ -188,6 +192,10 @@ function montarEspecificacoesSubstituicao(dadosOriginais, dadosFicticios) {
     specs.push(criarEspecificacaoNominal('nomeMae', 'Nome da mãe', dadosOriginais.nomeMae, dadosFicticios.nomeMae));
   }
 
+  for (const spec of specs) {
+    spec.compiledPairs = precompilarPares(spec.pairs);
+  }
+
   return specs;
 }
 
@@ -196,8 +204,7 @@ function aplicarEspecificacoesNoTexto(texto, specs) {
   const hits = {};
 
   for (const spec of specs) {
-    for (const [orig, repl] of spec.pairs) {
-      const regex = new RegExp(escapeRegex(orig), 'g');
+    for (const [regex, repl] of spec.compiledPairs || precompilarPares(spec.pairs)) {
       const matches = atualizado.match(regex);
       if (!matches) continue;
 
@@ -382,11 +389,16 @@ function montarEspecificacoesHex(specs, mapasHex) {
     }
 
     if (pairs.length || pairsRaw.length || verifyOriginals.length || verifyOriginalsRaw.length) {
+      const p = normalizarPares(pairs);
+      const pr = normalizarPares(pairsRaw);
+
       specsHex.push({
         id: spec.id,
         label: spec.label,
-        pairs: normalizarPares(pairs),
-        pairsRaw: normalizarPares(pairsRaw),
+        pairs: p,
+        compiledPairs: precompilarPares(p),
+        pairsRaw: pr,
+        compiledPairsRaw: precompilarPares(pr),
         verifyOriginals: normalizarListaValores(verifyOriginals),
         verifyOriginalsRaw: normalizarListaValores(verifyOriginalsRaw)
       });
@@ -408,8 +420,7 @@ function aplicarEspecificacoesEmHex(texto, specsHex) {
     let hexAtualizado = hexString;
 
     for (const spec of specsHex) {
-      for (const [orig, repl] of spec.pairs) {
-        const regex = new RegExp(escapeRegex(orig), 'g');
+      for (const [regex, repl] of spec.compiledPairs || precompilarPares(spec.pairs)) {
         const matches = hexAtualizado.match(regex);
         if (!matches) continue;
 
@@ -429,8 +440,7 @@ function aplicarEspecificacoesEmHex(texto, specsHex) {
   let textoFinal = atualizado;
 
   for (const spec of specsHex) {
-    for (const [orig, repl] of spec.pairsRaw || []) {
-      const regex = new RegExp(escapeRegex(orig), 'g');
+    for (const [regex, repl] of spec.compiledPairsRaw || precompilarPares(spec.pairsRaw || [])) {
       const matches = textoFinal.match(regex);
       if (!matches) continue;
 
