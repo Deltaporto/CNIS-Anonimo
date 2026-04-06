@@ -5,7 +5,18 @@ if (typeof window !== 'undefined' && typeof pdfjsLib !== 'undefined' && pdfjsLib
     'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 }
 
-const decoderLatin1 = new TextDecoder('latin1');
+// TextDecoder doesn't match raw byte values for 128-159 correctly, but for performance,
+// a chunk-based processing is much faster than Array.from.
+const decoderLatin1 = {
+  decode: function(bytes) {
+    const CHUNK_SIZE = 8192;
+    const chars = [];
+    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+      chars.push(String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE)));
+    }
+    return chars.join('');
+  }
+};
 
 function encodeLatin1(str) {
   const bytes = new Uint8Array(str.length);
@@ -614,7 +625,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   }
 
   const bytes = toUint8Array(pdfBytes);
-  let bin = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  let bin = decoderLatin1.decode(bytes);
 
   const regexStreams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   const partes = [];
@@ -624,7 +635,11 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   let match;
 
   while ((match = regexStreams.exec(bin)) !== null) {
-    const raw = Uint8Array.from(match[1].split('').map(char => char.charCodeAt(0)));
+    const rawStr = match[1];
+    const raw = new Uint8Array(rawStr.length);
+    for (let i = 0; i < rawStr.length; i++) {
+      raw[i] = rawStr.charCodeAt(i) & 0xff;
+    }
 
     let decoded;
     try {
@@ -653,10 +668,8 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
     modificou = true;
     mergeHits(hits, result.hits);
 
-    const newBin = Array.from(
-      pako.deflate(encodeLatin1(result.text)),
-      byte => String.fromCharCode(byte)
-    ).join('');
+    const deflated = pako.deflate(encodeLatin1(result.text));
+    const newBin = decoderLatin1.decode(deflated);
 
     partes.push(bin.slice(last, match.index) + 'stream\n' + newBin + '\nendstream');
     last = match.index + match[0].length;
@@ -667,7 +680,11 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   }
 
   partes.push(bin.slice(last));
-  const resultBytes = Uint8Array.from(partes.join('').split(''), char => char.charCodeAt(0));
+  const finalStr = partes.join('');
+  const resultBytes = new Uint8Array(finalStr.length);
+  for (let i = 0; i < finalStr.length; i++) {
+    resultBytes[i] = finalStr.charCodeAt(i) & 0xff;
+  }
 
   try {
     const doc = await PDFLib.PDFDocument.load(resultBytes, { ignoreEncryption: true, updateMetadata: false });
@@ -740,13 +757,17 @@ async function coletarTextosDecodificados(pdfBytes) {
 
 function coletarTextosDecodificadosViaBytes(pdfBytes) {
   const bytes = toUint8Array(pdfBytes);
-  const bin = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  const bin = decoderLatin1.decode(bytes);
   const textos = [];
   const regexStreams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   let match;
 
   while ((match = regexStreams.exec(bin)) !== null) {
-    const raw = Uint8Array.from(match[1].split('').map(char => char.charCodeAt(0)));
+    const rawStr = match[1];
+    const raw = new Uint8Array(rawStr.length);
+    for (let i = 0; i < rawStr.length; i++) {
+      raw[i] = rawStr.charCodeAt(i) & 0xff;
+    }
 
     try {
       textos.push(decoderLatin1.decode(pako.inflate(raw)));

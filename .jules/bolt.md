@@ -1,0 +1,3 @@
+## 2024-04-06 - Memory-intensive Array.from processing
+**Learning:** Using `Array.from(bytes, byte => String.fromCharCode(byte)).join('')` to convert huge byte arrays (like raw PDF stream content, potentially tens of megabytes) into strings forces V8 to allocate millions of tiny strings, causing enormous memory consumption and slow CPU execution (O(N) with high overhead factor).
+**Action:** Replace direct character-by-character `Array.from` conversion with a custom `decode` loop using `String.fromCharCode.apply(null, chunk)` combined over chunks (e.g. 8192 bytes) or fallback to standard explicit mapping `new Uint8Array` loops.
