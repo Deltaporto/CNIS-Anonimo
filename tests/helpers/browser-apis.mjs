@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import { webcrypto } from 'node:crypto';
 import * as PDFLib from 'pdf-lib';
 import pako from 'pako';
-import * as pdfjsBase from 'pdfjs-dist/legacy/build/pdf.js';
+import * as pdfjsBase from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 const ROOT_URL = new URL('../../', import.meta.url);
 const STANDARD_FONT_DATA_URL = new URL('node_modules/pdfjs-dist/standard_fonts/', ROOT_URL).href;
@@ -84,6 +84,7 @@ export async function loadPdfProcessorApi() {
     return {
       extrairDadosSensiveis,
       substituirDadosNoPDF,
+      verificarSubstituicoesNoPDF,
       coletarNitsDoTexto,
       extrairNomeDoTexto,
       extrairNomeMaeDoTexto,
