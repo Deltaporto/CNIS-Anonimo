@@ -13,6 +13,13 @@ let resultados = [];
 
 zonaUpload.addEventListener('click', () => inputArquivo.click());
 
+zonaUpload.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    inputArquivo.click();
+  }
+});
+
 inputArquivo.addEventListener('change', event => {
   if (event.target.files.length) iniciarLote(Array.from(event.target.files));
 });
