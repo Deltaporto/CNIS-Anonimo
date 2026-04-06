@@ -489,7 +489,10 @@ function decodificarStream(stream) {
 
 async function extrairDadosSensiveis(pdfBytes) {
   const copia = toUint8Array(pdfBytes).slice().buffer;
-  const pdf = await pdfjsLib.getDocument({ data: copia }).promise;
+  const pdf = await pdfjsLib.getDocument({
+    data: copia,
+    isEvalSupported: false
+  }).promise;
   const resultado = { nome: '', cpf: '', nits: [], nomeMae: '' };
 
   try {
