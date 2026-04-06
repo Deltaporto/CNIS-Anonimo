@@ -17,7 +17,11 @@
                  font-src https://fonts.gstatic.com;
                  img-src 'self' data:;
                  connect-src 'self' https://cdn.jsdelivr.net;
-                 worker-src blob: https://cdn.jsdelivr.net;" />
+                 worker-src blob: https://cdn.jsdelivr.net;
+                 object-src 'none';
+                 base-uri 'none';
+                 form-action 'none';
+                 upgrade-insecure-requests;" />
 
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"
           integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e"
