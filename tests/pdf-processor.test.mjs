@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import pako from 'pako';
 
 import { loadPdfProcessorApi } from './helpers/browser-apis.mjs';
 
@@ -114,4 +115,35 @@ end
   assert.match(result.text, new RegExp(cpfFake));
   assert.doesNotMatch(result.text, new RegExp(nomeOriginal));
   assert.doesNotMatch(result.text, new RegExp(cpfOriginal));
+});
+
+test('verificação ignora streams sem operadores de texto ao procurar dados residuais', async () => {
+  const specs = pdfProcessorApi.montarEspecificacoesSubstituicao(
+    {
+      nome: 'LUIZ ALBERTO DOS SANTOS',
+      cpf: '',
+      nits: [],
+      nomeMae: 'NIEDA PEREIRA DOS SANTOS'
+    },
+    {
+      nome: 'LUIZ FAKE DOS SANTOS',
+      cpf: '',
+      nits: [],
+      nomeMae: 'MARIA FAKE DOS SANTOS'
+    }
+  );
+
+  const streamTexto = 'BT\n(LUIZ FAKE DOS SANTOS) Tj\n(MARIA FAKE DOS SANTOS) Tj\nET';
+  const streamMetadados = 'CID-SET NIEDA PEREIRA DOS SANTOS';
+  const binarioPdf = [
+    '%PDF-1.4',
+    `stream\n${String.fromCharCode(...pako.deflate(streamTexto))}\nendstream`,
+    `stream\n${String.fromCharCode(...pako.deflate(streamMetadados))}\nendstream`,
+    '%%EOF'
+  ].join('\n');
+  const bytes = Uint8Array.from(binarioPdf, char => char.charCodeAt(0));
+
+  const unreplacedFields = await pdfProcessorApi.verificarSubstituicoesNoPDF(bytes, specs);
+
+  assert.deepEqual(unreplacedFields, []);
 });

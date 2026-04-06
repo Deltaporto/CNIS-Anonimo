@@ -729,7 +729,10 @@ async function coletarTextosDecodificados(pdfBytes) {
       const decoded = decodificarStream(obj);
       if (!decoded) continue;
 
-      textos.push(decoderLatin1.decode(decoded.decoded));
+      const texto = decoderLatin1.decode(decoded.decoded);
+      if (!contemOperadoresDeTexto(texto)) continue;
+
+      textos.push(texto);
     }
   } catch {
     return coletarTextosDecodificadosViaBytes(pdfBytes);
@@ -749,12 +752,14 @@ function coletarTextosDecodificadosViaBytes(pdfBytes) {
     const raw = Uint8Array.from(match[1].split('').map(char => char.charCodeAt(0)));
 
     try {
-      textos.push(decoderLatin1.decode(pako.inflate(raw)));
+      const texto = decoderLatin1.decode(pako.inflate(raw));
+      if (contemOperadoresDeTexto(texto)) textos.push(texto);
       continue;
     } catch {}
 
     try {
-      textos.push(decoderLatin1.decode(pako.inflateRaw(raw)));
+      const texto = decoderLatin1.decode(pako.inflateRaw(raw));
+      if (contemOperadoresDeTexto(texto)) textos.push(texto);
     } catch {}
   }
 
