@@ -137,6 +137,12 @@ main {
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
 }
+.zona-upload:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+  border-color: var(--navy-light);
+  background: #f0f5ff;
+}
 .zona-upload svg { opacity: .35; margin-bottom: 16px; transition: opacity .2s, transform .2s; }
 .zona-upload:hover svg { opacity: .6; transform: translateY(-3px); }
 .upload-titulo {
@@ -323,6 +329,10 @@ main {
   border: none;
   cursor: pointer;
   transition: background .15s, transform .1s, box-shadow .15s, opacity .15s;
+}
+.btn:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
 }
 .btn:active { transform: scale(.98); }
 .btn:disabled { opacity: .35; cursor: default; }
