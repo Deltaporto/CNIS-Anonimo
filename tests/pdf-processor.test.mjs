@@ -147,3 +147,44 @@ test('verificação ignora streams sem operadores de texto ao procurar dados res
 
   assert.deepEqual(unreplacedFields, []);
 });
+
+test('ajusta nomes fictícios quando a fonte do PDF não codifica o marcador padrao', () => {
+  const mapaSemK = {
+    ' ': '0003',
+    A: '0024',
+    B: '0025',
+    C: '0026',
+    D: '0027',
+    E: '0028',
+    F: '0029',
+    I: '002C',
+    L: '002F',
+    M: '0030',
+    N: '0031',
+    O: '0032',
+    R: '0035',
+    S: '0036',
+    T: '0037',
+    V: '0039',
+    Z: '003D'
+  };
+
+  const ajustados = pdfProcessorApi.ajustarDadosFicticiosParaMapasHex(
+    {
+      nome: 'ROBERTO CONSTANTINO DA SILVA',
+      cpf: '990.727.507-72',
+      nits: ['122.05156.39-1'],
+      nomeMae: 'ROZELIA CARDOSO C SILVA'
+    },
+    {
+      nome: 'ROBERTO FAKE DOS SANTOS',
+      cpf: '123.456.789-09',
+      nits: ['333.44444.55-6'],
+      nomeMae: 'MARIA FAKE DOS SANTOS'
+    },
+    [mapaSemK]
+  );
+
+  assert.equal(ajustados.nome, 'ROBERTO FALSO DOS SANTOS');
+  assert.equal(ajustados.nomeMae, 'MARIA FALSA DOS SANTOS');
+});

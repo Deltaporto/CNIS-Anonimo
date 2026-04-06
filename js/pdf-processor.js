@@ -126,8 +126,73 @@ function normalizarListaValores(valores) {
   return unicos;
 }
 
+const CANDIDATOS_SUFIXO_TITULAR = [
+  'FAKE DOS SANTOS',
+  'FALSO DOS SANTOS',
+  'FICTICIO DOS SANTOS',
+  'FALSO DA SILVA',
+  'FICTICIO DA SILVA'
+];
+
+const CANDIDATOS_NOME_MAE = [
+  'MARIA FAKE DOS SANTOS',
+  'MARIA FALSA DOS SANTOS',
+  'MARIA FICTICIA DOS SANTOS',
+  'MARIA FALSA DA SILVA',
+  'MARIA FICTICIA DA SILVA'
+];
+
 function precompilarPares(pares) {
   return pares.map(([orig, repl]) => [new RegExp(escapeRegex(orig), 'g'), repl]);
+}
+
+function algumMapaCodificaPar(original, substituto, mapasHex) {
+  return mapasHex.some(mapa =>
+    encodeTextWithCMap(original, mapa) && encodeTextWithCMap(substituto, mapa)
+  );
+}
+
+function escolherSubstitutoNominalCompativel(original, atual, candidatos, mapasHex) {
+  if (!original || !atual || !mapasHex.length) return atual;
+  if (algumMapaCodificaPar(original, atual, mapasHex)) return atual;
+
+  return candidatos.find(candidato =>
+    algumMapaCodificaPar(original, candidato, mapasHex)
+  ) || atual;
+}
+
+function ajustarDadosFicticiosParaMapasHex(dadosOriginais, dadosFicticios, mapasHex) {
+  if (!mapasHex.length) return { ...dadosFicticios };
+
+  const ajustados = {
+    ...dadosFicticios,
+    nits: Array.isArray(dadosFicticios.nits) ? [...dadosFicticios.nits] : []
+  };
+
+  if (dadosOriginais.nome && ajustados.nome) {
+    const primeiroNome = dadosOriginais.nome.trim().split(/\s+/)[0]?.toUpperCase();
+    const candidatosTitular = primeiroNome
+      ? CANDIDATOS_SUFIXO_TITULAR.map(sufixo => `${primeiroNome} ${sufixo}`)
+      : [];
+
+    ajustados.nome = escolherSubstitutoNominalCompativel(
+      dadosOriginais.nome,
+      ajustados.nome,
+      candidatosTitular,
+      mapasHex
+    );
+  }
+
+  if (dadosOriginais.nomeMae && ajustados.nomeMae) {
+    ajustados.nomeMae = escolherSubstitutoNominalCompativel(
+      dadosOriginais.nomeMae,
+      ajustados.nomeMae,
+      CANDIDATOS_NOME_MAE,
+      mapasHex
+    );
+  }
+
+  return ajustados;
 }
 
 function criarEspecificacaoNominal(id, label, original, ficticio) {
@@ -517,8 +582,18 @@ async function extrairDadosSensiveis(pdfBytes) {
 // ── SUBSTITUIÇÃO ──────────────────────────────────────────────────────────────
 
 async function substituirDadosNoPDF(pdfBytes, dadosOriginais, dadosFicticios) {
-  const specs = montarEspecificacoesSubstituicao(dadosOriginais, dadosFicticios);
   const hits = {};
+  let bytesTrabalho = toUint8Array(pdfBytes);
+  let alterouStreams = false;
+
+  const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes, { ignoreEncryption: true, updateMetadata: false });
+  const mapasHex = extrairMapasHexPorFonte(pdfDoc);
+  const dadosFicticiosAjustados = ajustarDadosFicticiosParaMapasHex(
+    dadosOriginais,
+    dadosFicticios,
+    mapasHex
+  );
+  const specs = montarEspecificacoesSubstituicao(dadosOriginais, dadosFicticiosAjustados);
 
   if (specs.length === 0) {
     const bytesSemAlteracao = toUint8Array(pdfBytes);
@@ -528,15 +603,12 @@ async function substituirDadosNoPDF(pdfBytes, dadosOriginais, dadosFicticios) {
       expectedCount: 0,
       appliedCount: 0,
       unreplacedFields: [],
-      unmatchedFields: []
+      unmatchedFields: [],
+      dadosFicticios: dadosFicticiosAjustados
     };
   }
 
-  let bytesTrabalho = toUint8Array(pdfBytes);
-  let alterouStreams = false;
-
-  const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes, { ignoreEncryption: true, updateMetadata: false });
-  const specsHex = montarEspecificacoesHex(specs, extrairMapasHexPorFonte(pdfDoc));
+  const specsHex = montarEspecificacoesHex(specs, mapasHex);
 
   for (const [, obj] of pdfDoc.context.enumerateIndirectObjects()) {
     if (!(obj.contents instanceof Uint8Array) || !obj.dict) continue;
@@ -574,7 +646,8 @@ async function substituirDadosNoPDF(pdfBytes, dadosOriginais, dadosFicticios) {
     expectedCount: specs.length,
     appliedCount,
     unreplacedFields,
-    unmatchedFields
+    unmatchedFields,
+    dadosFicticios: dadosFicticiosAjustados
   };
 }
 

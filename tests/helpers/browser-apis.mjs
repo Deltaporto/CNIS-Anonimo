@@ -85,6 +85,7 @@ export async function loadPdfProcessorApi() {
       extrairDadosSensiveis,
       substituirDadosNoPDF,
       verificarSubstituicoesNoPDF,
+      ajustarDadosFicticiosParaMapasHex,
       coletarNitsDoTexto,
       extrairNomeDoTexto,
       extrairNomeMaeDoTexto,

@@ -104,8 +104,9 @@ async function processarArquivo(file, item, indice, totalArquivos) {
 
     const dadosFicticios = gerarDadosFicticios(dadosOriginais);
     const resultadoPdf = await substituirDadosNoPDF(pdfBytes, dadosOriginais, dadosFicticios);
+    const dadosFicticiosAplicados = resultadoPdf.dadosFicticios || dadosFicticios;
 
-    mostrarSubs(item, dadosOriginais, dadosFicticios);
+    mostrarSubs(item, dadosOriginais, dadosFicticiosAplicados);
 
     if (!resultadoPdf.ok) {
       setProgresso(item, 100, false, true);
