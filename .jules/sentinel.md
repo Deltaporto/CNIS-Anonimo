@@ -1,0 +1,4 @@
+## 2024-05-24 - PDF.js eval() Vulnerability Prevention
+**Vulnerability:** PDF files can contain embedded JavaScript that could potentially be executed using `eval()` during document parsing with pdfjs-dist.
+**Learning:** By default, pdfjs-dist might attempt to evaluate JavaScript found within the PDF to support certain features (like forms or actions), which introduces an arbitrary code execution risk if a malicious PDF is uploaded by a user.
+**Prevention:** Always initialize `pdfjsLib.getDocument` with the option `{ isEvalSupported: false }` as a defense-in-depth measure, especially when rendering or extracting text from user-provided PDFs.
