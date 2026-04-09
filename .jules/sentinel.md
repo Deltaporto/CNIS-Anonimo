@@ -1,0 +1,4 @@
+## 2025-04-09 - [PDF Parsing Sandbox Escape]
+**Vulnerability:** The client-side PDF parsing using `pdfjs-dist` was calling `getDocument` without disabling `eval()` support. This could allow arbitrary JavaScript execution via `eval()` embedded in malicious PDFs, posing a severe security risk in an environment where PDFs are parsed.
+**Learning:** `pdfjs-dist` has a fallback execution path that might compile and run code embedded in PDFs if `isEvalSupported` is not strictly set to `false`. Since this tool processes arbitrary files (potentially from untrusted sources like external users submitting CNIS PDFs), the default behavior of `pdfjs-dist` could be leveraged for XSS or deeper sandbox escapes.
+**Prevention:** Always initialize `pdfjs-dist`'s `getDocument` with `{ isEvalSupported: false }` as a defense-in-depth measure to enforce a strict no-execution sandbox when processing untrusted PDFs.
