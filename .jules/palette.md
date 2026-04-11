@@ -1,0 +1,3 @@
+## 2025-02-18 - Visual Feedback for Client-Side JSZip Generation
+**Learning:** Heavy client-side operations (like generating ZIP files via `JSZip.generateAsync`) can silently block the UI, leaving users without feedback and potentially causing duplicate actions/clicks.
+**Action:** Always wrap these heavy async operations in `try...finally` blocks, displaying a disabled loading state (e.g., changing button text to '⏳ Compactando ZIP...' and setting `disabled=true`) immediately beforehand, and guaranteeing the restoration of the UI state in the `finally` block to prevent the app from getting stuck if generation fails.
