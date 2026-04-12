@@ -1,0 +1,3 @@
+## 2024-04-12 - Accessible ZIP Button Status & Feedback
+**Learning:** When generating large ZIP files in the client-side browser, the UI can freeze. It is important to disable the button and show a loading status (e.g. "Gerando ZIP..."), wrapped in a `try...finally` block. Using `aria-live="polite"` on the button ensures screen readers announce this status update.
+**Action:** Always wrap heavy client-side operations in `try...finally` blocks with explicit loading and disabled UI states to prevent UI freezing and duplicate actions. Apply `role="status"` and `aria-live="polite"` to dynamic text elements so screen readers announce processing updates automatically.
