@@ -1,0 +1,4 @@
+## 2026-04-12 - Disable `eval()` in PDF.js during Document Processing
+**Vulnerability:** PDF files processed via PDF.js on the client-side can potentially execute malicious JavaScript via `eval()` if `isEvalSupported` is not explicitly disabled, leading to Arbitrary Code Execution within the browser.
+**Learning:** `pdfjs-dist` defaults to supporting `eval()` to optimize certain PDF operations. However, this codebase handles arbitrary untrusted PDFs (from users). Relying on default configurations for untrusted inputs introduces an unnecessary attack vector. This defense-in-depth measure is essential for client-side PDF handling.
+**Prevention:** Always initialize `pdfjsLib.getDocument()` with `isEvalSupported: false` when processing untrusted PDFs on the client-side to prevent possible arbitrary JavaScript execution.
