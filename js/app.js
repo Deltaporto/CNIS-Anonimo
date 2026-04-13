@@ -235,6 +235,7 @@ function coletarObservacoes(dadosOriginais, resultadoPdf, modo = 'cnis') {
     if (!dadosOriginais.nome) ausentes.push('Nome/Titular');
     if (!dadosOriginais.numeroBeneficio) ausentes.push('Número do benefício');
     if (!dadosOriginais.codigoAutenticidade) ausentes.push('Código de autenticidade');
+    if (!dadosOriginais.endereco) ausentes.push('Endereço');
     if (!dadosOriginais.cpf && (!Array.isArray(dadosOriginais.nits) || dadosOriginais.nits.length === 0)) {
       ausentes.push('CPF ou NIT');
     }
@@ -326,6 +327,7 @@ function mascarar(valor, campo) {
   if (campo === 'nome' || campo === 'mae') return valor.split(' ')[0] + ' ****';
   if (campo === 'beneficio') return valor.replace(/\d(?=(?:\D*\d){2})/g, '*');
   if (campo === 'codigo') return valor.slice(0, 6) + '***';
+  if (campo === 'endereco') return valor.split(/\s+/).slice(0, 2).join(' ') + ' ***';
   return valor;
 }
 
@@ -357,6 +359,10 @@ function construirParesSubstituicao(originais, ficticios, modo = originais.tipoD
 
   if (originais.codigoAutenticidade || ficticios.codigoAutenticidade) {
     pares.push(['Código', originais.codigoAutenticidade, ficticios.codigoAutenticidade, 'codigo']);
+  }
+
+  if (originais.endereco || ficticios.endereco) {
+    pares.push(['Endereço', originais.endereco, ficticios.endereco, 'endereco']);
   }
 
   if (originais.nomeMae || ficticios.nomeMae) {

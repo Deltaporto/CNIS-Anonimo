@@ -57,6 +57,28 @@ test('extrai titular, número do benefício e código de autenticidade da carta 
   );
 });
 
+test('extrai bloco de endereço a partir de linhas rotuladas', () => {
+  const antigo = pdfProcessorApi.extrairEnderecoDasLinhas([
+    'Órgão Pagador / Agência Bancária: 0493 / BRASIL - JACAREPAGUA-RIO DE JANEIRO,RJ',
+    'Endereço: AVENIDA GEREMARIO DANTAS, 78 - TANQUE - JACAREPAGUA',
+    'Cálculo de Benefícios segundo a Lei 9876, de 29/11/1999'
+  ]);
+  const novo = pdfProcessorApi.extrairEnderecoDasLinhas([
+    'Banco: BANCO CREFISA',
+    'Agência: 0000 - FILIAL ABOLICAO-RJ',
+    'Endereço',
+    'AVENIDA DOM HELDER CAMARA, 7121 -',
+    'LOJA A - PILARES',
+    'SEU CADASTRO NA PREVIDÊNCIA SOCIAL'
+  ]);
+
+  assert.equal(antigo.endereco, 'AVENIDA GEREMARIO DANTAS, 78 - TANQUE - JACAREPAGUA');
+  assert.deepEqual(antigo.enderecoLinhasBrutas, ['Endereço: AVENIDA GEREMARIO DANTAS, 78 - TANQUE - JACAREPAGUA']);
+
+  assert.equal(novo.endereco, 'AVENIDA DOM HELDER CAMARA, 7121 - LOJA A - PILARES');
+  assert.deepEqual(novo.enderecoLinhas, ['AVENIDA DOM HELDER CAMARA, 7121 -', 'LOJA A - PILARES']);
+});
+
 test('substitui conteúdo codificado em hex usando mapa ToUnicode reverso', () => {
   const cmap = `
 /CIDInit /ProcSet findresource begin

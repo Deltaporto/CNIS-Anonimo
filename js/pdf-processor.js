@@ -117,6 +117,103 @@ function inferirTipoDocumentoNoTexto(texto) {
   return 'cnis';
 }
 
+function agruparLinhasPorCoordenada(itens = []) {
+  const grupos = new Map();
+
+  for (const item of itens) {
+    const texto = normalizarEspacos(item?.str || '');
+    if (!texto) continue;
+
+    const y = Number(item?.transform?.[5] || 0).toFixed(2);
+    const x = Number(item?.transform?.[4] || 0);
+
+    if (!grupos.has(y)) grupos.set(y, []);
+    grupos.get(y).push({ x, texto });
+  }
+
+  return [...grupos.entries()]
+    .sort((a, b) => Number(b[0]) - Number(a[0]))
+    .map(([, partes]) =>
+      normalizarEspacos(
+        partes
+          .sort((a, b) => a.x - b.x)
+          .map(parte => parte.texto)
+          .join(' ')
+      )
+    )
+    .filter(Boolean);
+}
+
+function linhaEhRotuloDeParadaEndereco(linha = '') {
+  return /^(?:Banco\b|Ag[eê]ncia\b|Local de Pagamento\b|Dados do Pagamento do Benef[ií]cio\b|C[aá]lculo\b|SEQ\b|Seu cadastro\b|Pagamento do Benef[ií]cio\b|Voc[eê]\b|Ap[oó]s\b|Comunicamos\b|Mantenha\b|Aps:|Nome:|Titular:|CPF\b|Nit:|N[úu]mero do Benef[ií]cio\b|Data de Concess[aã]o\b|Sal[aá]rio\b|Valor do Benef[ií]cio\b|\*|P[aá]gina\b)/i.test(linha);
+}
+
+function linhaPareceEnderecoInicial(linha = '') {
+  return /\b(?:RUA|AV(?:ENIDA)?|ALAMEDA|TRAVESSA|ESTRADA|RODOVIA|PRA[CÇ]A|LARGO|VIA)\b/i.test(linha)
+    || /\d/.test(linha);
+}
+
+function linhaPareceEnderecoContinuacao(linha = '') {
+  return /\b(?:LOJA|SALA|CASA|BLOCO|APTO?|ANDAR|CJ|CONJ|QD|QUADRA|LT|LOTE|FUNDOS)\b/i.test(linha)
+    || /^[A-ZÀ-Ý0-9][A-ZÀ-Ý0-9\s.'/-]+$/.test(linha);
+}
+
+function extrairEnderecoDasLinhas(linhas = []) {
+  for (let i = 0; i < linhas.length; i++) {
+    const linha = normalizarEspacos(linhas[i]);
+    if (!/^Endere(?:ç|c)o\b/i.test(linha)) continue;
+
+    const matchInline = linha.match(/^Endere(?:ç|c)o\s*:\s*(.+)$/i);
+    const enderecoLinhas = [];
+    const enderecoLinhasBrutas = [];
+
+    if (matchInline?.[1]) {
+      const valor = normalizarEspacos(matchInline[1]);
+      if (valor) {
+        enderecoLinhas.push(valor);
+        enderecoLinhasBrutas.push(linha);
+      }
+    }
+
+    let lacunasAposCaptura = 0;
+    for (let j = i + 1; j < Math.min(linhas.length, i + 8); j++) {
+      const proxima = normalizarEspacos(linhas[j]);
+      if (!proxima) continue;
+      if (linhaEhRotuloDeParadaEndereco(proxima)) {
+        if (enderecoLinhas.length) break;
+        continue;
+      }
+
+      if (!enderecoLinhas.length) {
+        if (!linhaPareceEnderecoInicial(proxima)) continue;
+      } else if (!linhaPareceEnderecoContinuacao(proxima)) {
+        lacunasAposCaptura += 1;
+        if (lacunasAposCaptura >= 2) break;
+        continue;
+      }
+
+      enderecoLinhas.push(proxima);
+      enderecoLinhasBrutas.push(proxima);
+      lacunasAposCaptura = 0;
+      if (enderecoLinhas.length >= 3) break;
+    }
+
+    if (enderecoLinhas.length) {
+      return {
+        endereco: enderecoLinhas.join(' '),
+        enderecoLinhas,
+        enderecoLinhasBrutas
+      };
+    }
+  }
+
+  return {
+    endereco: '',
+    enderecoLinhas: [],
+    enderecoLinhasBrutas: []
+  };
+}
+
 function escapeRegex(valor) {
   return valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -283,6 +380,37 @@ function criarEspecificacaoNumeroBeneficio(id, label, original, ficticio) {
   };
 }
 
+function criarEspecificacaoEndereco(dadosOriginais, dadosFicticios) {
+  const origLinhas = Array.isArray(dadosOriginais.enderecoLinhas) ? dadosOriginais.enderecoLinhas : [];
+  const origBrutas = Array.isArray(dadosOriginais.enderecoLinhasBrutas)
+    ? dadosOriginais.enderecoLinhasBrutas
+    : [];
+  const fakeLinhas = Array.isArray(dadosFicticios.enderecoLinhas) ? dadosFicticios.enderecoLinhas : [];
+
+  if (!origLinhas.length || origLinhas.length !== fakeLinhas.length) return null;
+
+  const pairs = [];
+  const verifyOriginals = [];
+
+  for (let i = 0; i < origLinhas.length; i++) {
+    const original = origLinhas[i];
+    const substituto = fakeLinhas[i];
+    const bruto = origBrutas[i] || original;
+    const brutoFake = bruto === original ? substituto : bruto.replace(original, substituto);
+
+    pairs.push([original, substituto]);
+    pairs.push([bruto, brutoFake]);
+    verifyOriginals.push(original, bruto);
+  }
+
+  return {
+    id: 'endereco',
+    label: 'Endereço',
+    pairs: normalizarPares(pairs),
+    verifyOriginals: normalizarListaValores(verifyOriginals)
+  };
+}
+
 function montarEspecificacoesSubstituicao(dadosOriginais, dadosFicticios) {
   const specs = [];
 
@@ -326,6 +454,9 @@ function montarEspecificacoesSubstituicao(dadosOriginais, dadosFicticios) {
       )
     );
   }
+
+  const specEndereco = criarEspecificacaoEndereco(dadosOriginais, dadosFicticios);
+  if (specEndereco) specs.push(specEndereco);
 
   if (dadosOriginais.nomeMae && dadosFicticios.nomeMae) {
     specs.push(criarEspecificacaoNominal('nomeMae', 'Nome da mãe', dadosOriginais.nomeMae, dadosFicticios.nomeMae));
@@ -636,14 +767,19 @@ async function extrairDadosSensiveis(pdfBytes) {
     nits: [],
     nomeMae: '',
     numeroBeneficio: '',
-    codigoAutenticidade: ''
+    codigoAutenticidade: '',
+    endereco: '',
+    enderecoLinhas: [],
+    enderecoLinhasBrutas: []
   };
 
   try {
     for (let paginaAtual = 1; paginaAtual <= pdf.numPages; paginaAtual++) {
       const page = await pdf.getPage(paginaAtual);
-      const itens = (await page.getTextContent()).items.map(item => item.str);
-      const texto = normalizarEspacos(itens.join(' '));
+      const content = await page.getTextContent();
+      const itens = content.items;
+      const texto = normalizarEspacos(itens.map(item => item.str).join(' '));
+      const linhas = agruparLinhasPorCoordenada(itens);
 
       if (inferirTipoDocumentoNoTexto(texto) === 'carta-concessao') {
         resultado.tipoDocumento = 'carta-concessao';
@@ -654,6 +790,14 @@ async function extrairDadosSensiveis(pdfBytes) {
       if (!resultado.numeroBeneficio) resultado.numeroBeneficio = extrairNumeroBeneficioDoTexto(texto);
       if (!resultado.codigoAutenticidade) {
         resultado.codigoAutenticidade = extrairCodigoAutenticidadeDoTexto(texto);
+      }
+      if (!resultado.endereco) {
+        const enderecoExtraido = extrairEnderecoDasLinhas(linhas);
+        if (enderecoExtraido.endereco) {
+          resultado.endereco = enderecoExtraido.endereco;
+          resultado.enderecoLinhas = enderecoExtraido.enderecoLinhas;
+          resultado.enderecoLinhasBrutas = enderecoExtraido.enderecoLinhasBrutas;
+        }
       }
 
       for (const nit of coletarNitsDoTexto(texto)) {

@@ -76,7 +76,8 @@ export async function loadFakeDataApi() {
       gerarCPF,
       gerarNIT,
       gerarNumeroBeneficio,
-      gerarCodigoAutenticidade
+      gerarCodigoAutenticidade,
+      gerarEnderecoFicticio
     };
   `)({ crypto: webcrypto });
 }
@@ -98,6 +99,7 @@ export async function loadPdfProcessorApi() {
       extrairCpfDoTexto,
       extrairNumeroBeneficioDoTexto,
       extrairCodigoAutenticidadeDoTexto,
+      extrairEnderecoDasLinhas,
       parseToUnicodeCMap,
       encodeTextWithCMap,
       montarEspecificacoesSubstituicao,

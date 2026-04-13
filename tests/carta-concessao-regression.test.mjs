@@ -20,6 +20,7 @@ for (const fixture of CARTA_CONCESSAO_FIXTURES) {
     assert.ok(extraidos.nome, 'deve extrair o nome/titular');
     assert.ok(extraidos.numeroBeneficio, 'deve extrair o número do benefício');
     assert.ok(extraidos.codigoAutenticidade, 'deve extrair o código de autenticidade');
+    assert.ok(extraidos.endereco, 'deve extrair o endereço rotulado');
     assert.ok(
       extraidos.cpf || extraidos.nits.length >= 1,
       'deve extrair CPF ou ao menos um NIT'
@@ -29,6 +30,8 @@ for (const fixture of CARTA_CONCESSAO_FIXTURES) {
     assert.equal(ficticios.nome, `${extraidos.nome.split(/\s+/)[0]} FAKE DOS SANTOS`);
     assert.equal(ficticios.numeroBeneficio.length, extraidos.numeroBeneficio.length);
     assert.equal(ficticios.codigoAutenticidade.length, extraidos.codigoAutenticidade.length);
+    assert.equal(ficticios.enderecoLinhas.length, extraidos.enderecoLinhas.length);
+    assert.notEqual(ficticios.endereco, extraidos.endereco);
 
     const processado = await pdfProcessorApi.substituirDadosNoPDF(
       originalBytes,
@@ -49,6 +52,7 @@ for (const fixture of CARTA_CONCESSAO_FIXTURES) {
     assert.equal(reextraidos.nome, ficticiosAplicados.nome);
     assert.equal(reextraidos.numeroBeneficio, ficticiosAplicados.numeroBeneficio);
     assert.equal(reextraidos.codigoAutenticidade, ficticiosAplicados.codigoAutenticidade);
+    assert.equal(reextraidos.endereco, ficticiosAplicados.endereco);
 
     if (extraidos.cpf) {
       assert.equal(reextraidos.cpf, ficticiosAplicados.cpf);

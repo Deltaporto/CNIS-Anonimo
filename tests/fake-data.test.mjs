@@ -24,7 +24,8 @@ test('preserva o primeiro nome e gera um NIT fake por NIT original', () => {
     cpf: '913.665.347-00',
     nits: ['111.68584.40-4', '222.33333.44-5'],
     numeroBeneficio: '171760037-6',
-    codigoAutenticidade: '260310ZNUFO1BMP91ZZ947'
+    codigoAutenticidade: '260310ZNUFO1BMP91ZZ947',
+    enderecoLinhas: ['AVENIDA GEREMARIO DANTAS, 78 - TANQUE - JACAREPAGUA']
   });
 
   assert.equal(dados.nome.split(' ')[0], 'ROSALINA');
@@ -41,4 +42,7 @@ test('preserva o primeiro nome e gera um NIT fake por NIT original', () => {
   assert.notEqual(dados.numeroBeneficio, '171760037-6');
   assert.equal(dados.codigoAutenticidade.length, '260310ZNUFO1BMP91ZZ947'.length);
   assert.notEqual(dados.codigoAutenticidade, '260310ZNUFO1BMP91ZZ947');
+  assert.equal(dados.enderecoLinhas.length, 1);
+  assert.notEqual(dados.enderecoLinhas[0], 'AVENIDA GEREMARIO DANTAS, 78 - TANQUE - JACAREPAGUA');
+  assert.equal(dados.endereco, dados.enderecoLinhas[0]);
 });

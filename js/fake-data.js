@@ -28,6 +28,12 @@ function randomUpperChar() {
   return ALFABETO_MAIUSCULO[randomInt(ALFABETO_MAIUSCULO.length)];
 }
 
+function escolherCharAlternativo(pool, atual, fallbackFn) {
+  const candidatos = pool.filter(char => char !== atual);
+  if (candidatos.length) return candidatos[randomInt(candidatos.length)];
+  return fallbackFn ? fallbackFn() : atual;
+}
+
 function aplicarMascaraNumerica(modelo = '', digitos = '') {
   let indiceDigito = 0;
   let resultado = '';
@@ -140,6 +146,77 @@ function gerarCodigoAutenticidade(codigoOriginal = '') {
   return codigo;
 }
 
+function gerarLinhaEnderecoFicticia(linhaOriginal = '', letrasDisponiveis = [], digitosDisponiveis = []) {
+  const linha = String(linhaOriginal || '').toUpperCase();
+  if (!linha) return '';
+
+  const poolLetras = letrasDisponiveis.length ? letrasDisponiveis : [...ALFABETO_MAIUSCULO];
+  const poolDigitos = digitosDisponiveis.length ? digitosDisponiveis : ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+  let alterou = false;
+  let resultado = '';
+
+  for (const char of linha) {
+    if (/[A-Z]/.test(char)) {
+      const substituto = escolherCharAlternativo(poolLetras, char, randomUpperChar);
+      if (substituto !== char) alterou = true;
+      resultado += substituto;
+      continue;
+    }
+
+    if (/\d/.test(char)) {
+      const substituto = escolherCharAlternativo(poolDigitos, char, randomDigit);
+      if (substituto !== char) alterou = true;
+      resultado += substituto;
+      continue;
+    }
+
+    resultado += char;
+  }
+
+  if (alterou) return resultado;
+
+  const primeiroIndiceLetra = [...linha].findIndex(char => /[A-Z]/.test(char));
+  if (primeiroIndiceLetra >= 0) {
+    const chars = [...resultado];
+    chars[primeiroIndiceLetra] = escolherCharAlternativo(poolLetras, chars[primeiroIndiceLetra], randomUpperChar);
+    return chars.join('');
+  }
+
+  const primeiroIndiceDigito = [...linha].findIndex(char => /\d/.test(char));
+  if (primeiroIndiceDigito >= 0) {
+    const chars = [...resultado];
+    chars[primeiroIndiceDigito] = escolherCharAlternativo(poolDigitos, chars[primeiroIndiceDigito], randomDigit);
+    return chars.join('');
+  }
+
+  return resultado;
+}
+
+function gerarEnderecoFicticio(enderecoLinhasOriginais = []) {
+  const linhas = Array.isArray(enderecoLinhasOriginais)
+    ? enderecoLinhasOriginais.map(linha => String(linha || '').toUpperCase()).filter(Boolean)
+    : [];
+
+  if (!linhas.length) {
+    return {
+      endereco: '',
+      enderecoLinhas: []
+    };
+  }
+
+  const letrasDisponiveis = [...new Set(linhas.join('').match(/[A-Z]/g) || [])];
+  const digitosDisponiveis = [...new Set(linhas.join('').match(/\d/g) || [])];
+  const enderecoLinhas = linhas.map(linha =>
+    gerarLinhaEnderecoFicticia(linha, letrasDisponiveis, digitosDisponiveis)
+  );
+
+  return {
+    endereco: enderecoLinhas.join(' '),
+    enderecoLinhas
+  };
+}
+
 function gerarCPFUnico(cpfOriginal = '') {
   const proibidos = new Set();
   const cpfOriginalDigitos = soDigitos(cpfOriginal);
@@ -167,6 +244,7 @@ function gerarDadosFicticios(originais = {}) {
   const nitsOriginais = Array.isArray(originais.nits) ? originais.nits : [];
   const proibidosNIT = new Set(nitsOriginais.map(soDigitos).filter(Boolean));
   const nitsFicticios = nitsOriginais.map(() => gerarNITUnico(proibidosNIT));
+  const enderecoFicticio = gerarEnderecoFicticio(originais.enderecoLinhas || []);
 
   return {
     nome: gerarNomeCompleto(originais.nome || null),
@@ -178,6 +256,8 @@ function gerarDadosFicticios(originais = {}) {
       : '',
     codigoAutenticidade: originais.codigoAutenticidade
       ? gerarCodigoAutenticidade(originais.codigoAutenticidade)
-      : ''
+      : '',
+    endereco: enderecoFicticio.endereco,
+    enderecoLinhas: enderecoFicticio.enderecoLinhas
   };
 }

@@ -23,7 +23,8 @@ test('monta pares de substituição com NIT 1, NIT 2, benefício, código e nome
       nits: ['111.68584.40-4', '222.33333.44-5'],
       nomeMae: 'MARIA APARECIDA DOS SANTOS',
       numeroBeneficio: '171760037-6',
-      codigoAutenticidade: '260310ZNUFO1BMP91ZZ947'
+      codigoAutenticidade: '260310ZNUFO1BMP91ZZ947',
+      endereco: 'AVENIDA GEREMARIO DANTAS, 78 - TANQUE - JACAREPAGUA'
     },
     {
       nome: 'ROSALINA FAKE DOS SANTOS',
@@ -31,13 +32,14 @@ test('monta pares de substituição com NIT 1, NIT 2, benefício, código e nome
       nits: ['333.44444.55-6', '777.88888.99-0'],
       nomeMae: 'MARIA FAKE DOS SANTOS',
       numeroBeneficio: '987654321-0',
-      codigoAutenticidade: '26041388FU4G0KR-XB4S21'
+      codigoAutenticidade: '26041388FU4G0KR-XB4S21',
+      endereco: 'AVENIDA GERAL 99 - CENTRO'
     }
   );
 
   assert.deepEqual(
     pares.map(([label]) => label),
-    ['Nome', 'CPF', 'NIT 1', 'NIT 2', 'Benefício', 'Código', 'Mãe']
+    ['Nome', 'CPF', 'NIT 1', 'NIT 2', 'Benefício', 'Código', 'Endereço', 'Mãe']
   );
 });
 
@@ -49,7 +51,8 @@ test('coletar observações da carta cobra benefício, código e CPF ou NIT', ()
       nits: [],
       nomeMae: '',
       numeroBeneficio: '',
-      codigoAutenticidade: ''
+      codigoAutenticidade: '',
+      endereco: ''
     },
     {
       unmatchedFields: []
@@ -59,6 +62,6 @@ test('coletar observações da carta cobra benefício, código e CPF ou NIT', ()
 
   assert.deepEqual(
     observacoes,
-    ['não encontrado: Número do benefício, Código de autenticidade, CPF ou NIT']
+    ['não encontrado: Número do benefício, Código de autenticidade, Endereço, CPF ou NIT']
   );
 });
