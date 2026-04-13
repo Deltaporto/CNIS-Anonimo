@@ -5,6 +5,8 @@ import pako from 'pako';
 import * as pdfjsBase from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 const ROOT_URL = new URL('../../', import.meta.url);
+const CNIS_FIXTURES_URL = new URL('teste/', ROOT_URL);
+const CARTA_CONCESSAO_FIXTURES_URL = new URL('teste-carta-de-concessao/', CNIS_FIXTURES_URL);
 const STANDARD_FONT_DATA_URL = new URL('node_modules/pdfjs-dist/standard_fonts/', ROOT_URL).href;
 const originalConsoleWarn = console.warn.bind(console);
 
@@ -47,10 +49,12 @@ function createElementStub() {
     appendChild() {},
     removeChild() {},
     click() {},
+    setAttribute() {},
     querySelector() { return createElementStub(); },
     classList: { add() {}, remove() {} },
     style: {},
     textContent: '',
+    innerHTML: '',
     disabled: false
   };
 }
@@ -70,7 +74,9 @@ export async function loadFakeDataApi() {
       gerarNomeMaeFicticio,
       gerarNomeCompleto,
       gerarCPF,
-      gerarNIT
+      gerarNIT,
+      gerarNumeroBeneficio,
+      gerarCodigoAutenticidade
     };
   `)({ crypto: webcrypto });
 }
@@ -90,6 +96,8 @@ export async function loadPdfProcessorApi() {
       extrairNomeDoTexto,
       extrairNomeMaeDoTexto,
       extrairCpfDoTexto,
+      extrairNumeroBeneficioDoTexto,
+      extrairCodigoAutenticidadeDoTexto,
       parseToUnicodeCMap,
       encodeTextWithCMap,
       montarEspecificacoesSubstituicao,
@@ -136,13 +144,15 @@ export async function loadAppApi() {
 }
 
 export async function readPdfFixture(filename) {
-  const bytes = await fs.readFile(new URL(filename, ROOT_URL));
+  const bytes = await fs.readFile(new URL(filename, CNIS_FIXTURES_URL));
   return new Uint8Array(bytes);
 }
 
-export const CNIS_FIXTURES = [
-  '2_CNIS2.pdf',
-  '3_CNIS2.pdf',
-  '3_CNIS3.pdf',
-  '4_CNIS2.pdf'
-];
+export const CNIS_FIXTURES = (await fs.readdir(CNIS_FIXTURES_URL))
+  .filter(filename => filename.toLowerCase().endsWith('.pdf'))
+  .sort((left, right) => left.localeCompare(right, 'pt-BR', { numeric: true }));
+
+export const CARTA_CONCESSAO_FIXTURES = (await fs.readdir(CARTA_CONCESSAO_FIXTURES_URL))
+  .filter(filename => filename.toLowerCase().endsWith('.pdf'))
+  .sort((left, right) => left.localeCompare(right, 'pt-BR', { numeric: true }))
+  .map(filename => `teste-carta-de-concessao/${filename}`);

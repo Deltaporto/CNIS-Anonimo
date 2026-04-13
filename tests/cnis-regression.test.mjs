@@ -31,6 +31,7 @@ for (const fixture of CNIS_FIXTURES) {
       extraidos,
       ficticios
     );
+    const ficticiosAplicados = processado.dadosFicticios || ficticios;
 
     assert.equal(processado.ok, true, JSON.stringify(processado));
     assert.deepEqual(processado.unreplacedFields, []);
@@ -40,10 +41,9 @@ for (const fixture of CNIS_FIXTURES) {
       : new Uint8Array(processado.bytes);
     const reextraidos = await pdfProcessorApi.extrairDadosSensiveis(bytesAnonimizados);
 
-    assert.equal(reextraidos.nome, ficticios.nome);
-    assert.equal(reextraidos.cpf, ficticios.cpf);
-    assert.equal(reextraidos.nomeMae, ficticios.nomeMae);
-    assert.deepEqual(reextraidos.nits, ficticios.nits);
-    assert.equal(reextraidos.nomeMae, 'MARIA FAKE DOS SANTOS');
+    assert.equal(reextraidos.nome, ficticiosAplicados.nome);
+    assert.equal(reextraidos.cpf, ficticiosAplicados.cpf);
+    assert.equal(reextraidos.nomeMae, ficticiosAplicados.nomeMae);
+    assert.deepEqual(reextraidos.nits, ficticiosAplicados.nits);
   });
 }

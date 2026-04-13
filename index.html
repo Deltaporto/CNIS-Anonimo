@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Anonimizador CNIS — LGPD</title>
+  <title>Anonimizador INSS — LGPD</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23185abd'/%3E%3Cpath d='M18 14h19l9 9v27a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4z' fill='white' opacity='.96'/%3E%3Cpath d='M37 14v10h10' fill='%23dce9ff'/%3E%3Cpath d='M25 31h14M25 38h14M25 45h10' stroke='%23185abd' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -36,7 +36,7 @@
 
 <header>
   <div class="header-inner">
-    <div class="logo-inss">Anonimizador CNIS</div>
+    <div class="logo-inss">Anonimizador INSS</div>
     <div class="logo-badge">LGPD</div>
   </div>
 </header>
@@ -51,14 +51,23 @@
     <span>Os PDFs são processados <strong>só no seu navegador</strong>. Nenhum dado é enviado para servidores.</span>
   </div>
 
+  <div class="modo-selector" role="tablist" aria-label="Tipo de documento para anonimização">
+    <button type="button" class="modo-btn modo-ativo" id="btn-modo-cnis" role="tab" aria-selected="true" aria-pressed="true">
+      Extrato CNIS
+    </button>
+    <button type="button" class="modo-btn" id="btn-modo-carta" role="tab" aria-selected="false" aria-pressed="false">
+      Carta de concessão
+    </button>
+  </div>
+
   <!-- ZONA DE UPLOAD -->
   <div class="zona-upload" id="zona-upload" role="button" tabindex="0" aria-label="Selecionar arquivos PDF do CNIS para anonimizar">
     <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="44" height="44" fill="currentColor" viewBox="0 0 16 16">
       <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
       <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
     </svg>
-    <p class="upload-titulo">Arraste os extratos CNIS aqui</p>
-    <p class="upload-sub">ou <strong>clique para selecionar</strong> · um ou vários arquivos · download automático ao concluir</p>
+    <p class="upload-titulo" id="upload-titulo">Arraste os extratos CNIS aqui</p>
+    <p class="upload-sub" id="upload-sub">ou <strong>clique para selecionar</strong> · um ou vários arquivos · download automático ao concluir</p>
     <input type="file" id="input-arquivo" accept=".pdf,application/pdf" multiple />
   </div>
 
@@ -76,7 +85,7 @@
 </main>
 
 <footer>
-  Ferramenta de anonimização LGPD · Nenhum dado armazenado ou transmitido
+  Ferramenta de anonimização LGPD para CNIS e cartas de concessão · Nenhum dado armazenado ou transmitido
 </footer>
 
 <script src="js/fake-data.js"></script>

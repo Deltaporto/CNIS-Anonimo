@@ -11,12 +11,13 @@ test('coleta múltiplos NITs e deduplica por dígitos', () => {
     'NIT: 111.68584.40-4',
     'PIS/PASEP: 11168584404',
     'Outro NIT: 222.33333.44-5',
-    'NIT: 22233333445'
+    'NIT: 22233333445',
+    'Nit: 1074601784-4'
   ].join(' ');
 
   assert.deepEqual(
     pdfProcessorApi.coletarNitsDoTexto(texto),
-    ['111.68584.40-4', '222.33333.44-5']
+    ['111.68584.40-4', '222.33333.44-5', '1074601784-4']
   );
 });
 
@@ -37,6 +38,23 @@ test('extrai nome, nome da mãe e CPF com variações de rótulo', () => {
     'MARIA APARECIDA DOS SANTOS'
   );
   assert.equal(pdfProcessorApi.extrairCpfDoTexto(texto), '913.665.347-00');
+});
+
+test('extrai titular, número do benefício e código de autenticidade da carta de concessão', () => {
+  const texto = [
+    'CARTA DE CONCESSÃO',
+    'TITULAR: ARMANDO DE OLIVEIRA',
+    'CPF: 013.881.617-45',
+    'Benefício 206.885.719-1',
+    'Você pode conferir a autenticidade deste documento com o código 260312WYHVJRXC7FWY5G55'
+  ].join(' ');
+
+  assert.equal(pdfProcessorApi.extrairNomeDoTexto(texto), 'ARMANDO DE OLIVEIRA');
+  assert.equal(pdfProcessorApi.extrairNumeroBeneficioDoTexto(texto), '206.885.719-1');
+  assert.equal(
+    pdfProcessorApi.extrairCodigoAutenticidadeDoTexto(texto),
+    '260312WYHVJRXC7FWY5G55'
+  );
 });
 
 test('substitui conteúdo codificado em hex usando mapa ToUnicode reverso', () => {

@@ -1,21 +1,98 @@
 // Lógica de lote: processa múltiplos PDFs e baixa como ZIP automaticamente
 
+const MODOS_DOCUMENTO = {
+  cnis: {
+    id: 'cnis',
+    prefixoArquivo: 'CNIS',
+    zipNome: 'CNIS_anonimizados.zip',
+    uploadTitulo: 'Arraste os extratos CNIS aqui',
+    uploadSub: 'ou <strong>clique para selecionar</strong> · um ou vários arquivos · download automático ao concluir',
+    ariaLabel: 'Selecionar arquivos PDF do CNIS para anonimizar',
+    botaoDownloadUm: 'Baixar novamente',
+    botaoDownloadVarios: 'Baixar ZIP novamente'
+  },
+  'carta-concessao': {
+    id: 'carta-concessao',
+    prefixoArquivo: 'Carta de Concessao',
+    zipNome: 'Cartas_de_concessao_anonimizadas.zip',
+    uploadTitulo: 'Arraste as cartas de concessão aqui',
+    uploadSub: 'ou <strong>clique para selecionar</strong> · PDFs de carta de concessão ou memória de cálculo · download automático ao concluir',
+    ariaLabel: 'Selecionar arquivos PDF de carta de concessão para anonimizar',
+    botaoDownloadUm: 'Baixar novamente',
+    botaoDownloadVarios: 'Baixar ZIP novamente'
+  }
+};
+
 const zonaUpload = document.getElementById('zona-upload');
 const inputArquivo = document.getElementById('input-arquivo');
 const listaEl = document.getElementById('lista-arquivos');
 const acoesEl = document.getElementById('acoes-globais');
 const btnBaixarZip = document.getElementById('btn-baixar-zip');
 const btnLimpar = document.getElementById('btn-limpar');
+const btnModoCnis = document.getElementById('btn-modo-cnis');
+const btnModoCarta = document.getElementById('btn-modo-carta');
+const uploadTituloEl = document.getElementById('upload-titulo');
+const uploadSubEl = document.getElementById('upload-sub');
 
 let resultados = [];
+let modoAtual = 'cnis';
+let modoResultados = 'cnis';
+
+function obterConfigModo(modo = 'cnis') {
+  return MODOS_DOCUMENTO[modo] || MODOS_DOCUMENTO.cnis;
+}
+
+function atualizarModoUI() {
+  const config = obterConfigModo(modoAtual);
+
+  if (uploadTituloEl) uploadTituloEl.textContent = config.uploadTitulo;
+  if (uploadSubEl) uploadSubEl.innerHTML = config.uploadSub;
+  if (zonaUpload && typeof zonaUpload.setAttribute === 'function') {
+    zonaUpload.setAttribute('aria-label', config.ariaLabel);
+  }
+
+  if (btnModoCnis?.classList) {
+    btnModoCnis.classList.remove('modo-ativo');
+    btnModoCarta.classList.remove('modo-ativo');
+    (modoAtual === 'cnis' ? btnModoCnis : btnModoCarta).classList.add('modo-ativo');
+  }
+
+  if (btnModoCnis && typeof btnModoCnis.setAttribute === 'function') {
+    btnModoCnis.setAttribute('aria-pressed', String(modoAtual === 'cnis'));
+  }
+  if (btnModoCarta && typeof btnModoCarta.setAttribute === 'function') {
+    btnModoCarta.setAttribute('aria-pressed', String(modoAtual === 'carta-concessao'));
+  }
+}
+
+function limparEstado() {
+  resultados = [];
+  modoResultados = modoAtual;
+  listaEl.textContent = '';
+  listaEl.classList.add('oculto');
+  acoesEl.classList.add('oculto');
+  inputArquivo.value = '';
+}
+
+function trocarModo(modo) {
+  if (!MODOS_DOCUMENTO[modo] || modoAtual === modo) return;
+  modoAtual = modo;
+  limparEstado();
+  atualizarModoUI();
+}
+
+atualizarModoUI();
+
+btnModoCnis?.addEventListener('click', () => trocarModo('cnis'));
+btnModoCarta?.addEventListener('click', () => trocarModo('carta-concessao'));
 
 // ── UPLOAD ────────────────────────────────────────────────────────────────────
 
 zonaUpload.addEventListener('click', () => inputArquivo.click());
 
-zonaUpload.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
+zonaUpload.addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
     inputArquivo.click();
   }
 });
@@ -45,6 +122,7 @@ zonaUpload.addEventListener('drop', event => {
 
 async function iniciarLote(arquivos) {
   resultados = [];
+  modoResultados = modoAtual;
   listaEl.textContent = '';
   listaEl.classList.remove('oculto');
   acoesEl.classList.add('oculto');
@@ -52,29 +130,31 @@ async function iniciarLote(arquivos) {
   const itens = arquivos.map(file => criarItemLista(file.name));
 
   for (let i = 0; i < arquivos.length; i++) {
-    await processarArquivo(arquivos[i], itens[i], i, arquivos.length);
+    await processarArquivo(arquivos[i], itens[i], i, arquivos.length, modoResultados);
   }
 
   if (resultados.length === 0) return;
 
+  const config = obterConfigModo(modoResultados);
   if (resultados.length === 1) {
     baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
   } else {
     const zip = new JSZip();
     for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
     const zipBytes = await zip.generateAsync({ type: 'uint8array' });
-    baixarBlob(zipBytes, 'application/zip', 'CNIS_anonimizados.zip');
+    baixarBlob(zipBytes, 'application/zip', config.zipNome);
   }
 
   acoesEl.classList.remove('oculto');
-  const label = resultados.length === 1 ? 'Baixar novamente' : 'Baixar ZIP novamente';
-  btnBaixarZip.textContent = '⬇ ' + label;
+  btnBaixarZip.textContent = resultados.length === 1
+    ? config.botaoDownloadUm
+    : config.botaoDownloadVarios;
   btnBaixarZip.disabled = false;
 }
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50 MB
 
-async function processarArquivo(file, item, indice, totalArquivos) {
+async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
   setStatus(item, 'processando', 'Processando…');
 
   if (file.size > MAX_PDF_SIZE) {
@@ -106,7 +186,7 @@ async function processarArquivo(file, item, indice, totalArquivos) {
     const resultadoPdf = await substituirDadosNoPDF(pdfBytes, dadosOriginais, dadosFicticios);
     const dadosFicticiosAplicados = resultadoPdf.dadosFicticios || dadosFicticios;
 
-    mostrarSubs(item, dadosOriginais, dadosFicticiosAplicados);
+    mostrarSubs(item, dadosOriginais, dadosFicticiosAplicados, modoLote);
 
     if (!resultadoPdf.ok) {
       setProgresso(item, 100, false, true);
@@ -126,7 +206,7 @@ async function processarArquivo(file, item, indice, totalArquivos) {
 
     setProgresso(item, 100, true);
 
-    const observacoes = coletarObservacoes(dadosOriginais, resultadoPdf);
+    const observacoes = coletarObservacoes(dadosOriginais, resultadoPdf, modoLote);
     if (observacoes.length) {
       setStatus(item, 'aviso', 'Concluído (' + observacoes.join('; ') + ')');
     } else {
@@ -134,7 +214,7 @@ async function processarArquivo(file, item, indice, totalArquivos) {
     }
 
     resultados.push({
-      nome: gerarNomeSaida(dadosOriginais.nome, indice, totalArquivos),
+      nome: gerarNomeSaida(dadosOriginais.nome, indice, totalArquivos, modoLote),
       bytes: resultadoPdf.bytes
     });
   } catch (err) {
@@ -144,14 +224,23 @@ async function processarArquivo(file, item, indice, totalArquivos) {
   }
 }
 
-function coletarObservacoes(dadosOriginais, resultadoPdf) {
+function coletarObservacoes(dadosOriginais, resultadoPdf, modo = 'cnis') {
   const observacoes = [];
   const ausentes = [];
 
-  if (!dadosOriginais.nome) ausentes.push('Nome');
-  if (!dadosOriginais.cpf) ausentes.push('CPF');
-  if (!Array.isArray(dadosOriginais.nits) || dadosOriginais.nits.length === 0) ausentes.push('NIT');
-  if (!dadosOriginais.nomeMae) ausentes.push('Nome da mãe');
+  if (modo === 'carta-concessao') {
+    if (!dadosOriginais.nome) ausentes.push('Nome/Titular');
+    if (!dadosOriginais.numeroBeneficio) ausentes.push('Número do benefício');
+    if (!dadosOriginais.codigoAutenticidade) ausentes.push('Código de autenticidade');
+    if (!dadosOriginais.cpf && (!Array.isArray(dadosOriginais.nits) || dadosOriginais.nits.length === 0)) {
+      ausentes.push('CPF ou NIT');
+    }
+  } else {
+    if (!dadosOriginais.nome) ausentes.push('Nome');
+    if (!dadosOriginais.cpf) ausentes.push('CPF');
+    if (!Array.isArray(dadosOriginais.nits) || dadosOriginais.nits.length === 0) ausentes.push('NIT');
+    if (!dadosOriginais.nomeMae) ausentes.push('Nome da mãe');
+  }
 
   if (ausentes.length) observacoes.push('não encontrado: ' + ausentes.join(', '));
   if (resultadoPdf.unmatchedFields.length) {
@@ -161,17 +250,19 @@ function coletarObservacoes(dadosOriginais, resultadoPdf) {
   return observacoes;
 }
 
-function gerarNomeSaida(nomeOriginal, indice, totalArquivos) {
+function gerarNomeSaida(nomeOriginal, indice, totalArquivos, modo = 'cnis') {
   const primeiroNome = nomeOriginal
     ? nomeOriginal.trim().split(/\s+/)[0]
     : 'Anonimizado';
 
   const nomeTitleCase = primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase();
-  if (totalArquivos === 1) return `CNIS ${nomeTitleCase}.pdf`;
+  const prefixo = obterConfigModo(modo).prefixoArquivo;
+
+  if (totalArquivos === 1) return `${prefixo} ${nomeTitleCase}.pdf`;
 
   const largura = Math.max(2, String(totalArquivos).length);
   const sequencia = String(indice + 1).padStart(largura, '0');
-  return `CNIS ${nomeTitleCase} ${sequencia}.pdf`;
+  return `${prefixo} ${nomeTitleCase} ${sequencia}.pdf`;
 }
 
 // ── DOM HELPERS ───────────────────────────────────────────────────────────────
@@ -230,18 +321,24 @@ function mascarar(valor, campo) {
   if (campo === 'cpf') return valor.slice(0, 4) + '***.***-**';
   if (campo === 'nit') return valor.slice(0, 4) + '*****.**-*';
   if (campo === 'nome' || campo === 'mae') return valor.split(' ')[0] + ' ****';
+  if (campo === 'beneficio') return valor.replace(/\d(?=(?:\D*\d){2})/g, '*');
+  if (campo === 'codigo') return valor.slice(0, 6) + '***';
   return valor;
 }
 
-function construirParesSubstituicao(originais, ficticios) {
-  const pares = [
-    ['Nome', originais.nome, ficticios.nome, 'nome'],
-    ['CPF', originais.cpf, ficticios.cpf, 'cpf']
-  ];
+function construirParesSubstituicao(originais, ficticios, modo = originais.tipoDocumento || 'cnis') {
+  const pares = [];
+
+  if (originais.nome || ficticios.nome) {
+    pares.push([modo === 'carta-concessao' ? 'Titular' : 'Nome', originais.nome, ficticios.nome, 'nome']);
+  }
+
+  if (originais.cpf || ficticios.cpf) {
+    pares.push(['CPF', originais.cpf, ficticios.cpf, 'cpf']);
+  }
 
   const nitsOriginais = Array.isArray(originais.nits) ? originais.nits : [];
   const nitsFicticios = Array.isArray(ficticios.nits) ? ficticios.nits : [];
-
   for (let i = 0; i < nitsOriginais.length; i++) {
     pares.push([
       nitsOriginais.length > 1 ? `NIT ${i + 1}` : 'NIT',
@@ -251,11 +348,22 @@ function construirParesSubstituicao(originais, ficticios) {
     ]);
   }
 
-  pares.push(['Mãe', originais.nomeMae, ficticios.nomeMae, 'mae']);
+  if (originais.numeroBeneficio || ficticios.numeroBeneficio) {
+    pares.push(['Benefício', originais.numeroBeneficio, ficticios.numeroBeneficio, 'beneficio']);
+  }
+
+  if (originais.codigoAutenticidade || ficticios.codigoAutenticidade) {
+    pares.push(['Código', originais.codigoAutenticidade, ficticios.codigoAutenticidade, 'codigo']);
+  }
+
+  if (originais.nomeMae || ficticios.nomeMae) {
+    pares.push(['Mãe', originais.nomeMae, ficticios.nomeMae, 'mae']);
+  }
+
   return pares;
 }
 
-function mostrarSubs(item, originais, ficticios) {
+function mostrarSubs(item, originais, ficticios, modo) {
   const el = item.querySelector('.arquivo-subs');
   el.textContent = '';
 
@@ -275,7 +383,7 @@ function mostrarSubs(item, originais, ficticios) {
 
   tabela.appendChild(header);
 
-  const pares = construirParesSubstituicao(originais, ficticios);
+  const pares = construirParesSubstituicao(originais, ficticios, modo);
   pares.filter(([, original]) => original).forEach(([label, original, fake, campo]) => {
     const linha = document.createElement('div');
     linha.className = 'sub-linha';
@@ -320,6 +428,8 @@ function baixarBlob(bytes, tipo, nome) {
 // ── BOTÕES ────────────────────────────────────────────────────────────────────
 
 btnBaixarZip.addEventListener('click', async () => {
+  const config = obterConfigModo(modoResultados);
+
   if (resultados.length === 1) {
     baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
     return;
@@ -328,13 +438,10 @@ btnBaixarZip.addEventListener('click', async () => {
   const zip = new JSZip();
   for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
   const zipBytes = await zip.generateAsync({ type: 'uint8array' });
-  baixarBlob(zipBytes, 'application/zip', 'CNIS_anonimizados.zip');
+  baixarBlob(zipBytes, 'application/zip', config.zipNome);
 });
 
 btnLimpar.addEventListener('click', () => {
-  resultados = [];
-  listaEl.textContent = '';
-  listaEl.classList.add('oculto');
-  acoesEl.classList.add('oculto');
-  inputArquivo.value = '';
+  limparEstado();
+  atualizarModoUI();
 });

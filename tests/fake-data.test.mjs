@@ -22,7 +22,9 @@ test('preserva o primeiro nome e gera um NIT fake por NIT original', () => {
   const dados = fakeDataApi.gerarDadosFicticios({
     nome: 'ROSALINA DA CONCEICAO CRUZ ALBERTO',
     cpf: '913.665.347-00',
-    nits: ['111.68584.40-4', '222.33333.44-5']
+    nits: ['111.68584.40-4', '222.33333.44-5'],
+    numeroBeneficio: '171760037-6',
+    codigoAutenticidade: '260310ZNUFO1BMP91ZZ947'
   });
 
   assert.equal(dados.nome.split(' ')[0], 'ROSALINA');
@@ -35,4 +37,8 @@ test('preserva o primeiro nome e gera um NIT fake por NIT original', () => {
     dados.nits.map(valor => valor.replace(/\D/g, '')),
     ['11168584404', '22233333445']
   );
+  assert.equal(dados.numeroBeneficio.length, '171760037-6'.length);
+  assert.notEqual(dados.numeroBeneficio, '171760037-6');
+  assert.equal(dados.codigoAutenticidade.length, '260310ZNUFO1BMP91ZZ947'.length);
+  assert.notEqual(dados.codigoAutenticidade, '260310ZNUFO1BMP91ZZ947');
 });

@@ -117,6 +117,46 @@ main {
 }
 .aviso-lgpd svg { flex-shrink: 0; }
 
+/* ── MODOS ── */
+.modo-selector {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.modo-btn {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink-soft);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  cursor: pointer;
+  transition: border-color .18s, background .18s, color .18s, box-shadow .18s, transform .18s;
+  box-shadow: var(--shadow);
+}
+
+.modo-btn:hover {
+  border-color: #c3d1eb;
+  color: var(--navy);
+  transform: translateY(-1px);
+}
+
+.modo-btn:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.modo-btn.modo-ativo {
+  border-color: var(--navy-light);
+  background: linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
+  color: var(--navy);
+  box-shadow: 0 2px 12px rgba(26, 74, 138, .14);
+}
+
 /* ── UPLOAD ── */
 .zona-upload {
   border: 2px dashed var(--border);
@@ -378,4 +418,15 @@ footer {
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
+}
+
+@media (max-width: 640px) {
+  .modo-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .subs-header,
+  .sub-linha {
+    grid-template-columns: 64px 1fr 14px 1fr;
+  }
 }

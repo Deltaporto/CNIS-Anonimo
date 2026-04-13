@@ -6,6 +6,7 @@
 const PRIMEIROS_MASC = ['JOAO', 'CARLOS', 'JOSE', 'PEDRO', 'PAULO'];
 const PRIMEIROS_FEM  = ['MARIA', 'ANA', 'FRANCISCA', 'JULIA', 'SANDRA'];
 const SOBRENOME_FICTICIO = 'FAKE DOS SANTOS';
+const ALFABETO_MAIUSCULO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 function randomInt(max) {
   return crypto.getRandomValues(new Uint32Array(1))[0] % max;
@@ -17,6 +18,32 @@ function escolha(arr) {
 
 function soDigitos(valor = '') {
   return String(valor).replace(/\D/g, '');
+}
+
+function randomDigit() {
+  return String(randomInt(10));
+}
+
+function randomUpperChar() {
+  return ALFABETO_MAIUSCULO[randomInt(ALFABETO_MAIUSCULO.length)];
+}
+
+function aplicarMascaraNumerica(modelo = '', digitos = '') {
+  let indiceDigito = 0;
+  let resultado = '';
+
+  for (const char of String(modelo)) {
+    if (/\d/.test(char)) {
+      resultado += digitos[indiceDigito] || '';
+      indiceDigito += 1;
+      continue;
+    }
+
+    resultado += char;
+  }
+
+  if (!resultado && digitos) return digitos;
+  return resultado;
 }
 
 // Gera nome fictício preservando o primeiro nome original: "ROSALINA FAKE DOS SANTOS"
@@ -69,6 +96,50 @@ function gerarNIT() {
   return `${n.slice(0, 3)}.${n.slice(3, 8)}.${n.slice(8, 10)}-${n.slice(10)}`;
 }
 
+function gerarNumeroBeneficio(numeroOriginal = '') {
+  const digitosOriginais = soDigitos(numeroOriginal);
+  const quantidadeDigitos = digitosOriginais.length || 10;
+
+  let digitos;
+  do {
+    digitos = Array.from(
+      crypto.getRandomValues(new Uint8Array(quantidadeDigitos)),
+      byte => String(byte % 10)
+    ).join('');
+  } while (
+    digitos === digitosOriginais ||
+    /^(\d)\1+$/.test(digitos)
+  );
+
+  return aplicarMascaraNumerica(numeroOriginal, digitos);
+}
+
+function gerarCodigoAutenticidade(codigoOriginal = '') {
+  const modelo = String(codigoOriginal || '').trim().toUpperCase();
+  if (!modelo) return '';
+  const digitosDisponiveis = [...new Set([...modelo].filter(char => /\d/.test(char)))];
+  const letrasDisponiveis = [...new Set([...modelo].filter(char => /[A-Z]/.test(char)))];
+
+  let codigo;
+  do {
+    codigo = [...modelo].map(char => {
+      if (/\d/.test(char)) {
+        return digitosDisponiveis.length
+          ? digitosDisponiveis[randomInt(digitosDisponiveis.length)]
+          : randomDigit();
+      }
+      if (/[A-Z]/.test(char)) {
+        return letrasDisponiveis.length
+          ? letrasDisponiveis[randomInt(letrasDisponiveis.length)]
+          : randomUpperChar();
+      }
+      return char;
+    }).join('');
+  } while (codigo === modelo);
+
+  return codigo;
+}
+
 function gerarCPFUnico(cpfOriginal = '') {
   const proibidos = new Set();
   const cpfOriginalDigitos = soDigitos(cpfOriginal);
@@ -101,6 +172,12 @@ function gerarDadosFicticios(originais = {}) {
     nome: gerarNomeCompleto(originais.nome || null),
     cpf: gerarCPFUnico(originais.cpf || ''),
     nits: nitsFicticios,
-    nomeMae: gerarNomeMaeFicticio()
+    nomeMae: gerarNomeMaeFicticio(),
+    numeroBeneficio: originais.numeroBeneficio
+      ? gerarNumeroBeneficio(originais.numeroBeneficio)
+      : '',
+    codigoAutenticidade: originais.codigoAutenticidade
+      ? gerarCodigoAutenticidade(originais.codigoAutenticidade)
+      : ''
   };
 }

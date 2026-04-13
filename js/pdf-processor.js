@@ -39,8 +39,18 @@ function formatarNIT(valor = '') {
   return `${digitos.slice(0, 3)}.${digitos.slice(3, 8)}.${digitos.slice(8, 10)}-${digitos.slice(10)}`;
 }
 
+function formatarNumeroBeneficio(valor = '') {
+  const digitos = soDigitos(valor);
+  if (digitos.length !== 10) return '';
+  return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9)}`;
+}
+
 function limparNomeExtraido(valor = '') {
   return normalizarEspacos(valor.replace(/[:;,.\-]+$/g, ''));
+}
+
+function limparCodigoAutenticidade(valor = '') {
+  return normalizarEspacos(valor).replace(/[.;,:]+$/g, '').toUpperCase();
 }
 
 function adicionarValorUnico(lista, valor, chaveFn = v => v) {
@@ -65,9 +75,8 @@ function coletarNitsDoTexto(texto) {
     adicionarValorUnico(encontrados, match[0], soDigitos);
   }
 
-  for (const match of texto.matchAll(/\b(?:NIT|NIS|PIS(?:\/PASEP)?|PASEP)\s*:?\s*(\d{11}|\d{3}\.\d{5}\.\d{2}-\d)\b/gi)) {
-    const nit = formatarNIT(match[1]);
-    adicionarValorUnico(encontrados, nit, soDigitos);
+  for (const match of texto.matchAll(/\b(?:NIT|NIS|PIS(?:\/PASEP)?|PASEP)\s*:?\s*(\d{11}|\d{10}-\d|\d{3}\.\d{5}\.\d{2}-\d)\b/gi)) {
+    adicionarValorUnico(encontrados, normalizarEspacos(match[1]), soDigitos);
   }
 
   return encontrados;
@@ -75,7 +84,7 @@ function coletarNitsDoTexto(texto) {
 
 function extrairNomeDoTexto(texto) {
   const match = texto.match(
-    /\bNome(?!\s+da\s+m(?:ã|a)e)\s*:?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s'`.-]+?)(?=\s+(?:Nome da m(?:ã|a)e|M(?:ã|a)e|CPF|NIT|NIS|PIS|PASEP|Data\b|P(?:á|a)gina\b|Identifica(?:ç|c)ão\b|Origem\b|C(?:ó|o)digo\b)|$)/i
+    /\b(?:Nome|Titular)(?!\s+da\s+m(?:ã|a)e)\s*:?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s'`.-]+?)(?=\s+(?:Nome da m(?:ã|a)e|M(?:ã|a)e|CPF|NIT|NIS|PIS|PASEP|Data\b|P(?:á|a)gina\b|Identifica(?:ç|c)ão\b|Origem\b|C(?:ó|o)digo\b|Benef[ií]cio\b|N[úu]mero do Benef[ií]cio\b|Aps\b)|$)/i
   );
   return match ? limparNomeExtraido(match[1]) : '';
 }
@@ -85,6 +94,27 @@ function extrairNomeMaeDoTexto(texto) {
     /\b(?:Nome da m(?:ã|a)e|M(?:ã|a)e)\s*:?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s'`.-]+?)(?=\s+(?:Nome\b|CPF|NIT|NIS|PIS|PASEP|Data\b|P(?:á|a)gina\b|Identifica(?:ç|c)ão\b|Origem\b|C(?:ó|o)digo\b)|$)/i
   );
   return match ? limparNomeExtraido(match[1]) : '';
+}
+
+function extrairNumeroBeneficioDoTexto(texto) {
+  const matchRotulado = texto.match(
+    /\b(?:N[úu]mero do Benef[ií]cio|Benef[ií]cio)\s*:?\s*(\d{3}\.\d{3}\.\d{3}-\d|\d{9,10}-\d)\b/i
+  );
+  if (matchRotulado) return normalizarEspacos(matchRotulado[1]);
+
+  const matchFormato = texto.match(/\b\d{3}\.\d{3}\.\d{3}-\d\b/);
+  return matchFormato ? matchFormato[0] : '';
+}
+
+function extrairCodigoAutenticidadeDoTexto(texto) {
+  const match = texto.match(/\bc[oó]digo\s+([A-Z0-9-]{12,})\b/i);
+  return match ? limparCodigoAutenticidade(match[1]) : '';
+}
+
+function inferirTipoDocumentoNoTexto(texto) {
+  if (/\bcarta\s+de\s+concess[aã]o\b/i.test(texto)) return 'carta-concessao';
+  if (/\bmem[oó]ria\s+de\s+c[aá]lculo\s+do\s+benef[ií]cio\b/i.test(texto)) return 'carta-concessao';
+  return 'cnis';
 }
 
 function escapeRegex(valor) {
@@ -231,6 +261,28 @@ function criarEspecificacaoNumerica(id, label, original, ficticio, formatador) {
   };
 }
 
+function criarEspecificacaoNumeroBeneficio(id, label, original, ficticio) {
+  const originalDigitos = soDigitos(original);
+  const ficticioDigitos = soDigitos(ficticio);
+  const originalFormatado = formatarNumeroBeneficio(originalDigitos);
+  const ficticioFormatado = formatarNumeroBeneficio(ficticioDigitos);
+
+  return {
+    id,
+    label,
+    pairs: normalizarPares([
+      [original, ficticio],
+      [originalFormatado, ficticioFormatado],
+      [originalDigitos, ficticioDigitos]
+    ]),
+    verifyOriginals: normalizarListaValores([
+      original,
+      originalFormatado,
+      originalDigitos
+    ])
+  };
+}
+
 function montarEspecificacoesSubstituicao(dadosOriginais, dadosFicticios) {
   const specs = [];
 
@@ -250,6 +302,28 @@ function montarEspecificacoesSubstituicao(dadosOriginais, dadosFicticios) {
     const label = totalNits > 1 ? `NIT ${i + 1}` : 'NIT';
     specs.push(
       criarEspecificacaoNumerica(`nit:${i}`, label, nitsOriginais[i], nitsFicticios[i], formatarNIT)
+    );
+  }
+
+  if (dadosOriginais.numeroBeneficio && dadosFicticios.numeroBeneficio) {
+    specs.push(
+      criarEspecificacaoNumeroBeneficio(
+        'numeroBeneficio',
+        'Número do benefício',
+        dadosOriginais.numeroBeneficio,
+        dadosFicticios.numeroBeneficio
+      )
+    );
+  }
+
+  if (dadosOriginais.codigoAutenticidade && dadosFicticios.codigoAutenticidade) {
+    specs.push(
+      criarEspecificacaoNominal(
+        'codigoAutenticidade',
+        'Código de autenticidade',
+        dadosOriginais.codigoAutenticidade,
+        dadosFicticios.codigoAutenticidade
+      )
     );
   }
 
@@ -555,7 +629,15 @@ function decodificarStream(stream) {
 async function extrairDadosSensiveis(pdfBytes) {
   const copia = toUint8Array(pdfBytes).slice().buffer;
   const pdf = await pdfjsLib.getDocument({ data: copia }).promise;
-  const resultado = { nome: '', cpf: '', nits: [], nomeMae: '' };
+  const resultado = {
+    tipoDocumento: 'cnis',
+    nome: '',
+    cpf: '',
+    nits: [],
+    nomeMae: '',
+    numeroBeneficio: '',
+    codigoAutenticidade: ''
+  };
 
   try {
     for (let paginaAtual = 1; paginaAtual <= pdf.numPages; paginaAtual++) {
@@ -563,9 +645,16 @@ async function extrairDadosSensiveis(pdfBytes) {
       const itens = (await page.getTextContent()).items.map(item => item.str);
       const texto = normalizarEspacos(itens.join(' '));
 
+      if (inferirTipoDocumentoNoTexto(texto) === 'carta-concessao') {
+        resultado.tipoDocumento = 'carta-concessao';
+      }
       if (!resultado.nome) resultado.nome = extrairNomeDoTexto(texto);
       if (!resultado.nomeMae) resultado.nomeMae = extrairNomeMaeDoTexto(texto);
       if (!resultado.cpf) resultado.cpf = extrairCpfDoTexto(texto);
+      if (!resultado.numeroBeneficio) resultado.numeroBeneficio = extrairNumeroBeneficioDoTexto(texto);
+      if (!resultado.codigoAutenticidade) {
+        resultado.codigoAutenticidade = extrairCodigoAutenticidadeDoTexto(texto);
+      }
 
       for (const nit of coletarNitsDoTexto(texto)) {
         adicionarValorUnico(resultado.nits, nit, soDigitos);

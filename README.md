@@ -1,6 +1,6 @@
-# Anonimizador CNIS
+# Anonimizador INSS
 
-Ferramenta web para anonimizar extratos do CNIS (Cadastro Nacional de Informações Sociais) em conformidade com a LGPD, permitindo o uso de plataformas SaaS previdenciárias sem expor dados reais dos segurados.
+Ferramenta web para anonimizar extratos do CNIS (Cadastro Nacional de Informações Sociais) e cartas de concessão do INSS em conformidade com a LGPD, permitindo o uso de plataformas SaaS previdenciárias sem expor dados reais dos segurados.
 
 **Acesse:** https://deltaporto.github.io/CNIS-Anonimo/
 
@@ -13,6 +13,8 @@ Substitui os dados sensíveis do segurado por dados fictícios, mantendo toda a 
 | Nome | Substituído por nome fictício identificável (ex: "JOAO FAKE DOS SANTOS") |
 | CPF | Substituído por CPF fictício com dígitos verificadores válidos |
 | NIT | Cada NIT encontrado no PDF é substituído por um NIT fictício válido e consistente no arquivo |
+| Número do benefício | Substituído por número fictício com a mesma máscara do original |
+| Código de autenticidade | Substituído por código fictício preservando o formato original |
 | Nome da mãe | Substituído por nome fictício sempre iniciado por "MARIA" |
 | Data de nascimento | **Preservada** |
 | Vínculos, salários, contribuições, indicadores | **Preservados** |
@@ -20,10 +22,11 @@ Substitui os dados sensíveis do segurado por dados fictícios, mantendo toda a 
 ## Como usar
 
 1. Acesse o site
-2. Arraste ou selecione o PDF do CNIS
-3. Aguarde o processamento local no navegador
-4. Confira os dados identificados e os substitutos gerados automaticamente
-5. O download do PDF anonimizado ou do ZIP começa automaticamente ao final
+2. Escolha a aba `Extrato CNIS` ou `Carta de concessão`
+3. Arraste ou selecione um ou mais PDFs
+4. Aguarde o processamento local no navegador
+5. Confira os dados identificados e os substitutos gerados automaticamente
+6. O download do PDF anonimizado ou do ZIP começa automaticamente ao final
 
 ## Privacidade
 
@@ -42,7 +45,7 @@ A bateria cobre:
 - geração de dados fictícios, incluindo a regra de que titular e mãe usam o sobrenome fixo `FAKE DOS SANTOS`
 - parsing de nome, CPF e múltiplos NITs
 - helpers de nomeação e exibição do lote
-- regressão do pipeline completo com os PDFs reais `2_CNIS2.pdf`, `3_CNIS2.pdf`, `3_CNIS3.pdf` e `4_CNIS2.pdf`
+- regressão do pipeline completo com todos os PDFs reais disponíveis em `teste/`
 
 ## Tecnologias
 
