@@ -44,6 +44,7 @@ function obterConfigModo(modo = 'cnis') {
 
 function atualizarModoUI() {
   const config = obterConfigModo(modoAtual);
+  if (document.body?.dataset) document.body.dataset.modo = modoAtual;
 
   if (uploadTituloEl) uploadTituloEl.textContent = config.uploadTitulo;
   if (uploadSubEl) uploadSubEl.innerHTML = config.uploadSub;
@@ -59,9 +60,11 @@ function atualizarModoUI() {
 
   if (btnModoCnis && typeof btnModoCnis.setAttribute === 'function') {
     btnModoCnis.setAttribute('aria-pressed', String(modoAtual === 'cnis'));
+    btnModoCnis.setAttribute('aria-selected', String(modoAtual === 'cnis'));
   }
   if (btnModoCarta && typeof btnModoCarta.setAttribute === 'function') {
     btnModoCarta.setAttribute('aria-pressed', String(modoAtual === 'carta-concessao'));
+    btnModoCarta.setAttribute('aria-selected', String(modoAtual === 'carta-concessao'));
   }
 }
 
