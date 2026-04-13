@@ -121,126 +121,29 @@ main {
 .modo-selector {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
 .modo-btn {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  border: 1px solid rgba(15, 45, 94, .1);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(247,245,240,.92) 100%);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.78);
   color: var(--ink-soft);
-  border-radius: 18px;
-  padding: 16px 18px 15px;
+  border-radius: var(--radius);
+  padding: 12px 14px;
   font-family: 'Inter', sans-serif;
-  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -.01em;
   cursor: pointer;
-  transition: border-color .18s, background .18s, color .18s, box-shadow .18s, transform .18s, opacity .18s;
-  box-shadow: 0 10px 24px rgba(15,45,94,.05);
-}
-
-.modo-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at top right, rgba(26,74,138,.12), transparent 48%),
-    linear-gradient(135deg, rgba(255,255,255,.35), transparent 58%);
-  opacity: .6;
-  z-index: -1;
-  transition: opacity .18s ease;
-}
-
-.modo-btn::after {
-  content: '';
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 0;
-  height: 3px;
-  border-radius: 999px 999px 0 0;
-  background: linear-gradient(90deg, rgba(15,45,94,.14), rgba(15,45,94,.02));
-  transform: scaleX(.42);
-  transform-origin: left center;
-  transition: transform .2s ease, background .2s ease;
-}
-
-.modo-btn-topo {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 9px;
-}
-
-.modo-icon {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  background: rgba(15,45,94,.06);
-  color: var(--navy);
-  border: 1px solid rgba(15,45,94,.08);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.85);
-}
-
-.modo-icon svg {
-  width: 21px;
-  height: 21px;
-}
-
-.modo-textos {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.modo-kicker {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .11em;
-  text-transform: uppercase;
-  color: rgba(15,45,94,.58);
-}
-
-.modo-titulo {
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -.03em;
-  color: var(--ink);
-}
-
-.modo-chip {
-  align-self: start;
-  padding: 4px 9px;
-  border-radius: 999px;
-  background: rgba(15,45,94,.06);
-  color: rgba(15,45,94,.72);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  border: 1px solid rgba(15,45,94,.08);
-}
-
-.modo-descricao {
-  display: block;
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--ink-soft);
-  max-width: 32ch;
+  transition: border-color .18s, background .18s, color .18s, box-shadow .18s, transform .18s;
+  box-shadow: var(--shadow);
 }
 
 .modo-btn:hover {
-  border-color: rgba(26,74,138,.26);
+  border-color: #c3d1eb;
   color: var(--navy);
-  transform: translateY(-2px);
-  box-shadow: 0 18px 34px rgba(15,45,94,.09);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
 }
 
 .modo-btn:focus-visible {
@@ -248,68 +151,11 @@ main {
   outline-offset: 2px;
 }
 
-.modo-btn:hover::before {
-  opacity: .92;
-}
-
-.modo-btn:hover::after {
-  transform: scaleX(.72);
-}
-
 .modo-btn.modo-ativo {
-  border-color: rgba(26,74,138,.34);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(235,242,255,.98) 100%);
+  border-color: var(--navy-light);
+  background: linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
   color: var(--navy);
-  box-shadow:
-    0 18px 38px rgba(15,45,94,.11),
-    inset 0 1px 0 rgba(255,255,255,.95);
-}
-
-.modo-btn.modo-ativo::before {
-  opacity: 1;
-  background:
-    radial-gradient(circle at top right, rgba(26,74,138,.16), transparent 52%),
-    radial-gradient(circle at bottom left, rgba(15,45,94,.08), transparent 40%),
-    linear-gradient(135deg, rgba(255,255,255,.42), transparent 58%);
-}
-
-.modo-btn.modo-ativo::after {
-  transform: scaleX(1);
-  background: linear-gradient(90deg, var(--navy-light), #6aa0ff);
-}
-
-.modo-btn.modo-ativo .modo-icon {
-  background: linear-gradient(180deg, rgba(15,45,94,.12), rgba(15,45,94,.05));
-  border-color: rgba(26,74,138,.14);
-}
-
-.modo-btn.modo-ativo .modo-chip {
-  background: rgba(15,45,94,.9);
-  border-color: rgba(15,45,94,.9);
-  color: #fff;
-}
-
-body[data-modo="carta-concessao"] .modo-btn.modo-ativo {
-  border-color: rgba(10,84,102,.34);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(232,247,244,.98) 100%);
-}
-
-body[data-modo="carta-concessao"] .modo-btn.modo-ativo::before {
-  background:
-    radial-gradient(circle at top right, rgba(20,132,153,.16), transparent 52%),
-    radial-gradient(circle at bottom left, rgba(9,84,102,.08), transparent 40%),
-    linear-gradient(135deg, rgba(255,255,255,.42), transparent 58%);
-}
-
-body[data-modo="carta-concessao"] .modo-btn.modo-ativo::after {
-  background: linear-gradient(90deg, #0a6b7d, #42b6c8);
-}
-
-body[data-modo="carta-concessao"] .modo-btn.modo-ativo .modo-icon {
-  color: #0a6b7d;
-  background: linear-gradient(180deg, rgba(10,107,125,.12), rgba(10,107,125,.05));
+  box-shadow: 0 2px 12px rgba(26, 74, 138, .14);
 }
 
 /* ── UPLOAD ── */
@@ -578,20 +424,6 @@ footer {
 @media (max-width: 640px) {
   .modo-selector {
     grid-template-columns: 1fr;
-  }
-
-  .modo-btn {
-    padding: 14px 15px;
-  }
-
-  .modo-btn-topo {
-    grid-template-columns: auto 1fr;
-  }
-
-  .modo-chip {
-    grid-column: 2;
-    justify-self: start;
-    margin-top: 2px;
   }
 
   .subs-header,
