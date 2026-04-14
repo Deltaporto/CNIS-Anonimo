@@ -288,6 +288,8 @@ function criarItemLista(nomeArquivo) {
 
   const status = document.createElement('span');
   status.className = 'arquivo-status status-aguardando';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
   status.textContent = 'Aguardando';
 
   cab.append(icone, nome, status);
@@ -438,16 +440,25 @@ function baixarBlob(bytes, tipo, nome) {
 
 btnBaixarZip.addEventListener('click', async () => {
   const config = obterConfigModo(modoResultados);
+  const textoOriginal = btnBaixarZip.textContent;
 
-  if (resultados.length === 1) {
-    baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
-    return;
+  try {
+    btnBaixarZip.disabled = true;
+    btnBaixarZip.textContent = 'Gerando ZIP...';
+
+    if (resultados.length === 1) {
+      baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
+      return;
+    }
+
+    const zip = new JSZip();
+    for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
+    const zipBytes = await zip.generateAsync({ type: 'uint8array' });
+    baixarBlob(zipBytes, 'application/zip', config.zipNome);
+  } finally {
+    btnBaixarZip.disabled = false;
+    btnBaixarZip.textContent = textoOriginal;
   }
-
-  const zip = new JSZip();
-  for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
-  const zipBytes = await zip.generateAsync({ type: 'uint8array' });
-  baixarBlob(zipBytes, 'application/zip', config.zipNome);
 });
 
 btnLimpar.addEventListener('click', () => {
