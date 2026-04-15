@@ -141,18 +141,26 @@ async function iniciarLote(arquivos) {
   const config = obterConfigModo(modoResultados);
   if (resultados.length === 1) {
     baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
+    acoesEl.classList.remove('oculto');
+    btnBaixarZip.textContent = config.botaoDownloadUm;
+    btnBaixarZip.disabled = false;
   } else {
-    const zip = new JSZip();
-    for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
-    const zipBytes = await zip.generateAsync({ type: 'uint8array' });
-    baixarBlob(zipBytes, 'application/zip', config.zipNome);
-  }
+    acoesEl.classList.remove('oculto');
+    btnBaixarZip.disabled = true;
+    btnBaixarZip.textContent = 'Gerando ZIP...';
+    btnBaixarZip.setAttribute('aria-live', 'polite');
 
-  acoesEl.classList.remove('oculto');
-  btnBaixarZip.textContent = resultados.length === 1
-    ? config.botaoDownloadUm
-    : config.botaoDownloadVarios;
-  btnBaixarZip.disabled = false;
+    try {
+      const zip = new JSZip();
+      for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
+      const zipBytes = await zip.generateAsync({ type: 'uint8array' });
+      baixarBlob(zipBytes, 'application/zip', config.zipNome);
+    } finally {
+      btnBaixarZip.disabled = false;
+      btnBaixarZip.textContent = config.botaoDownloadVarios;
+      btnBaixarZip.removeAttribute('aria-live');
+    }
+  }
 }
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50 MB
@@ -289,6 +297,8 @@ function criarItemLista(nomeArquivo) {
   const status = document.createElement('span');
   status.className = 'arquivo-status status-aguardando';
   status.textContent = 'Aguardando';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
 
   cab.append(icone, nome, status);
 
@@ -444,10 +454,20 @@ btnBaixarZip.addEventListener('click', async () => {
     return;
   }
 
-  const zip = new JSZip();
-  for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
-  const zipBytes = await zip.generateAsync({ type: 'uint8array' });
-  baixarBlob(zipBytes, 'application/zip', config.zipNome);
+  btnBaixarZip.disabled = true;
+  btnBaixarZip.textContent = 'Gerando ZIP...';
+  btnBaixarZip.setAttribute('aria-live', 'polite');
+
+  try {
+    const zip = new JSZip();
+    for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
+    const zipBytes = await zip.generateAsync({ type: 'uint8array' });
+    baixarBlob(zipBytes, 'application/zip', config.zipNome);
+  } finally {
+    btnBaixarZip.disabled = false;
+    btnBaixarZip.textContent = config.botaoDownloadVarios;
+    btnBaixarZip.removeAttribute('aria-live');
+  }
 });
 
 btnLimpar.addEventListener('click', () => {
