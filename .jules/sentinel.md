@@ -1,0 +1,4 @@
+## 2024-11-23 - Client-side PDF Processing RCE Risk
+**Vulnerability:** Arbitrary JavaScript execution (XSS/RCE) via `eval()` embedded in malicious PDFs processed by PDF.js on the client side.
+**Learning:** By default, PDF.js may use `eval()` for certain operations. In a client-side only tool like Anonimizador CNIS, processing untrusted PDFs from users directly in their browser opens a vector for execution of malicious scripts if `eval()` is not explicitly disabled.
+**Prevention:** Always initialize `pdfjsLib.getDocument` with `{ isEvalSupported: false }` as a defense-in-depth measure when processing untrusted PDFs in the browser.
