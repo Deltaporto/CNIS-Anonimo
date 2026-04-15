@@ -1,0 +1,3 @@
+## 2024-04-15 - TypedArray String Conversion Overhead
+**Learning:** `Array.from(bytes, byte => String.fromCharCode(byte))` or chained `.split('').map(char => char.charCodeAt(0))` for converting large typed arrays (like `Uint8Array`) to/from strings are severe bottlenecks, causing up to 10x slower execution and significant memory overhead. Native JS `String.fromCharCode.apply` inside a chunked loop, or direct iteration is dramatically faster.
+**Action:** Replace `Array.from()` functional maps or chained array methods on large data arrays with simple chunked arrays or custom loops like `encodeLatin1`.
