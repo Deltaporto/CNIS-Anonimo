@@ -1,0 +1,3 @@
+## 2024-10-27 - Accessible Loading States for Heavy Client-Side Tasks
+**Learning:** When executing heavy synchronous or asynchronous client-side tasks (like JSZip generation), wrapping the logic in a `try...finally` block is crucial. Disabling the trigger button and showing a loading text prevents duplicate actions. However, to ensure screen readers are informed of background state changes without requiring manual focus, generic file processing states should utilize `role="status"` and `aria-live="polite"`.
+**Action:** Always implement explicit disabled and loading text states inside a `try...finally` block for heavy operations. Additionally, add `role="status"` and `aria-live="polite"` to dynamically changing text nodes that announce processing status.
