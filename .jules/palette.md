@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessible Loading States for Heavy Operations
+**Learning:** Heavy client-side tasks like JSZip generation can freeze the UI and allow duplicate submissions if the button isn't disabled. Furthermore, dynamic status elements (like `.arquivo-status`) are visually obvious but invisible to screen readers without ARIA attributes.
+**Action:** Wrap heavy operations in `try...finally` with a disabled button and loading text. Always apply `role="status"` and `aria-live="polite"` to dynamic text spans so screen readers automatically announce updates like "Processando..." or "Anonimizado".
