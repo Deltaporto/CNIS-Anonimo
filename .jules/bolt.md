@@ -1,0 +1,3 @@
+## 2024-05-15 - Fast Array-to-String conversions for Binary Processing
+**Learning:** In a heavily binary-manipulated workflow (like PDF processing), converting `Uint8Array` to a binary string using `Array.from(bytes, byte => String.fromCharCode(byte)).join('')` creates immense memory pressure and executes a closure millions of times.
+**Action:** Use `String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE))` within a loop (max chunk ~32k) to dramatically increase processing speed and avoid "Maximum call stack size exceeded" errors. Similarly, favor standard loops over `split('').map()` for string-to-array mappings.
