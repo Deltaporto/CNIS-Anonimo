@@ -13,6 +13,15 @@ function encodeLatin1(str) {
   return bytes;
 }
 
+function bytesToStringLatin1(bytes) {
+  let str = '';
+  const chunkSize = 32768; // lowered from 65536 to ensure cross-engine compatibility with call stack limits
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    str += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return str;
+}
+
 function toUint8Array(bytes) {
   if (bytes instanceof Uint8Array) return new Uint8Array(bytes);
   if (bytes instanceof ArrayBuffer) return new Uint8Array(bytes);
@@ -920,7 +929,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   }
 
   const bytes = toUint8Array(pdfBytes);
-  let bin = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  let bin = bytesToStringLatin1(bytes);
 
   const regexStreams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   const partes = [];
@@ -959,10 +968,8 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
     modificou = true;
     mergeHits(hits, result.hits);
 
-    const newBin = Array.from(
-      pako.deflate(encodeLatin1(result.text)),
-      byte => String.fromCharCode(byte)
-    ).join('');
+    const deflatedBytes = pako.deflate(encodeLatin1(result.text));
+    const newBin = bytesToStringLatin1(deflatedBytes);
 
     partes.push(bin.slice(last, match.index) + 'stream\n' + newBin + '\nendstream');
     last = match.index + match[0].length;
@@ -973,7 +980,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   }
 
   partes.push(bin.slice(last));
-  const resultBytes = Uint8Array.from(partes.join('').split(''), char => char.charCodeAt(0));
+  const resultBytes = encodeLatin1(partes.join(''));
 
   try {
     const doc = await PDFLib.PDFDocument.load(resultBytes, { ignoreEncryption: true, updateMetadata: false });
@@ -1049,7 +1056,7 @@ async function coletarTextosDecodificados(pdfBytes) {
 
 function coletarTextosDecodificadosViaBytes(pdfBytes) {
   const bytes = toUint8Array(pdfBytes);
-  const bin = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  const bin = bytesToStringLatin1(bytes);
   const textos = [];
   const regexStreams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   let match;
