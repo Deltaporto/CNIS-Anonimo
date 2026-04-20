@@ -5,7 +5,21 @@ if (typeof window !== 'undefined' && typeof pdfjsLib !== 'undefined' && pdfjsLib
     'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 }
 
-const decoderLatin1 = new TextDecoder('latin1');
+// Optimização: Decodificador Latin1 personalizado em blocos (chunked)
+// O TextDecoder nativo para 'latin1' mapeia para Windows-1252, o que corrompe
+// bytes no intervalo 128-159 em streams binárias.
+// Essa implementação é mais eficiente em memória para grandes payloads que
+// Array.from(bytes).map(...) e garante equivalência funcional para os bytes corretos.
+const decoderLatin1 = {
+  decode: function(bytes) {
+    let result = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      result += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+    }
+    return result;
+  }
+};
 
 function encodeLatin1(str) {
   const bytes = new Uint8Array(str.length);
