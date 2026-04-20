@@ -1,0 +1,3 @@
+## $(date +%Y-%m-%d) - Optimize large typed array conversions
+**Learning:** For large typed arrays like `Uint8Array`, converting to a binary string using functional mappers (e.g., `Array.from(bytes, byte => String.fromCharCode(byte)).join('')`) or converting from strings back to `Uint8Array` via `split('').map()` is extremely slow.
+**Action:** Replace functional maps with a custom JavaScript chunked decoder (`String.fromCharCode.apply`) with a max chunk size of 32768, and use direct bounded loops (like `encodeLatin1`) when parsing strings to `Uint8Array`. This provides significant performance gains for heavy string conversions.
