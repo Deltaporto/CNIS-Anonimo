@@ -444,10 +444,23 @@ btnBaixarZip.addEventListener('click', async () => {
     return;
   }
 
-  const zip = new JSZip();
-  for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
-  const zipBytes = await zip.generateAsync({ type: 'uint8array' });
-  baixarBlob(zipBytes, 'application/zip', config.zipNome);
+  const textoOriginal = btnBaixarZip.textContent;
+  btnBaixarZip.disabled = true;
+  btnBaixarZip.textContent = 'Gerando ZIP...';
+  btnBaixarZip.setAttribute('role', 'status');
+  btnBaixarZip.setAttribute('aria-live', 'polite');
+
+  try {
+    const zip = new JSZip();
+    for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
+    const zipBytes = await zip.generateAsync({ type: 'uint8array' });
+    baixarBlob(zipBytes, 'application/zip', config.zipNome);
+  } finally {
+    btnBaixarZip.disabled = false;
+    btnBaixarZip.textContent = textoOriginal;
+    btnBaixarZip.removeAttribute('role');
+    btnBaixarZip.removeAttribute('aria-live');
+  }
 });
 
 btnLimpar.addEventListener('click', () => {
