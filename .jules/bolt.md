@@ -1,0 +1,3 @@
+## 2024-05-18 - Uint8Array Binary String Conversions
+**Learning:** In JavaScript, converting large `Uint8Array`s to binary strings via `Array.from(bytes, byte => String.fromCharCode(byte)).join('')` or using `.split('').map(char => char.charCodeAt(0))` for string to array conversions is exceedingly slow due to the overhead of functional mapping and multiple intermediate array allocations.
+**Action:** Always prefer using `String.fromCharCode.apply` with chunking (e.g., max call stack limits like 32768) for converting byte arrays to strings, and a simple `for` loop allocating a `new Uint8Array(str.length)` for converting strings back to byte arrays. This architectural pattern yields order-of-magnitude performance improvements.
