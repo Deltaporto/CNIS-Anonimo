@@ -1,3 +1,7 @@
 ## 2024-05-18 - Making Custom DIV Interactive Elements Accessible
 **Learning:** When using generic elements like `div` for core interactions (e.g., drag-and-drop upload zones), adding a click listener is not enough for keyboard users. They need `role="button"`, `tabindex="0"`, a keyboard event listener for `Enter` and `Space`, and an explicit focus style (`:focus-visible`) to be fully accessible. Adding an explicit `aria-label` also significantly improves the screen reader experience.
 **Action:** Always verify if a custom interactive element can be reached via the `Tab` key and triggered via the keyboard, and check if decorative SVGs within it are hidden from screen readers using `aria-hidden="true"`.
+
+## 2024-05-18 - Feedback for Heavy Client-Side Tasks and Dynamic Texts
+**Learning:** For heavy, blocking client-side operations (like generating ZIP files via JSZip in the browser), users need immediate visual feedback. If a button stays active during a long synchronous/asynchronous task without visual changes, users tend to click it multiple times. Also, dynamic text components (like progress status indicators for files) are not read by screen readers as they change unless they explicitly have `role="status"` and `aria-live="polite"`.
+**Action:** Wrap heavy operations in `try...finally` blocks with explicit disabling of the trigger button and update the text to show a loading state. For dynamically updating text elements, always use `role="status"` and `aria-live="polite"` so screen readers automatically announce changes.

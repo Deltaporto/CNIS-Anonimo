@@ -289,6 +289,8 @@ function criarItemLista(nomeArquivo) {
   const status = document.createElement('span');
   status.className = 'arquivo-status status-aguardando';
   status.textContent = 'Aguardando';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
 
   cab.append(icone, nome, status);
 
@@ -444,10 +446,19 @@ btnBaixarZip.addEventListener('click', async () => {
     return;
   }
 
-  const zip = new JSZip();
-  for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
-  const zipBytes = await zip.generateAsync({ type: 'uint8array' });
-  baixarBlob(zipBytes, 'application/zip', config.zipNome);
+  const textoOriginal = btnBaixarZip.textContent;
+  btnBaixarZip.disabled = true;
+  btnBaixarZip.textContent = 'Gerando ZIP...';
+
+  try {
+    const zip = new JSZip();
+    for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
+    const zipBytes = await zip.generateAsync({ type: 'uint8array' });
+    baixarBlob(zipBytes, 'application/zip', config.zipNome);
+  } finally {
+    btnBaixarZip.disabled = false;
+    btnBaixarZip.textContent = textoOriginal;
+  }
 });
 
 btnLimpar.addEventListener('click', () => {
