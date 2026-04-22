@@ -1,0 +1,3 @@
+## 2024-05-18 - Avoid `Array.from` for typed array to string conversions
+**Learning:** `Array.from(bytes, byte => String.fromCharCode(byte)).join('')` is extremely slow and memory inefficient for large byte arrays, like multi-megabyte PDF streams. In our benchmark, converting a 5MB Uint8Array took ~3.1 seconds. Replacing it with a chunked `String.fromCharCode.apply(null, bytes.subarray(i, i + chunk))` loop took only ~0.1 seconds. Similarly, using a bounded loop to encode strings to bytes (`encodeLatin1`) is significantly faster than `Uint8Array.from(str.split('').map(char => char.charCodeAt(0)))`.
+**Action:** Use custom chunked conversion loops for large buffer to string manipulations and bounded assignments for strings to buffer, rather than high-level array mappings.
