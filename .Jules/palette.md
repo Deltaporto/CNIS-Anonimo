@@ -8,3 +8,11 @@
 ## 2024-05-18 - Dynamic Content Accessibility
 **Learning:** For status texts generated dynamically in JavaScript (like file processing status changing from 'Aguardando' to 'Concluído'), screen readers will ignore these updates unless explicitly told to read them.
 **Action:** Always add `role="status"` and `aria-live="polite"` to dynamic text elements so updates are smoothly announced to screen reader users without stealing focus.
+
+## 2024-05-18 - Managing Long-Running Client-Side Processes on Interactive Dropzones
+**Learning:** When locking the UI during heavy asynchronous operations like batch processing, explicitly managing pointer events (`pointer-events: none;`) along with `aria-disabled="true"` and `opacity` on custom interactive elements (like dropzones) securely prevents repetitive clicks and drop operations which could corrupt state arrays.
+**Action:** When creating async processing queues, wrap the execution in a `try...finally` block that sets a guard variable and applies both semantic and physical visual constraints to the trigger element to safely block user interactions.
+
+## 2024-05-18 - Adding Accessible Semantics to Generic Progress Bars
+**Learning:** For custom-built progress bars (often div-based like `.progresso-wrap`), adding `role="progressbar"`, `aria-valuemin="0"`, `aria-valuemax="100"`, `aria-label` and dynamically updating `aria-valuenow` via JavaScript ensures the visual loading progress is accurately announced by screen readers.
+**Action:** Always map the dynamically updated visual `width` of a progress bar to its semantic `aria-valuenow` counterpart in the DOM manipulation function.
