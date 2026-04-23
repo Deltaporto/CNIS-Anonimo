@@ -132,9 +132,32 @@ async function iniciarLote(arquivos) {
 
   const itens = arquivos.map(file => criarItemLista(file.name));
 
+  // ⚡ Optimization: Parallel PDF processing with concurrency limit
+  // Processes up to 3 PDFs simultaneously to maximize throughput without memory exhaustion.
+  // Results are assigned by index to maintain original order regardless of completion time.
+  const concurrencyLimit = 3;
+  let activePromises = [];
+  const processPromises = [];
+  const resultadosTemp = new Array(arquivos.length);
+
   for (let i = 0; i < arquivos.length; i++) {
-    await processarArquivo(arquivos[i], itens[i], i, arquivos.length, modoResultados);
+    const p = processarArquivo(arquivos[i], itens[i], i, arquivos.length, modoResultados)
+      .then(res => {
+        if (res) resultadosTemp[i] = res;
+      });
+    processPromises.push(p);
+
+    if (concurrencyLimit <= arquivos.length) {
+      const e = p.then(() => activePromises.splice(activePromises.indexOf(e), 1));
+      activePromises.push(e);
+      if (activePromises.length >= concurrencyLimit) {
+        await Promise.race(activePromises);
+      }
+    }
   }
+
+  await Promise.all(processPromises);
+  resultados = resultadosTemp.filter(Boolean);
 
   if (resultados.length === 0) return;
 
@@ -169,7 +192,7 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
   if (file.size > MAX_PDF_SIZE) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Arquivo muito grande (máx. 50 MB)');
-    return;
+    return null;
   }
 
   const header = new Uint8Array(await file.slice(0, 5).arrayBuffer());
@@ -179,7 +202,7 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
   if (!isPDF) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Arquivo não é um PDF válido');
-    return;
+    return null;
   }
 
   setProgresso(item, 30);
@@ -210,7 +233,7 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
         setStatus(item, 'erro', 'Falha segura: nenhuma substituição pôde ser confirmada');
       }
 
-      return;
+      return null;
     }
 
     setProgresso(item, 100, true);
@@ -222,14 +245,15 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
       setStatus(item, 'ok', 'Anonimizado ✓');
     }
 
-    resultados.push({
+    return {
       nome: gerarNomeSaida(dadosOriginais.nome, indice, totalArquivos, modoLote),
       bytes: resultadoPdf.bytes
-    });
+    };
   } catch (err) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Erro ao processar o PDF. Verifique se o arquivo é válido.');
     console.error('[CNIS]', err);
+    return null;
   }
 }
 
