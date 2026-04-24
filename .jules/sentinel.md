@@ -1,0 +1,4 @@
+## 2025-02-14 - Prevent Arbitrary JavaScript Execution in PDF.js
+**Vulnerability:** The application extracts data from user-uploaded PDFs using `pdfjsLib.getDocument()`. Without disabling eval, maliciously crafted PDFs containing certain elements (like Type 4 PostScript functions) could theoretically lead to arbitrary JavaScript execution in the browser context via the PDF.js engine's internal use of `eval()` or `new Function()`.
+**Learning:** Security defaults in widely used libraries may still prioritize performance or legacy feature support over absolute sandboxing. Relying solely on the browser's origin isolation might be insufficient if sensitive data is handled in the same context.
+**Prevention:** Always initialize `pdfjsLib.getDocument` with `isEvalSupported: false` when processing untrusted PDFs in the browser. This forces PDF.js to use its safer, internal interpreter instead of native JS evaluation for embedded code.
