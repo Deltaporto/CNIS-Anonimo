@@ -19,6 +19,28 @@ function toUint8Array(bytes) {
   return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 }
 
+// ⚡ Bolt Optimization: Fast binary array to string conversion
+// Replaces slow Array.from(bytes, ...).join('') which causes heavy GC and slow loops on large arrays.
+// Chunking prevents "Maximum call stack size exceeded" errors.
+function bytesToString(bytes) {
+  const CHUNK_SIZE = 32768;
+  let str = '';
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    str += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
+  }
+  return str;
+}
+
+// ⚡ Bolt Optimization: Fast string to binary array conversion
+// Replaces slow str.split('').map(...) which creates multiple intermediate arrays.
+function stringToBytes(str) {
+  const bytes = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) {
+    bytes[i] = str.charCodeAt(i) & 0xff;
+  }
+  return bytes;
+}
+
 function soDigitos(valor = '') {
   return String(valor).replace(/\D/g, '');
 }
@@ -920,7 +942,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   }
 
   const bytes = toUint8Array(pdfBytes);
-  let bin = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  let bin = bytesToString(bytes);
 
   const regexStreams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   const partes = [];
@@ -930,7 +952,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   let match;
 
   while ((match = regexStreams.exec(bin)) !== null) {
-    const raw = Uint8Array.from(match[1].split('').map(char => char.charCodeAt(0)));
+    const raw = stringToBytes(match[1]);
 
     let decoded;
     try {
@@ -959,10 +981,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
     modificou = true;
     mergeHits(hits, result.hits);
 
-    const newBin = Array.from(
-      pako.deflate(encodeLatin1(result.text)),
-      byte => String.fromCharCode(byte)
-    ).join('');
+    const newBin = bytesToString(pako.deflate(encodeLatin1(result.text)));
 
     partes.push(bin.slice(last, match.index) + 'stream\n' + newBin + '\nendstream');
     last = match.index + match[0].length;
@@ -973,7 +992,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   }
 
   partes.push(bin.slice(last));
-  const resultBytes = Uint8Array.from(partes.join('').split(''), char => char.charCodeAt(0));
+  const resultBytes = stringToBytes(partes.join(''));
 
   try {
     const doc = await PDFLib.PDFDocument.load(resultBytes, { ignoreEncryption: true, updateMetadata: false });
@@ -1049,13 +1068,13 @@ async function coletarTextosDecodificados(pdfBytes) {
 
 function coletarTextosDecodificadosViaBytes(pdfBytes) {
   const bytes = toUint8Array(pdfBytes);
-  const bin = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  const bin = bytesToString(bytes);
   const textos = [];
   const regexStreams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   let match;
 
   while ((match = regexStreams.exec(bin)) !== null) {
-    const raw = Uint8Array.from(match[1].split('').map(char => char.charCodeAt(0)));
+    const raw = stringToBytes(match[1]);
 
     try {
       const texto = decoderLatin1.decode(pako.inflate(raw));

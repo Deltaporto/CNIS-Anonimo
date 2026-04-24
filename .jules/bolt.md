@@ -1,0 +1,3 @@
+## 2024-04-24 - Fast typed array to string conversions
+**Learning:** For large typed arrays like `Uint8Array`, avoid using `Array.from` with functional maps (e.g., `Array.from(bytes, byte => String.fromCharCode(byte))`) or chained `.split('').map()`. They introduce significant overhead for garbage collection and iterations, particularly in fallback stream replacement loops where arrays might be megabytes large.
+**Action:** Use chunked `String.fromCharCode.apply` with a max chunk size of 32768 (to avoid maximum call stack size exceeded errors) for stringifying, and direct bounded loops (`str.charCodeAt(i) & 0xff`) for converting back to `Uint8Array`.
