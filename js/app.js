@@ -131,10 +131,26 @@ async function iniciarLote(arquivos) {
   acoesEl.classList.add('oculto');
 
   const itens = arquivos.map(file => criarItemLista(file.name));
+  const resultadosParciais = new Array(arquivos.length);
 
-  for (let i = 0; i < arquivos.length; i++) {
-    await processarArquivo(arquivos[i], itens[i], i, arquivos.length, modoResultados);
-  }
+  // Otimização: Pool de workers para processamento paralelo limitado (concorrência máxima: 3)
+  // Isso acelera o processamento de lotes sem travar a interface do usuário ou causar falta de memória.
+  const concorrencia = 3;
+  const iterador = arquivos.entries();
+
+  const worker = async () => {
+    for (const [i, arquivo] of iterador) {
+      const resultado = await processarArquivo(arquivo, itens[i], i, arquivos.length, modoResultados);
+      if (resultado) {
+        resultadosParciais[i] = resultado;
+      }
+    }
+  };
+
+  const workers = Array(Math.min(concorrencia, arquivos.length)).fill(0).map(worker);
+  await Promise.all(workers);
+
+  resultados = resultadosParciais.filter(Boolean);
 
   if (resultados.length === 0) return;
 
@@ -222,10 +238,10 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
       setStatus(item, 'ok', 'Anonimizado ✓');
     }
 
-    resultados.push({
+    return {
       nome: gerarNomeSaida(dadosOriginais.nome, indice, totalArquivos, modoLote),
       bytes: resultadoPdf.bytes
-    });
+    };
   } catch (err) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Erro ao processar o PDF. Verifique se o arquivo é válido.');
