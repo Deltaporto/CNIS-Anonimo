@@ -1,0 +1,3 @@
+## 2024-05-24 - Client-Side Concurrency Optimization for Processing Files
+**Learning:** Sequential `await` in resource-heavy client-side loops (like extracting data and replacing bytes in multiple large PDFs) significantly increases total processing time and starves the UI thread.
+**Action:** Replace the sequential loop with a worker-pool pattern using a concurrency limit (e.g., 3). Ensure the asynchronous worker functions return results instead of modifying global arrays, assigning them to a pre-allocated array by their original index to maintain output order regardless of task completion timing.
