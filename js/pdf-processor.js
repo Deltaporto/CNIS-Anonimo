@@ -759,7 +759,8 @@ function decodificarStream(stream) {
 
 async function extrairDadosSensiveis(pdfBytes) {
   const copia = toUint8Array(pdfBytes).slice().buffer;
-  const pdf = await pdfjsLib.getDocument({ data: copia }).promise;
+  // Security Fix: isEvalSupported: false mitigates CVE-2024-4367 in older pdfjs-dist versions
+  const pdf = await pdfjsLib.getDocument({ data: copia, isEvalSupported: false }).promise;
   const resultado = {
     tipoDocumento: 'cnis',
     nome: '',
