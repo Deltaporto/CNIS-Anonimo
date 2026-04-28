@@ -302,6 +302,11 @@ function criarItemLista(nomeArquivo) {
 
   const progressoWrap = document.createElement('div');
   progressoWrap.className = 'progresso-wrap';
+  progressoWrap.setAttribute('role', 'progressbar');
+  progressoWrap.setAttribute('aria-valuemin', '0');
+  progressoWrap.setAttribute('aria-valuemax', '100');
+  progressoWrap.setAttribute('aria-valuenow', '0');
+  progressoWrap.setAttribute('aria-label', `Progresso de ${nomeArquivo}`);
 
   const progressoBarra = document.createElement('div');
   progressoBarra.className = 'progresso-barra';
@@ -326,6 +331,11 @@ function setProgresso(item, pct, completo = false, erro = false) {
   barra.style.width = pct + '%';
   if (completo) barra.classList.add('completo');
   if (erro) barra.classList.add('erro');
+
+  const progressoWrap = item.querySelector('.progresso-wrap');
+  if (progressoWrap) {
+    progressoWrap.setAttribute('aria-valuenow', pct.toString());
+  }
 }
 
 function mascarar(valor, campo) {
