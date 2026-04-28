@@ -1,0 +1,4 @@
+## 2024-04-28 - Arbitrary Code Execution in PDF.js (CVE-2024-4367)
+**Vulnerability:** The application uses `pdfjs-dist` to parse PDFs in the browser. Older versions (< 4.2.67), such as the 3.11.174 used in this project, are vulnerable to CVE-2024-4367, where a malicious PDF containing specially crafted font data can execute arbitrary JavaScript via `eval()` when parsed.
+**Learning:** By default, PDF.js attempts to use `eval()` to optimize font rendering or logic execution. If untrusted PDFs are processed without disabling this behavior, it opens an XSS/arbitrary code execution vector directly in the client's browser.
+**Prevention:** Always initialize `pdfjsLib.getDocument` with `isEvalSupported: false` when parsing untrusted user-uploaded PDFs, especially on vulnerable versions, to disable the use of `eval` and mitigate this class of vulnerabilities.
