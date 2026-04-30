@@ -1,0 +1,3 @@
+## 2025-02-23 - Optimize Uint8Array to String conversion
+**Learning:** In V8/Node environments, using `Array.from()` combined with functional mapping (e.g. `Array.from(bytes, byte => String.fromCharCode(byte)).join('')`) to convert large binary payloads into strings introduces massive memory bloat and significant performance overhead. It creates intermediate array allocations for each character.
+**Action:** Replace `Array.from` with `String.fromCharCode.apply` utilizing chunking. A chunk size around 32768 is a safe limit to prevent exceeding the V8 maximum call stack size, while avoiding intermediate large array generation, which results in execution speeds an order of magnitude faster.
