@@ -8,3 +8,6 @@
 ## 2024-05-18 - Dynamic Content Accessibility
 **Learning:** For status texts generated dynamically in JavaScript (like file processing status changing from 'Aguardando' to 'Concluído'), screen readers will ignore these updates unless explicitly told to read them.
 **Action:** Always add `role="status"` and `aria-live="polite"` to dynamic text elements so updates are smoothly announced to screen reader users without stealing focus.
+## 2024-05-18 - Avoid committing accidental lock files
+**Learning:** During test setups where temporary `pnpm add` commands are run in a project that deliberately avoids having a `package.json` at root, a `pnpm-lock.yaml` file might be silently created and staged.
+**Action:** Always verify `git status` and specifically drop `pnpm-lock.yaml` before committing to avoid repository pollution and failing the 50-line patch limit.
