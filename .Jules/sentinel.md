@@ -1,0 +1,4 @@
+## 2024-05-01 - [CVE-2024-4367] Arbitrary JS execution via pdfjs-dist
+**Vulnerability:** The application uses `pdfjs-dist@3.11.174` for client-side PDF processing. Versions of `pdfjs-dist` < 4.2.67 are vulnerable to CVE-2024-4367, which allows arbitrary JavaScript execution via `eval()` when rendering malicious PDFs.
+**Learning:** This existed because older versions of `pdfjs-dist` rely on `eval()` or `Function()` constructor for font rendering operations, which can be exploited by carefully crafted PDF files containing embedded JavaScript. The specific impact is Cross-Site Scripting (XSS) within the browser processing the PDF.
+**Prevention:** To avoid this in the future, always initialize `pdfjsLib.getDocument` with `{ isEvalSupported: false }` for older versions, or better yet, keep the `pdfjs-dist` library updated to versions > 4.2.67 where this has been properly addressed upstream.
