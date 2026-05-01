@@ -1,0 +1,3 @@
+## 2024-05-19 - Optimize Uint8Array and String Conversions
+**Learning:** Using `Array.from` with a mapping function to convert large `Uint8Array`s to strings (e.g., `Array.from(bytes, byte => String.fromCharCode(byte)).join('')`) is extremely slow and memory-intensive in V8.
+**Action:** Use chunked `String.fromCharCode.apply` with a safe chunk size (e.g., 32768) to bypass the call stack limits while achieving a massive performance boost when converting byte arrays to strings. For the reverse operation, use an optimized bounded loop like `encodeLatin1` instead of `Uint8Array.from(str.split('').map(...))`.
