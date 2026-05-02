@@ -1,0 +1,3 @@
+## 2024-05-24 - Array.from string concatenation
+**Learning:** In V8 environments (like Node 22 and Chrome), converting large typed arrays (e.g., `Uint8Array`) to strings using `Array.from(bytes, byte => String.fromCharCode(byte)).join('')` or `Uint8Array.from(str.split('').map(char => char.charCodeAt(0)))` is extremely slow. A chunked loop with `String.fromCharCode.apply` or direct loops bounded by byte indices (`encodeLatin1`) perform significantly faster (by magnitudes of ~50x-80x).
+**Action:** When converting between strings and large byte arrays, avoid `.map()` over `.split('')` and `Array.from` with functional mappings. Implement chunked string mapping (`String.fromCharCode.apply(null, bytes.subarray(...))`) or simple bounded array loops instead.
