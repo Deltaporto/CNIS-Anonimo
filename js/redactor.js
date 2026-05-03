@@ -30,8 +30,13 @@ function redigirCPF(original) {
   return original.replace(/\d/g, '*');
 }
 
-function redigirNumerico(label, num) { return ''; }
-function redigirMascarar(original) { return ''; }
+function redigirNumerico(label, num) {
+  return label + '0'.repeat(num.length);
+}
+
+function redigirMascarar(original) {
+  return '*'.repeat(original.length);
+}
 function redigirNome(original) { return ''; }
 function mapearSubstitutos(texto) { return []; }
 function contarAchados(texto) { return { cpfs: 0, oabs: 0, crms: 0, nomes: 0, numerosProcesso: [] }; }
