@@ -24,3 +24,25 @@ test('redigirMascarar substitui todo o conteúdo por asteriscos de mesmo comprim
   assert.equal(api.redigirMascarar('RUA DAS FLORES 10').length, 'RUA DAS FLORES 10'.length);
   assert.ok(!/[^*]/.test(api.redigirMascarar('qualquer coisa')));
 });
+
+test('redigirNome converte nome em iniciais e preenche com espaços até comprimento original', () => {
+  const original = 'ROSALINA FERREIRA DA SILVA';
+  const resultado = api.redigirNome(original);
+  assert.equal(resultado.length, original.length, 'comprimento deve ser identico');
+  assert.ok(resultado.startsWith('R. F. S.'), 'deve comecar com as iniciais corretas');
+  assert.equal(resultado.trimEnd(), 'R. F. S.', 'sem trailing spaces deve ser so as iniciais');
+});
+
+test('redigirNome com dois nomes sem conectivos', () => {
+  const original = 'JOAO SILVA';
+  const resultado = api.redigirNome(original);
+  assert.equal(resultado.length, original.length);
+  assert.equal(resultado.trimEnd(), 'J. S.');
+});
+
+test('redigirNome ignora conectivos na geracao de iniciais', () => {
+  const original = 'MARIA DA CONCEICAO';
+  const resultado = api.redigirNome(original);
+  assert.equal(resultado.length, original.length);
+  assert.equal(resultado.trimEnd(), 'M. C.');
+});

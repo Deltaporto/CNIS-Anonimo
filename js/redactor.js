@@ -37,6 +37,14 @@ function redigirNumerico(label, num) {
 function redigirMascarar(original) {
   return '*'.repeat(original.length);
 }
-function redigirNome(original) { return ''; }
+function redigirNome(original) {
+  const conectivos = new Set(['de', 'da', 'das', 'do', 'dos']);
+  const palavras = original.trim().split(/\s+/);
+  const iniciais = palavras
+    .filter(p => !conectivos.has(p.toLowerCase()))
+    .map(p => p[0].toUpperCase() + '.')
+    .join(' ');
+  return iniciais.padEnd(original.length, ' ');
+}
 function mapearSubstitutos(texto) { return []; }
 function contarAchados(texto) { return { cpfs: 0, oabs: 0, crms: 0, nomes: 0, numerosProcesso: [] }; }
