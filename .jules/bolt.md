@@ -1,0 +1,3 @@
+## 2025-02-13 - Optimize large byte array to string conversions and vice versa
+**Learning:** In JavaScript, using `Array.from(bytes, byte => String.fromCharCode(byte)).join('')` on large `Uint8Array`s is extremely slow and memory intensive, potentially causing maximum call stack size exceeded errors. Similarly, `Uint8Array.from(str.split('').map(char => char.charCodeAt(0)))` is very slow for large strings.
+**Action:** Always use chunked `String.fromCharCode.apply` with a max chunk size of 32768 for converting large `Uint8Array`s to strings. For string to `Uint8Array` conversions, use a pre-allocated `Uint8Array` and a direct `for` loop (like the `encodeLatin1` function).
