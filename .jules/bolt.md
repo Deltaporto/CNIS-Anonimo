@@ -1,0 +1,3 @@
+## 2024-05-20 - Huge performance gain by removing Array.from and map for Uint8Array to/from String conversion
+**Learning:** In `js/pdf-processor.js`, there's a significant performance bottleneck due to iterating over large Uint8Array instances using `Array.from(bytes, byte => String.fromCharCode(byte))` or chained `.split('').map(char => char.charCodeAt(0))`. This pattern is used for serializing streams, leading to long processing times for large files.
+**Action:** Replace `Array.from` with a chunked `String.fromCharCode.apply` with a safe chunk size (e.g., 32768) to prevent "maximum call stack size exceeded" errors. For converting string back to `Uint8Array`, use the existing `encodeLatin1` function (or equivalent bounded loops) instead of `.split('').map()`.
