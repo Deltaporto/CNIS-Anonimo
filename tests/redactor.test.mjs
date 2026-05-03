@@ -46,3 +46,40 @@ test('redigirNome ignora conectivos na geracao de iniciais', () => {
   assert.equal(resultado.length, original.length);
   assert.equal(resultado.trimEnd(), 'M. C.');
 });
+
+test('mapearSubstitutos detecta CPF valido e gera substituto byte-safe', () => {
+  const pares = api.mapearSubstitutos('CPF do reu: 913.665.347-00 conforme certidao.');
+  const par = pares.find(p => p.original === '913.665.347-00');
+  assert.ok(par, 'deve detectar o CPF');
+  assert.equal(par.substituto, '***.***.***-**');
+  assert.equal(par.substituto.length, par.original.length);
+});
+
+test('mapearSubstitutos ignora CPF com checksum invalido', () => {
+  const pares = api.mapearSubstitutos('CPF: 123.456.789-00');
+  assert.equal(pares.filter(p => p.original.includes('123.456')).length, 0);
+});
+
+test('mapearSubstitutos detecta OAB preservando label e zerificando numero', () => {
+  const pares = api.mapearSubstitutos('Advogado OAB/RJ 123456 presente.');
+  const par = pares.find(p => p.original.includes('OAB'));
+  assert.ok(par, 'deve detectar OAB');
+  assert.ok(par.substituto.startsWith('OAB/RJ '), 'label deve ser preservado');
+  assert.equal(par.substituto.length, par.original.length);
+});
+
+test('mapearSubstitutos detecta CRM preservando label', () => {
+  const pares = api.mapearSubstitutos('Medico CRM/RJ 12345 emitiu laudo.');
+  const par = pares.find(p => p.original.includes('CRM'));
+  assert.ok(par);
+  assert.equal(par.substituto.length, par.original.length);
+  assert.ok(par.substituto.includes('00000'));
+});
+
+test('mapearSubstitutos detecta telefone e zerifica digitos preservando separadores', () => {
+  const pares = api.mapearSubstitutos('Contato: (21) 99999-8888');
+  const par = pares.find(p => p.original.includes('99999'));
+  assert.ok(par, 'deve detectar telefone');
+  assert.equal(par.substituto, par.original.replace(/\d/g, '0'));
+  assert.equal(par.substituto.length, par.original.length);
+});

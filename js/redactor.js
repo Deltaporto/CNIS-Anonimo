@@ -46,5 +46,51 @@ function redigirNome(original) {
     .join(' ');
   return iniciais.padEnd(original.length, ' ');
 }
-function mapearSubstitutos(texto) { return []; }
+function _globalizar(pattern, flagsExtras) {
+  const base = pattern.flags + 'g' + (flagsExtras || '');
+  const flags = [...new Set(base.split(''))].join('');
+  return new RegExp(pattern.source, flags);
+}
+
+function _adicionarParUnico(pares, original, substituto) {
+  if (!original || !substituto) return;
+  if (original.length !== substituto.length) return;
+  if (pares.some(p => p.original === original)) return;
+  pares.push({ original, substituto });
+}
+
+function mapearSubstitutos(texto) {
+  const pares = [];
+
+  const numerosProcesso = new Set(
+    [...texto.matchAll(_globalizar(NUMERO_DE_PROCESSO_PATTERN))].map(m => m[0])
+  );
+
+  for (const m of texto.matchAll(_globalizar(CPF_PATTERN))) {
+    if (!validarCPF(m[0]) || numerosProcesso.has(m[0])) continue;
+    _adicionarParUnico(pares, m[0], redigirCPF(m[0]));
+  }
+
+  for (const m of texto.matchAll(_globalizar(OAB_PATTERN, 'i'))) {
+    const [full, label, num] = m;
+    _adicionarParUnico(pares, full, redigirNumerico(label, num));
+  }
+
+  for (const m of texto.matchAll(_globalizar(CRM_PATTERN, 'i'))) {
+    const [full, label, num] = m;
+    _adicionarParUnico(pares, full, redigirNumerico(label, num));
+  }
+
+  for (const m of texto.matchAll(_globalizar(IDENTIDADE_PATTERN, 'i'))) {
+    const [full, num] = m;
+    const label = full.slice(0, full.length - num.length);
+    _adicionarParUnico(pares, full, redigirNumerico(label, num));
+  }
+
+  for (const m of texto.matchAll(_globalizar(TELEFONE_PATTERN))) {
+    _adicionarParUnico(pares, m[0], m[0].replace(/\d/g, '0'));
+  }
+
+  return pares;
+}
 function contarAchados(texto) { return { cpfs: 0, oabs: 0, crms: 0, nomes: 0, numerosProcesso: [] }; }
