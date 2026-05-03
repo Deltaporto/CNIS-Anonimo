@@ -1,0 +1,3 @@
+## 2024-04-16 - Optimize large array conversions in PDF processing
+**Learning:** In JavaScript, mapping over large `Uint8Array` objects using `Array.from` or `split('').map()` creates massive intermediate object arrays, leading to significant memory bloat and garbage collection pauses. Converting byte arrays to strings sequentially one character at a time is highly inefficient.
+**Action:** Always use chunked `String.fromCharCode.apply` with a max chunk size (e.g., 32768) when converting large typed arrays to strings, and use direct loop allocation (like `encodeLatin1`) instead of chained map/split calls to go from strings to bytes.
