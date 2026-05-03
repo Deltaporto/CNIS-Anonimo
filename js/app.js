@@ -302,6 +302,11 @@ function criarItemLista(nomeArquivo) {
 
   const progressoWrap = document.createElement('div');
   progressoWrap.className = 'progresso-wrap';
+  progressoWrap.setAttribute('role', 'progressbar');
+  progressoWrap.setAttribute('aria-valuemin', '0');
+  progressoWrap.setAttribute('aria-valuemax', '100');
+  progressoWrap.setAttribute('aria-valuenow', '0');
+  progressoWrap.setAttribute('aria-label', 'Progresso');
 
   const progressoBarra = document.createElement('div');
   progressoBarra.className = 'progresso-barra';
@@ -323,7 +328,9 @@ function setStatus(item, tipo, texto) {
 
 function setProgresso(item, pct, completo = false, erro = false) {
   const barra = item.querySelector('.progresso-barra');
+  const wrap = item.querySelector('.progresso-wrap');
   barra.style.width = pct + '%';
+  if (wrap) wrap.setAttribute('aria-valuenow', pct);
   if (completo) barra.classList.add('completo');
   if (erro) barra.classList.add('erro');
 }
