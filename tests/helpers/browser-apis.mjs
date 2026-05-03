@@ -82,11 +82,11 @@ export async function loadFakeDataApi() {
   `)({ crypto: webcrypto });
 }
 
-export async function loadPdfProcessorApi() {
+export async function loadPdfProcessorApi(redactorApi = null) {
   const source = await readSource('js/pdf-processor.js');
 
   return new Function('deps', `
-    const { TextDecoder, Uint8Array, ArrayBuffer, PDFLib, pako, pdfjsLib } = deps;
+    const { TextDecoder, Uint8Array, ArrayBuffer, PDFLib, pako, pdfjsLib, mapearSubstitutos, contarAchados } = deps;
     ${source}
     return {
       extrairDadosSensiveis,
@@ -112,7 +112,9 @@ export async function loadPdfProcessorApi() {
     ArrayBuffer,
     PDFLib,
     pako,
-    pdfjsLib
+    pdfjsLib,
+    mapearSubstitutos: redactorApi ? redactorApi.mapearSubstitutos : () => [],
+    contarAchados: redactorApi ? redactorApi.contarAchados : () => ({ cpfs: 0, oabs: 0, crms: 0, nomes: 0, numerosProcesso: [] })
   });
 }
 
@@ -158,3 +160,17 @@ export const CARTA_CONCESSAO_FIXTURES = (await fs.readdir(CARTA_CONCESSAO_FIXTUR
   .filter(filename => filename.toLowerCase().endsWith('.pdf'))
   .sort((left, right) => left.localeCompare(right, 'pt-BR', { numeric: true }))
   .map(filename => `teste-carta-de-concessao/${filename}`);
+
+export async function loadRedactorApi() {
+  const source = await readSource('js/redactor.js');
+  const primeiroNomes = JSON.parse(
+    await fs.readFile(new URL('assets/common-first-names.json', ROOT_URL), 'utf8')
+  );
+
+  return new Function('deps', `
+    const { primeiroNomes } = deps;
+    ${source}
+    inicializar(primeiroNomes);
+    return { redigirCPF, redigirNumerico, redigirMascarar, redigirNome, mapearSubstitutos, contarAchados };
+  `)({ primeiroNomes });
+}
