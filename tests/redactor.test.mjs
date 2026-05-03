@@ -83,3 +83,38 @@ test('mapearSubstitutos detecta telefone e zerifica digitos preservando separado
   assert.equal(par.substituto, par.original.replace(/\d/g, '0'));
   assert.equal(par.substituto.length, par.original.length);
 });
+
+test('mapearSubstitutos detecta email e mascara com asteriscos de mesmo comprimento', () => {
+  const pares = api.mapearSubstitutos('Enviar para joao.silva@tjrj.jus.br urgente.');
+  const par = pares.find(p => p.original.includes('@'));
+  assert.ok(par, 'deve detectar email');
+  assert.equal(par.substituto, '*'.repeat(par.original.length));
+  assert.equal(par.substituto.length, par.original.length);
+});
+
+test('mapearSubstitutos detecta nome com primeiro nome reconhecido e gera iniciais com padding', () => {
+  const pares = api.mapearSubstitutos('A parte autora JOAO SILVA DOS SANTOS requer o seguinte.');
+  const par = pares.find(p => p.original.includes('JOAO'));
+  assert.ok(par, 'deve detectar nome iniciado por primeiro nome reconhecido');
+  assert.equal(par.substituto.length, par.original.length, 'comprimento deve ser preservado');
+  assert.ok(par.substituto.includes('J.'), 'deve conter inicial de JOAO');
+  assert.ok(par.substituto.includes('S.'), 'deve conter inicial de SILVA');
+});
+
+test('mapearSubstitutos preserva numero do processo e nao o inclui como par', () => {
+  const texto = 'Processo 0001234-56.2024.8.19.0001 e CPF 913.665.347-00.';
+  const pares = api.mapearSubstitutos(texto);
+  assert.equal(pares.find(p => p.original.includes('0001234')), undefined,
+    'numero do processo nao deve aparecer como par de substituicao');
+  assert.ok(pares.find(p => p.original === '913.665.347-00'),
+    'CPF deve ser redatado mesmo com numero do processo presente');
+});
+
+test('contarAchados retorna contagens corretas por tipo', () => {
+  const texto = 'Processo 0001234-56.2024.8.19.0001 CPF: 913.665.347-00 OAB/RJ 12345 JOAO SILVA DOS SANTOS';
+  const achados = api.contarAchados(texto);
+  assert.equal(achados.cpfs, 1);
+  assert.equal(achados.oabs, 1);
+  assert.equal(achados.numerosProcesso.length, 1);
+  assert.equal(achados.numerosProcesso[0], '0001234-56.2024.8.19.0001');
+});

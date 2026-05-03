@@ -59,6 +59,45 @@ function _adicionarParUnico(pares, original, substituto) {
   pares.push({ original, substituto });
 }
 
+function detectarNomesNoTexto(texto) {
+  const conectivos = new Set(['de', 'da', 'das', 'do', 'dos']);
+  const tokens = texto.match(/[A-ZÀ-ÿa-zà-ÿ]+|\s+|[^\wA-ZÀ-ÿ\s]+/g) || [];
+  const nomes = [];
+  let i = 0;
+
+  while (i < tokens.length) {
+    const tok = tokens[i];
+    if (!/^[A-ZÀ-Þ]/.test(tok) || !firstNameSet.has(tok.toLowerCase())) { i++; continue; }
+
+    const seq = [tok];
+    let j = i + 1;
+
+    while (j < tokens.length) {
+      const prox = tokens[j];
+      if (/^\s+$/.test(prox)) { seq.push(prox); j++; continue; }
+      if (conectivos.has(prox.toLowerCase()) ||
+          /^[A-ZÀ-Þ][A-ZÀ-Þa-zà-ÿ]+$/.test(prox) ||
+          /^[A-ZÀ-Þ]{2,}$/.test(prox)) {
+        seq.push(prox); j++;
+      } else { break; }
+    }
+
+    while (seq.length > 1) {
+      const last = seq[seq.length - 1];
+      if (/^\s+$/.test(last) || conectivos.has(last.toLowerCase())) seq.pop();
+      else break;
+    }
+
+    const nome = seq.join('');
+    const palavrasNome = nome.trim().split(/\s+/).filter(p => !conectivos.has(p.toLowerCase()));
+
+    if (palavrasNome.length >= 2) { nomes.push(nome); i = j; }
+    else { i++; }
+  }
+
+  return nomes;
+}
+
 function mapearSubstitutos(texto) {
   const pares = [];
 
@@ -91,6 +130,22 @@ function mapearSubstitutos(texto) {
     _adicionarParUnico(pares, m[0], m[0].replace(/\d/g, '0'));
   }
 
+  for (const m of texto.matchAll(_globalizar(EMAIL_PATTERN, 'i'))) {
+    _adicionarParUnico(pares, m[0], redigirMascarar(m[0]));
+  }
+
+  for (const nome of detectarNomesNoTexto(texto)) {
+    if (numerosProcesso.has(nome)) continue;
+    _adicionarParUnico(pares, nome, redigirNome(nome));
+  }
+
   return pares;
 }
-function contarAchados(texto) { return { cpfs: 0, oabs: 0, crms: 0, nomes: 0, numerosProcesso: [] }; }
+function contarAchados(texto) {
+  const numerosProcesso = [...texto.matchAll(_globalizar(NUMERO_DE_PROCESSO_PATTERN))].map(m => m[0]);
+  const cpfs = [...texto.matchAll(_globalizar(CPF_PATTERN))].filter(m => validarCPF(m[0])).length;
+  const oabs = [...texto.matchAll(_globalizar(OAB_PATTERN, 'i'))].length;
+  const crms = [...texto.matchAll(_globalizar(CRM_PATTERN, 'i'))].length;
+  const nomes = detectarNomesNoTexto(texto).length;
+  return { cpfs, oabs, crms, nomes, numerosProcesso };
+}
