@@ -7,6 +7,16 @@ if (typeof window !== 'undefined' && typeof pdfjsLib !== 'undefined' && pdfjsLib
 
 const decoderLatin1 = new TextDecoder('latin1');
 
+function uint8ArrayToString(bytes) {
+  const CHUNK_SIZE = 32768;
+  let str = '';
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+    str += String.fromCharCode.apply(null, chunk);
+  }
+  return str;
+}
+
 function encodeLatin1(str) {
   const bytes = new Uint8Array(str.length);
   for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i) & 0xff;
@@ -920,7 +930,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   }
 
   const bytes = toUint8Array(pdfBytes);
-  let bin = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  let bin = uint8ArrayToString(bytes);
 
   const regexStreams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   const partes = [];
@@ -930,7 +940,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   let match;
 
   while ((match = regexStreams.exec(bin)) !== null) {
-    const raw = Uint8Array.from(match[1].split('').map(char => char.charCodeAt(0)));
+    const raw = encodeLatin1(match[1]);
 
     let decoded;
     try {
@@ -959,10 +969,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
     modificou = true;
     mergeHits(hits, result.hits);
 
-    const newBin = Array.from(
-      pako.deflate(encodeLatin1(result.text)),
-      byte => String.fromCharCode(byte)
-    ).join('');
+    const newBin = uint8ArrayToString(pako.deflate(encodeLatin1(result.text)));
 
     partes.push(bin.slice(last, match.index) + 'stream\n' + newBin + '\nendstream');
     last = match.index + match[0].length;
@@ -973,7 +980,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   }
 
   partes.push(bin.slice(last));
-  const resultBytes = Uint8Array.from(partes.join('').split(''), char => char.charCodeAt(0));
+  const resultBytes = encodeLatin1(partes.join(''));
 
   try {
     const doc = await PDFLib.PDFDocument.load(resultBytes, { ignoreEncryption: true, updateMetadata: false });
@@ -1049,13 +1056,13 @@ async function coletarTextosDecodificados(pdfBytes) {
 
 function coletarTextosDecodificadosViaBytes(pdfBytes) {
   const bytes = toUint8Array(pdfBytes);
-  const bin = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  const bin = uint8ArrayToString(bytes);
   const textos = [];
   const regexStreams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   let match;
 
   while ((match = regexStreams.exec(bin)) !== null) {
-    const raw = Uint8Array.from(match[1].split('').map(char => char.charCodeAt(0)));
+    const raw = encodeLatin1(match[1]);
 
     try {
       const texto = decoderLatin1.decode(pako.inflate(raw));
