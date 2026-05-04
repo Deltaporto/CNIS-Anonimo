@@ -8,3 +8,6 @@
 ## 2024-05-18 - Dynamic Content Accessibility
 **Learning:** For status texts generated dynamically in JavaScript (like file processing status changing from 'Aguardando' to 'Concluído'), screen readers will ignore these updates unless explicitly told to read them.
 **Action:** Always add `role="status"` and `aria-live="polite"` to dynamic text elements so updates are smoothly announced to screen reader users without stealing focus.
+## 2024-05-18 - Custom Progress Indicator Accessibility
+**Learning:** In this application, progress indicators are custom-built using generic `div` elements (like `progresso-wrap`). Without semantic HTML, screen readers fail to announce the progress state to users during file processing.
+**Action:** Always enhance custom progress indicator `div`s with `role="progressbar"`, `aria-valuemin`, `aria-valuemax`, and dynamically update `aria-valuenow` via JavaScript to ensure screen readers accurately announce progress changes.
