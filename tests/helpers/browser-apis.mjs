@@ -51,7 +51,7 @@ function createElementStub() {
     click() {},
     setAttribute() {},
     querySelector() { return createElementStub(); },
-    classList: { add() {}, remove() {} },
+    classList: { add() {}, remove() {}, toggle() {} },
     style: {},
     textContent: '',
     innerHTML: '',
@@ -104,7 +104,8 @@ export async function loadPdfProcessorApi(redactorApi = null) {
       encodeTextWithCMap,
       montarEspecificacoesSubstituicao,
       montarEspecificacoesHex,
-      aplicarEspecificacoesEmHex
+      aplicarEspecificacoesEmHex,
+      processarDocumentoJudicial
     };
   `)({
     TextDecoder,
@@ -171,6 +172,33 @@ export async function loadRedactorApi() {
     const { primeiroNomes } = deps;
     ${source}
     inicializar(primeiroNomes);
-    return { redigirCPF, redigirNumerico, redigirMascarar, redigirNome, mapearSubstitutos, contarAchados };
+    return {
+      inicializar,
+      inicializarRedactorPadrao,
+      redigirCPF,
+      redigirNumerico,
+      redigirMascarar,
+      redigirNome,
+      mapearSubstitutos,
+      contarAchados
+    };
   `)({ primeiroNomes });
+}
+
+const PROCESSO_JUDICIAL_FIXTURES_URL = new URL('tests/processo-judicial/', ROOT_URL);
+
+export const PROCESSO_JUDICIAL_FIXTURES = await (async () => {
+  try {
+    return (await fs.readdir(PROCESSO_JUDICIAL_FIXTURES_URL))
+      .filter(filename => filename.toLowerCase().endsWith('.pdf'))
+      .sort((left, right) => left.localeCompare(right, 'pt-BR', { numeric: true }))
+      .map(filename => `processo-judicial/${filename}`);
+  } catch {
+    return [];
+  }
+})();
+
+export async function readProcessoJudicialFixture(filename) {
+  const bytes = await fs.readFile(new URL(`tests/${filename}`, ROOT_URL));
+  return new Uint8Array(bytes);
 }

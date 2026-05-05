@@ -92,6 +92,24 @@ test('mapearSubstitutos detecta email e mascara com asteriscos de mesmo comprime
   assert.equal(par.substituto.length, par.original.length);
 });
 
+test('mapearSubstitutos detecta endereco e mascara com asteriscos de mesmo comprimento', () => {
+  const pares = api.mapearSubstitutos('Residente na Rua das Flores 10, Centro.');
+  const par = pares.find(p => p.original.toLowerCase().includes('rua das flores'));
+  assert.ok(par, 'deve detectar endereco');
+  assert.equal(par.substituto, '*'.repeat(par.original.length));
+  assert.equal(par.substituto.length, par.original.length);
+});
+
+test('mapearSubstitutos nao inclui rotulos seguintes em nomes ou enderecos', () => {
+  const pares = api.mapearSubstitutos(
+    'Parte autora JOAO SILVA DOS SANTOS CPF 913.665.347-00 Endereco Rua das Flores 10 Pagina 1'
+  );
+  assert.ok(pares.find(p => p.original === 'JOAO SILVA DOS SANTOS'));
+  assert.ok(pares.find(p => p.original === 'Rua das Flores 10'));
+  assert.equal(pares.find(p => p.original.includes('SANTOS CPF')), undefined);
+  assert.equal(pares.find(p => p.original.includes('Pagina')), undefined);
+});
+
 test('mapearSubstitutos detecta nome com primeiro nome reconhecido e gera iniciais com padding', () => {
   const pares = api.mapearSubstitutos('A parte autora JOAO SILVA DOS SANTOS requer o seguinte.');
   const par = pares.find(p => p.original.includes('JOAO'));
@@ -111,10 +129,11 @@ test('mapearSubstitutos preserva numero do processo e nao o inclui como par', ()
 });
 
 test('contarAchados retorna contagens corretas por tipo', () => {
-  const texto = 'Processo 0001234-56.2024.8.19.0001 CPF: 913.665.347-00 OAB/RJ 12345 JOAO SILVA DOS SANTOS';
+  const texto = 'Processo 0001234-56.2024.8.19.0001 e 0001234-56.2024.8.19.0001 CPF: 913.665.347-00 OAB/RJ 12345 JOAO SILVA DOS SANTOS';
   const achados = api.contarAchados(texto);
   assert.equal(achados.cpfs, 1);
   assert.equal(achados.oabs, 1);
+  assert.equal(achados.enderecos, 0);
   assert.equal(achados.numerosProcesso.length, 1);
   assert.equal(achados.numerosProcesso[0], '0001234-56.2024.8.19.0001');
 });

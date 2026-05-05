@@ -5,12 +5,18 @@ const CRM_PATTERN = /\b((?:CRM(?:\/[A-Z]{2})?|CREMERJ)\s*)(\d{2,10}|\d{2,3}\.\d{
 const IDENTIDADE_PATTERN = /\b(?:Identidade|Id\.?|Ident\.?|RG)\s*(?:n[.º]?\s*)?(\d[\d.\-\/]{4,8}\d)\b/i;
 const TELEFONE_PATTERN = /\(?\d{2}\)?\s*\d{4,5}[-\s]?\d{4}\b/;
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-const ENDERECO_PATTERN = /\b(?:Rua|R\.|Avenida|Av\.?|Travessa|Trav\.?|Pra[cç]a|Rodovia|Rod\.?|Estrada|Estr\.?)\b\s+[^\n,]+(?:,?\s*n[.º]?\s*\d+)?/i;
+const ENDERECO_PATTERN = /\b(?:Rua|R\.|Avenida|Av\.?|Travessa|Trav\.?|Pra[cç]a|Rodovia|Rod\.?|Estrada|Estr\.?)\b\s+.+?(?=\s+(?:Processo|CPF|OAB|CRM|Contato|E-?mail|Endere[cç]o|Parte|P[aá]gina)\b|[,;\n]|$)/i;
 
 let firstNameSet = new Set();
 
 function inicializar(primeiroNomes) {
   firstNameSet = new Set(primeiroNomes.map(n => n.toLowerCase()));
+}
+
+async function inicializarRedactorPadrao(fetchFn = fetch) {
+  if (firstNameSet.size) return;
+  const resposta = await fetchFn('assets/common-first-names.json');
+  inicializar(await resposta.json());
 }
 
 function validarCPF(cpf) {
@@ -61,6 +67,20 @@ function _adicionarParUnico(pares, original, substituto) {
 
 function detectarNomesNoTexto(texto) {
   const conectivos = new Set(['de', 'da', 'das', 'do', 'dos']);
+  const rotulosParada = new Set([
+    'CPF',
+    'OAB',
+    'CRM',
+    'RG',
+    'PROCESSO',
+    'CONTATO',
+    'EMAIL',
+    'E-MAIL',
+    'ENDERECO',
+    'ENDEREÇO',
+    'PAGINA',
+    'PÁGINA'
+  ]);
   const tokens = texto.match(/[A-ZÀ-ÿa-zà-ÿ]+|\s+|[^\wA-ZÀ-ÿ\s]+/g) || [];
   const nomes = [];
   let i = 0;
@@ -75,6 +95,7 @@ function detectarNomesNoTexto(texto) {
     while (j < tokens.length) {
       const prox = tokens[j];
       if (/^\s+$/.test(prox)) { seq.push(prox); j++; continue; }
+      if (rotulosParada.has(prox.toUpperCase())) break;
       if (conectivos.has(prox.toLowerCase()) ||
           /^[A-ZÀ-Þ][A-ZÀ-Þa-zà-ÿ]+$/.test(prox) ||
           /^[A-ZÀ-Þ]{2,}$/.test(prox)) {
@@ -134,6 +155,10 @@ function mapearSubstitutos(texto) {
     _adicionarParUnico(pares, m[0], redigirMascarar(m[0]));
   }
 
+  for (const m of texto.matchAll(_globalizar(ENDERECO_PATTERN, 'i'))) {
+    _adicionarParUnico(pares, m[0], redigirMascarar(m[0]));
+  }
+
   for (const nome of detectarNomesNoTexto(texto)) {
     if (numerosProcesso.has(nome)) continue;
     _adicionarParUnico(pares, nome, redigirNome(nome));
@@ -142,10 +167,11 @@ function mapearSubstitutos(texto) {
   return pares;
 }
 function contarAchados(texto) {
-  const numerosProcesso = [...texto.matchAll(_globalizar(NUMERO_DE_PROCESSO_PATTERN))].map(m => m[0]);
+  const numerosProcesso = [...new Set([...texto.matchAll(_globalizar(NUMERO_DE_PROCESSO_PATTERN))].map(m => m[0]))];
   const cpfs = [...texto.matchAll(_globalizar(CPF_PATTERN))].filter(m => validarCPF(m[0])).length;
   const oabs = [...texto.matchAll(_globalizar(OAB_PATTERN, 'i'))].length;
   const crms = [...texto.matchAll(_globalizar(CRM_PATTERN, 'i'))].length;
   const nomes = detectarNomesNoTexto(texto).length;
-  return { cpfs, oabs, crms, nomes, numerosProcesso };
+  const enderecos = [...texto.matchAll(_globalizar(ENDERECO_PATTERN, 'i'))].length;
+  return { cpfs, oabs, crms, nomes, enderecos, numerosProcesso };
 }

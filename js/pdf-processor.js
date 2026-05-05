@@ -595,6 +595,12 @@ function encodedHexToPdfLiteral(hex) {
   return escaped;
 }
 
+function encodeTextToLatin1Hex(texto) {
+  return Array.from(encodeLatin1(texto), byte =>
+    byte.toString(16).padStart(2, '0').toUpperCase()
+  ).join('');
+}
+
 function extrairMapasHexPorFonte(pdfDoc) {
   const mapas = [];
   const vistos = new Set();
@@ -626,8 +632,6 @@ function extrairMapasHexPorFonte(pdfDoc) {
 }
 
 function montarEspecificacoesHex(specs, mapasHex) {
-  if (!mapasHex.length) return [];
-
   const specsHex = [];
 
   for (const spec of specs) {
@@ -635,6 +639,19 @@ function montarEspecificacoesHex(specs, mapasHex) {
     const pairsRaw = [];
     const verifyOriginals = [];
     const verifyOriginalsRaw = [];
+
+    for (const [orig, repl] of spec.pairs) {
+      const originalHex = encodeTextToLatin1Hex(orig);
+      const replacementHex = encodeTextToLatin1Hex(repl);
+      if (originalHex && replacementHex) {
+        pairs.push([originalHex, replacementHex]);
+      }
+    }
+
+    for (const original of spec.verifyOriginals) {
+      const originalHex = encodeTextToLatin1Hex(original);
+      if (originalHex) verifyOriginals.push(originalHex);
+    }
 
     for (const mapa of mapasHex) {
       for (const [orig, repl] of spec.pairs) {
@@ -1070,4 +1087,101 @@ function coletarTextosDecodificadosViaBytes(pdfBytes) {
   }
 
   return textos;
+}
+
+// ── MODO PROCESSO JUDICIAL ────────────────────────────────────────────────────
+
+async function _extrairTextoCompleto(pdfBytes) {
+  const copia = toUint8Array(pdfBytes).slice().buffer;
+  const pdf = await pdfjsLib.getDocument({ data: copia }).promise;
+  const textos = [];
+
+  try {
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      textos.push(normalizarEspacos(content.items.map(item => item.str).join(' ')));
+    }
+  } finally {
+    try { pdf.cleanup(); } catch {}
+    try { await pdf.destroy(); } catch {}
+  }
+
+  return textos.join('\n');
+}
+
+async function processarDocumentoJudicial(pdfBytes) {
+  const pdfBytesArr = toUint8Array(pdfBytes);
+  const texto = await _extrairTextoCompleto(pdfBytesArr);
+  const pares = mapearSubstitutos(texto);
+  const achados = contarAchados(texto);
+
+  if (!pares.length) {
+    return {
+      bytes: pdfBytesArr,
+      ok: true,
+      achados,
+      expectedCount: 0,
+      appliedCount: 0,
+      unreplacedFields: [],
+      unmatchedFields: []
+    };
+  }
+
+  const specs = pares.map(({ original, substituto }, i) => ({
+    id: `campo_${i}`,
+    label: original.slice(0, 50),
+    pairs: [[original, substituto]],
+    verifyOriginals: [original]
+  }));
+
+  const hits = {};
+  let bytesTrabalho = pdfBytesArr;
+  let alterouStreams = false;
+
+  const pdfDoc = await PDFLib.PDFDocument.load(pdfBytesArr, {
+    ignoreEncryption: true,
+    updateMetadata: false
+  });
+  const mapasHex = extrairMapasHexPorFonte(pdfDoc);
+  const specsHex = montarEspecificacoesHex(specs, mapasHex);
+
+  for (const [, obj] of pdfDoc.context.enumerateIndirectObjects()) {
+    if (!(obj.contents instanceof Uint8Array) || !obj.dict) continue;
+    const result = _processarStream(obj, specs, specsHex);
+    if (result.changed) alterouStreams = true;
+    mergeHits(hits, result.hits);
+  }
+
+  if (alterouStreams) {
+    bytesTrabalho = await pdfDoc.save({ useObjectStreams: false });
+  }
+
+  const specsPendentes = specs.filter(spec => !hits[spec.id]);
+  if (!alterouStreams || specsPendentes.length > 0) {
+    const specsHexPendentes = specsHex.filter(spec => !hits[spec.id]);
+    const fallback = await _substituirViaBytesRaw(
+      bytesTrabalho,
+      alterouStreams ? specsPendentes : specs,
+      alterouStreams ? specsHexPendentes : specsHex
+    );
+    bytesTrabalho = fallback.bytes;
+    mergeHits(hits, fallback.hits);
+  }
+
+  const unreplacedFields = await verificarSubstituicoesNoPDF(bytesTrabalho, specs);
+  const unmatchedFields = specs
+    .filter(spec => !hits[spec.id])
+    .map(spec => spec.label);
+  const appliedCount = specs.filter(spec => hits[spec.id]).length;
+
+  return {
+    bytes: bytesTrabalho,
+    ok: unreplacedFields.length === 0 && !(specs.length > 0 && appliedCount === 0),
+    achados,
+    expectedCount: specs.length,
+    appliedCount,
+    unreplacedFields,
+    unmatchedFields
+  };
 }

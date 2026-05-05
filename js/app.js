@@ -20,6 +20,16 @@ const MODOS_DOCUMENTO = {
     ariaLabel: 'Selecionar arquivos PDF de carta de concessão para anonimizar',
     botaoDownloadUm: 'Baixar novamente',
     botaoDownloadVarios: 'Baixar ZIP novamente'
+  },
+  'processo-judicial': {
+    id: 'processo-judicial',
+    prefixoArquivo: 'Processo',
+    zipNome: 'Processos_anonimizados.zip',
+    uploadTitulo: 'Arraste as peças processuais aqui',
+    uploadSub: 'ou <strong>clique para selecionar</strong> · petições, sentenças, acórdãos · download automático ao concluir',
+    ariaLabel: 'Selecionar arquivos PDF de processos judiciais para anonimizar',
+    botaoDownloadUm: 'Baixar novamente',
+    botaoDownloadVarios: 'Baixar ZIP novamente'
   }
 };
 
@@ -31,6 +41,7 @@ const btnBaixarZip = document.getElementById('btn-baixar-zip');
 const btnLimpar = document.getElementById('btn-limpar');
 const btnModoCnis = document.getElementById('btn-modo-cnis');
 const btnModoCarta = document.getElementById('btn-modo-carta');
+const btnModoProcesso = document.getElementById('btn-modo-processo');
 const uploadTituloEl = document.getElementById('upload-titulo');
 const uploadSubEl = document.getElementById('upload-sub');
 
@@ -53,9 +64,9 @@ function atualizarModoUI() {
   }
 
   if (btnModoCnis?.classList) {
-    btnModoCnis.classList.remove('modo-ativo');
-    btnModoCarta.classList.remove('modo-ativo');
-    (modoAtual === 'cnis' ? btnModoCnis : btnModoCarta).classList.add('modo-ativo');
+    btnModoCnis.classList.toggle('modo-ativo', modoAtual === 'cnis');
+    btnModoCarta?.classList.toggle('modo-ativo', modoAtual === 'carta-concessao');
+    btnModoProcesso?.classList.toggle('modo-ativo', modoAtual === 'processo-judicial');
   }
 
   if (btnModoCnis && typeof btnModoCnis.setAttribute === 'function') {
@@ -65,6 +76,10 @@ function atualizarModoUI() {
   if (btnModoCarta && typeof btnModoCarta.setAttribute === 'function') {
     btnModoCarta.setAttribute('aria-pressed', String(modoAtual === 'carta-concessao'));
     btnModoCarta.setAttribute('aria-selected', String(modoAtual === 'carta-concessao'));
+  }
+  if (btnModoProcesso && typeof btnModoProcesso.setAttribute === 'function') {
+    btnModoProcesso.setAttribute('aria-pressed', String(modoAtual === 'processo-judicial'));
+    btnModoProcesso.setAttribute('aria-selected', String(modoAtual === 'processo-judicial'));
   }
 }
 
@@ -88,6 +103,7 @@ atualizarModoUI();
 
 btnModoCnis?.addEventListener('click', () => trocarModo('cnis'));
 btnModoCarta?.addEventListener('click', () => trocarModo('carta-concessao'));
+btnModoProcesso?.addEventListener('click', () => trocarModo('processo-judicial'));
 
 // ── UPLOAD ────────────────────────────────────────────────────────────────────
 
@@ -182,6 +198,11 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
     return;
   }
 
+  if (modoLote === 'processo-judicial') {
+    await processarArquivoJudicial(file, item, indice, totalArquivos);
+    return;
+  }
+
   setProgresso(item, 30);
 
   try {
@@ -230,6 +251,55 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Erro ao processar o PDF. Verifique se o arquivo é válido.');
     console.error('[CNIS]', err);
+  }
+}
+
+async function processarArquivoJudicial(file, item, indice, totalArquivos) {
+  setProgresso(item, 30);
+
+  try {
+    if (typeof inicializarRedactorPadrao === 'function') {
+      await inicializarRedactorPadrao();
+    }
+
+    const pdfBytes = await file.arrayBuffer();
+    setProgresso(item, 50);
+
+    const resultado = await processarDocumentoJudicial(pdfBytes);
+    setProgresso(item, 90);
+    mostrarAchados(item, resultado.achados);
+
+    if (!resultado.ok) {
+      setProgresso(item, 100, false, true);
+
+      if (resultado.unreplacedFields?.length) {
+        setStatus(
+          item,
+          'erro',
+          'Falha segura: restaram dados no PDF (' + resultado.unreplacedFields.join(', ') + ')'
+        );
+      } else {
+        setStatus(item, 'erro', 'Falha segura: nenhuma substituição pôde ser confirmada');
+      }
+
+      return;
+    }
+
+    setProgresso(item, 100, true);
+    if (resultado.unmatchedFields?.length) {
+      setStatus(item, 'aviso', 'Concluído (não confirmado: ' + resultado.unmatchedFields.join(', ') + ')');
+    } else {
+      setStatus(item, 'ok', 'Anonimizado ✓');
+    }
+
+    resultados.push({
+      nome: gerarNomeSaida(null, indice, totalArquivos, 'processo-judicial'),
+      bytes: resultado.bytes
+    });
+  } catch (err) {
+    setProgresso(item, 100, false, true);
+    setStatus(item, 'erro', 'Erro ao processar o PDF. Verifique se o arquivo é válido.');
+    console.error('[Processo Judicial]', err);
   }
 }
 
@@ -426,6 +496,48 @@ function mostrarSubs(item, originais, ficticios, modo) {
   });
 
   el.appendChild(tabela);
+}
+
+function mostrarAchados(item, achados = {}) {
+  const el = item.querySelector('.arquivo-subs');
+  el.textContent = '';
+
+  const resumo = document.createElement('div');
+  resumo.className = 'subs-tabela';
+
+  const partes = [];
+  if (achados.cpfs) partes.push('CPFs: ' + achados.cpfs);
+  if (achados.oabs) partes.push('OABs: ' + achados.oabs);
+  if (achados.crms) partes.push('CRMs: ' + achados.crms);
+  if (achados.nomes) partes.push('Nomes: ' + achados.nomes);
+  if (achados.enderecos) partes.push('Endereços: ' + achados.enderecos);
+
+  const linha = document.createElement('div');
+  linha.className = 'sub-linha';
+  linha.style.gridTemplateColumns = '1fr';
+
+  const textoEl = document.createElement('span');
+  textoEl.className = 'sub-label';
+  textoEl.textContent = partes.length
+    ? 'Redatados: ' + partes.join(' · ')
+    : 'Nenhum dado sensível encontrado';
+  linha.appendChild(textoEl);
+  resumo.appendChild(linha);
+
+  if (achados.numerosProcesso?.length) {
+    const processoLinha = document.createElement('div');
+    processoLinha.className = 'sub-linha';
+    processoLinha.style.gridTemplateColumns = '1fr';
+
+    const processoEl = document.createElement('span');
+    processoEl.className = 'sub-original';
+    processoEl.textContent = 'Processo preservado: ' + achados.numerosProcesso.join(', ');
+
+    processoLinha.appendChild(processoEl);
+    resumo.appendChild(processoLinha);
+  }
+
+  el.appendChild(resumo);
 }
 
 // ── DOWNLOAD ──────────────────────────────────────────────────────────────────
