@@ -61,11 +61,30 @@ test('mapearSubstitutos ignora CPF com checksum invalido', () => {
 });
 
 test('mapearSubstitutos detecta OAB preservando label e zerificando numero', () => {
-  const pares = api.mapearSubstitutos('Advogado OAB/RJ 123456 presente.');
+  const pares = api.mapearSubstitutos('Advogado OAB/RJ 123456 presente. Intimar OAB-RJ) sob o n. 169.859.');
   const par = pares.find(p => p.original.includes('OAB'));
   assert.ok(par, 'deve detectar OAB');
   assert.ok(par.substituto.startsWith('OAB/RJ '), 'label deve ser preservado');
   assert.equal(par.substituto.length, par.original.length);
+  assert.equal(
+    pares.find(p => p.original === 'OAB-RJ) sob o n. 169.859')?.substituto,
+    'OAB-RJ) sob o n. 0000000'
+  );
+});
+
+test('mapearSubstitutos detecta OAB compacta e nomes de capa/evento', () => {
+  const texto = [
+    'NATHALYE LIBANIO DA SILVA CRUZ RJ246673',
+    'RJ169859 - MARIANGELA MENDES ALBUQUERQUE MARQUES DE OLIVEIRA',
+    'OLIVEIRA RJ169859'
+  ].join(' ');
+  const pares = api.mapearSubstitutos(texto);
+
+  assert.equal(pares.find(p => p.original === 'RJ246673')?.substituto, 'RJ000000');
+  assert.equal(pares.find(p => p.original === 'RJ169859')?.substituto, 'RJ000000');
+  assert.equal(pares.find(p => p.original === 'OLIVEIRA RJ169859')?.substituto, 'O.       RJ000000');
+  assert.ok(pares.find(p => p.original === 'NATHALYE LIBANIO DA SILVA CRUZ'));
+  assert.ok(pares.find(p => p.original === 'MARIANGELA MENDES ALBUQUERQUE MARQUES DE OLIVEIRA'));
 });
 
 test('mapearSubstitutos detecta CRM preservando label', () => {
@@ -126,6 +145,14 @@ test('mapearSubstitutos preserva numero do processo e nao o inclui como par', ()
     'numero do processo nao deve aparecer como par de substituicao');
   assert.ok(pares.find(p => p.original === '913.665.347-00'),
     'CPF deve ser redatado mesmo com numero do processo presente');
+});
+
+test('mapearSubstitutos preserva numero de processo CNJ compacto sem redacao parcial', () => {
+  const texto = 'Capa do processo 50299468320254025101 e telefone (21) 99999-8888.';
+  const pares = api.mapearSubstitutos(texto);
+  assert.equal(pares.find(p => p.original.includes('50299468320254025101')), undefined);
+  assert.equal(pares.find(p => p.original === '(21) 99999-8888')?.substituto, '(00) 00000-0000');
+  assert.deepEqual(api.contarAchados(texto).numerosProcesso, ['50299468320254025101']);
 });
 
 test('contarAchados retorna contagens corretas por tipo', () => {

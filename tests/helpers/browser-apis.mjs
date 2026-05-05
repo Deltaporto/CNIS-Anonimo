@@ -103,6 +103,7 @@ export async function loadPdfProcessorApi(redactorApi = null) {
       parseToUnicodeCMap,
       encodeTextWithCMap,
       montarEspecificacoesSubstituicao,
+      aplicarEspecificacoesNoTexto,
       montarEspecificacoesHex,
       aplicarEspecificacoesEmHex,
       processarDocumentoJudicial

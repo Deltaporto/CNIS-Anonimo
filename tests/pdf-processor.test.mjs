@@ -157,6 +157,123 @@ end
   assert.doesNotMatch(result.text, new RegExp(cpfOriginal));
 });
 
+test('substitui texto literal fragmentado em arrays TJ', () => {
+  const specs = [
+    {
+      id: 'nome',
+      label: 'Nome',
+      pairs: [['LEONARDO CESAR MOREIRA', 'L. C. M.              ']],
+      verifyOriginals: ['LEONARDO CESAR MOREIRA']
+    },
+    {
+      id: 'cpf',
+      label: 'CPF',
+      pairs: [['042.452.937-80', '***.***.***-**']],
+      verifyOriginals: ['042.452.937-80']
+    }
+  ];
+  const stream = [
+    'BT',
+    '/F2 12 Tf',
+    '[(L)-4(EON)4(A)-3(RDO )-118(C)-2(ESA)4(R )-111(M)-2(OREI)-5(R)8(A)] TJ',
+    '[(CPF )-20(042)-2(.)-2(452)-2(.)-2(937)] TJ',
+    '[(-)] TJ',
+    '[(80)] TJ',
+    'ET'
+  ].join('\n');
+
+  const result = pdfProcessorApi.aplicarEspecificacoesNoTexto(stream, specs);
+
+  assert.equal(result.changed, true);
+  assert.equal(result.hits.nome, 1);
+  assert.equal(result.hits.cpf, 1);
+  assert.doesNotMatch(result.text, /LEONARDO CESAR MOREIRA/);
+  assert.doesNotMatch(result.text, /042\.452\.937-80/);
+  assert.match(result.text, /L\. C\. M\./);
+  assert.match(result.text, /CPF \*\*\*\.\*\*\*\.\*\*\*/);
+  assert.match(result.text, /\[\(-\)\] TJ/);
+  assert.match(result.text, /\[\(\*\*\)\] TJ/);
+});
+
+test('substitui texto literal fragmentado em operadores Tj separados', () => {
+  const specs = [
+    {
+      id: 'nome',
+      label: 'Nome',
+      pairs: [['LEONARDO CESARMOREIRA', 'L. C. M.             ']],
+      verifyOriginals: ['LEONARDO CESARMOREIRA']
+    }
+  ];
+  const stream = [
+    'BT',
+    '/F1 10 Tf',
+    '(LEONARDO CESAR)Tj',
+    '1 0 0 1 150 613.08 Tm',
+    '(MOREIRA)Tj',
+    'ET'
+  ].join('\n');
+
+  const result = pdfProcessorApi.aplicarEspecificacoesNoTexto(stream, specs);
+
+  assert.equal(result.changed, true);
+  assert.equal(result.hits.nome, 1);
+  assert.doesNotMatch(result.text, /LEONARDO/);
+  assert.doesNotMatch(result.text, /MOREIRA/);
+  assert.match(result.text, /L\. C\. M\./);
+});
+
+test('substitui texto hex fragmentado em arrays TJ', () => {
+  const specsHex = [
+    {
+      id: 'cpf',
+      label: 'CPF',
+      pairs: [['001000420030', '000000000000']],
+      verifyOriginals: ['001000420030']
+    }
+  ];
+  const stream = [
+    'BT',
+    '/F3 12 Tf',
+    '[<0010>-2<0042>-2<0030>] TJ',
+    'ET'
+  ].join('\n');
+
+  const result = pdfProcessorApi.aplicarEspecificacoesEmHex(stream, specsHex);
+
+  assert.equal(result.changed, true);
+  assert.equal(result.hits.cpf, 1);
+  assert.doesNotMatch(result.text, /0010/);
+  assert.doesNotMatch(result.text, /0042/);
+  assert.match(result.text, /\[<000000000000>\] TJ/);
+});
+
+test('substitui texto hex fragmentado em operadores Tj separados', () => {
+  const specsHex = [
+    {
+      id: 'nome',
+      label: 'Nome',
+      pairs: [['002F00180025', '000000000000']],
+      verifyOriginals: ['002F00180025']
+    }
+  ];
+  const stream = [
+    'BT',
+    '/F6 11 Tf',
+    '<002F> Tj',
+    '7.9 0 Td <0018> Tj',
+    '6.1 0 Td <0025> Tj',
+    'ET'
+  ].join('\n');
+
+  const result = pdfProcessorApi.aplicarEspecificacoesEmHex(stream, specsHex);
+
+  assert.equal(result.changed, true);
+  assert.equal(result.hits.nome, 1);
+  assert.doesNotMatch(result.text, /002F/);
+  assert.doesNotMatch(result.text, /0018/);
+  assert.doesNotMatch(result.text, /0025/);
+});
+
 test('verificação ignora streams sem operadores de texto ao procurar dados residuais', async () => {
   const specs = pdfProcessorApi.montarEspecificacoesSubstituicao(
     {

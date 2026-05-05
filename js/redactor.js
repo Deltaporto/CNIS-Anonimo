@@ -1,11 +1,13 @@
 const NUMERO_DE_PROCESSO_PATTERN = /\b\d{7}-?\d{2}\.?\d{4}\.?\d{1}\.?\d{2}\.?\d{4}\b/;
 const CPF_PATTERN = /\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/;
 const OAB_PATTERN = /\b(OAB(?:\/[A-Z]{2}| [A-Z]{2})?:?\s*(?:n\.?|nº\.?)?\s*)(\d{2,6}(?:\.\d{3})?)\b/i;
-const CRM_PATTERN = /\b((?:CRM(?:\/[A-Z]{2})?|CREMERJ)\s*)(\d{2,10}|\d{2,3}\.\d{3})\b/i;
+const OAB_SOB_PATTERN = /\b(OAB[-\/ ]?[A-Z]{2}\)?\s+sob\s+o\s+n\.?\s*)(\d{2,6}(?:\.\d{3})?)\b/i;
+const OAB_COMPACTA_PATTERN = /\b([A-Z]{2})(\d{4,6})\b/;
+const CRM_PATTERN = /\b((?:CRM(?:\/[A-Z]{2})?|CREMERJ)\s*)(\d{4,10}|\d{2,3}\.\d{3})\b/i;
 const IDENTIDADE_PATTERN = /\b(?:Identidade|Id\.?|Ident\.?|RG)\s*(?:n[.º]?\s*)?(\d[\d.\-\/]{4,8}\d)\b/i;
 const TELEFONE_PATTERN = /\(?\d{2}\)?\s*\d{4,5}[-\s]?\d{4}\b/;
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-const ENDERECO_PATTERN = /\b(?:Rua|R\.|Avenida|Av\.?|Travessa|Trav\.?|Pra[cç]a|Rodovia|Rod\.?|Estrada|Estr\.?)\b\s+.+?(?=\s+(?:Processo|CPF|OAB|CRM|Contato|E-?mail|Endere[cç]o|Parte|P[aá]gina)\b|[,;\n]|$)/i;
+const ENDERECO_PATTERN = /\b(?:Rua|R\.|Avenida|Av\.?|Travessa|Trav\.?|Pra[cç]a|Rodovia|Rod\.?|Estrada|Estr\.?)\b(?!\s+PERICIAL\b)\s+.+?(?=\s+(?:Processo|CPF|OAB|CRM|Contato|E-?mail|Endere[cç]o|Parte|P[aá]gina|C[aá]lcul[oa])\b|[,;\n]|$)/i;
 
 let firstNameSet = new Set();
 
@@ -65,6 +67,24 @@ function _adicionarParUnico(pares, original, substituto) {
   pares.push({ original, substituto });
 }
 
+function _coletarMatches(pattern, texto, flagsExtras = '') {
+  return [...texto.matchAll(_globalizar(pattern, flagsExtras))];
+}
+
+function _coletarRangesProtegidos(texto) {
+  return _coletarMatches(NUMERO_DE_PROCESSO_PATTERN, texto).map(match => ({
+    valor: match[0],
+    inicio: match.index,
+    fim: match.index + match[0].length
+  }));
+}
+
+function _sobrepoeRangeProtegido(match, ranges) {
+  const inicio = match.index;
+  const fim = match.index + match[0].length;
+  return ranges.some(range => inicio < range.fim && fim > range.inicio);
+}
+
 function detectarNomesNoTexto(texto) {
   const conectivos = new Set(['de', 'da', 'das', 'do', 'dos']);
   const rotulosParada = new Set([
@@ -78,6 +98,17 @@ function detectarNomesNoTexto(texto) {
     'E-MAIL',
     'ENDERECO',
     'ENDEREÇO',
+    'ÓRGÃO',
+    'ORGAO',
+    'JULGADOR',
+    'JUIZ',
+    'JUIZA',
+    'RELATOR',
+    'RELATORA',
+    'LOCALIZADOR',
+    'LOCALIZADORES',
+    'RECORRENTE',
+    'RECORRIDO',
     'PAGINA',
     'PÁGINA'
   ]);
@@ -119,49 +150,120 @@ function detectarNomesNoTexto(texto) {
   return nomes;
 }
 
+function detectarNomesJuridicosEmCaixaAlta(texto) {
+  const nomes = [];
+  const palavraNome = '[A-ZÀ-Ý]{2,}';
+  const trechoNome = `${palavraNome}(?:\\s+(?:DE|DA|DAS|DO|DOS|${palavraNome})){1,7}`;
+  const patterns = [
+    new RegExp(`\\b[A-Z]{2}\\d{4,6}\\s*-\\s*(${trechoNome})\\b`, 'g'),
+    new RegExp(`\\b(${trechoNome})\\s+[A-Z]{2}\\d{4,6}\\b`, 'g')
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of texto.matchAll(pattern)) {
+      const nome = match[1].trim();
+      const palavras = nome.split(/\s+/).filter(p => !['DE', 'DA', 'DAS', 'DO', 'DOS'].includes(p));
+      if (palavras.length >= 2) nomes.push(nome);
+    }
+  }
+
+  return nomes;
+}
+
+function adicionarNomeComVariantes(pares, nome) {
+  _adicionarParUnico(pares, nome, redigirNome(nome));
+
+  const indicesEspaco = [];
+  for (let i = 0; i < nome.length; i++) {
+    if (nome[i] === ' ') indicesEspaco.push(i);
+  }
+
+  for (const idx of indicesEspaco) {
+    const variante = nome.slice(0, idx) + nome.slice(idx + 1);
+    if (variante.length < nome.length - 1) continue;
+    _adicionarParUnico(pares, variante, redigirNome(variante));
+  }
+}
+
 function mapearSubstitutos(texto) {
   const pares = [];
 
-  const numerosProcesso = new Set(
-    [...texto.matchAll(_globalizar(NUMERO_DE_PROCESSO_PATTERN))].map(m => m[0])
-  );
+  const processosProtegidos = _coletarRangesProtegidos(texto);
+  const numerosProcesso = new Set(processosProtegidos.map(match => match.valor));
 
-  for (const m of texto.matchAll(_globalizar(CPF_PATTERN))) {
-    if (!validarCPF(m[0]) || numerosProcesso.has(m[0])) continue;
+  for (const m of _coletarMatches(CPF_PATTERN, texto)) {
+    if (!validarCPF(m[0]) || _sobrepoeRangeProtegido(m, processosProtegidos)) continue;
     _adicionarParUnico(pares, m[0], redigirCPF(m[0]));
   }
 
-  for (const m of texto.matchAll(_globalizar(OAB_PATTERN, 'i'))) {
+  for (const m of _coletarMatches(OAB_PATTERN, texto, 'i')) {
+    if (_sobrepoeRangeProtegido(m, processosProtegidos)) continue;
     const [full, label, num] = m;
     _adicionarParUnico(pares, full, redigirNumerico(label, num));
   }
 
-  for (const m of texto.matchAll(_globalizar(CRM_PATTERN, 'i'))) {
+  for (const m of _coletarMatches(OAB_SOB_PATTERN, texto, 'i')) {
+    if (_sobrepoeRangeProtegido(m, processosProtegidos)) continue;
     const [full, label, num] = m;
     _adicionarParUnico(pares, full, redigirNumerico(label, num));
   }
 
-  for (const m of texto.matchAll(_globalizar(IDENTIDADE_PATTERN, 'i'))) {
+  for (const m of _coletarMatches(/\b([A-ZÀ-Ý]{3,})\s+([A-Z]{2})(\d{4,6})\b/, texto)) {
+    if (_sobrepoeRangeProtegido(m, processosProtegidos)) continue;
+    const [full, nome, uf, num] = m;
+    _adicionarParUnico(pares, full, `${redigirNome(nome)} ${uf}${'0'.repeat(num.length)}`);
+  }
+
+  for (const m of _coletarMatches(OAB_COMPACTA_PATTERN, texto)) {
+    if (_sobrepoeRangeProtegido(m, processosProtegidos)) continue;
+    const [full, uf, num] = m;
+    _adicionarParUnico(pares, full, uf + '0'.repeat(num.length));
+  }
+
+  for (const m of _coletarMatches(CRM_PATTERN, texto, 'i')) {
+    if (_sobrepoeRangeProtegido(m, processosProtegidos)) continue;
+    const [full, label, num] = m;
+    _adicionarParUnico(pares, full, redigirNumerico(label, num));
+    _adicionarParUnico(pares, num, '0'.repeat(num.length));
+  }
+
+  for (const m of _coletarMatches(IDENTIDADE_PATTERN, texto, 'i')) {
+    if (_sobrepoeRangeProtegido(m, processosProtegidos)) continue;
     const [full, num] = m;
     const label = full.slice(0, full.length - num.length);
     _adicionarParUnico(pares, full, redigirNumerico(label, num));
+    _adicionarParUnico(pares, num, '0'.repeat(num.length));
   }
 
-  for (const m of texto.matchAll(_globalizar(TELEFONE_PATTERN))) {
+  for (const m of _coletarMatches(TELEFONE_PATTERN, texto)) {
+    if (_sobrepoeRangeProtegido(m, processosProtegidos)) continue;
     _adicionarParUnico(pares, m[0], m[0].replace(/\d/g, '0'));
   }
 
-  for (const m of texto.matchAll(_globalizar(EMAIL_PATTERN, 'i'))) {
+  for (const m of _coletarMatches(EMAIL_PATTERN, texto, 'i')) {
+    if (_sobrepoeRangeProtegido(m, processosProtegidos)) continue;
     _adicionarParUnico(pares, m[0], redigirMascarar(m[0]));
   }
 
-  for (const m of texto.matchAll(_globalizar(ENDERECO_PATTERN, 'i'))) {
+  for (const m of _coletarMatches(ENDERECO_PATTERN, texto, 'i')) {
+    if (_sobrepoeRangeProtegido(m, processosProtegidos)) continue;
     _adicionarParUnico(pares, m[0], redigirMascarar(m[0]));
   }
 
   for (const nome of detectarNomesNoTexto(texto)) {
     if (numerosProcesso.has(nome)) continue;
-    _adicionarParUnico(pares, nome, redigirNome(nome));
+    adicionarNomeComVariantes(pares, nome);
+  }
+
+  for (const nome of detectarNomesJuridicosEmCaixaAlta(texto)) {
+    if (numerosProcesso.has(nome)) continue;
+    adicionarNomeComVariantes(pares, nome);
+
+    const palavras = nome.trim().split(/\s+/);
+    if (palavras.length >= 4) {
+      const prefixo = palavras.slice(0, -1).join(' ');
+      adicionarNomeComVariantes(pares, prefixo);
+    }
   }
 
   return pares;
@@ -169,9 +271,11 @@ function mapearSubstitutos(texto) {
 function contarAchados(texto) {
   const numerosProcesso = [...new Set([...texto.matchAll(_globalizar(NUMERO_DE_PROCESSO_PATTERN))].map(m => m[0]))];
   const cpfs = [...texto.matchAll(_globalizar(CPF_PATTERN))].filter(m => validarCPF(m[0])).length;
-  const oabs = [...texto.matchAll(_globalizar(OAB_PATTERN, 'i'))].length;
+  const oabs = [...texto.matchAll(_globalizar(OAB_PATTERN, 'i'))].length +
+    [...texto.matchAll(_globalizar(OAB_SOB_PATTERN, 'i'))].length +
+    [...texto.matchAll(_globalizar(OAB_COMPACTA_PATTERN))].length;
   const crms = [...texto.matchAll(_globalizar(CRM_PATTERN, 'i'))].length;
-  const nomes = detectarNomesNoTexto(texto).length;
+  const nomes = detectarNomesNoTexto(texto).length + detectarNomesJuridicosEmCaixaAlta(texto).length;
   const enderecos = [...texto.matchAll(_globalizar(ENDERECO_PATTERN, 'i'))].length;
   return { cpfs, oabs, crms, nomes, enderecos, numerosProcesso };
 }

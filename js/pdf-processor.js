@@ -273,6 +273,423 @@ function precompilarPares(pares) {
   return pares.map(([orig, repl]) => [new RegExp(escapeRegex(orig), 'g'), repl]);
 }
 
+function decodificarPdfLiteral(literal = '') {
+  let resultado = '';
+
+  for (let i = 0; i < literal.length; i++) {
+    const char = literal[i];
+    if (char !== '\\') {
+      resultado += char;
+      continue;
+    }
+
+    const prox = literal[++i];
+    if (prox === undefined) break;
+    if (prox === 'n') resultado += '\n';
+    else if (prox === 'r') resultado += '\r';
+    else if (prox === 't') resultado += '\t';
+    else if (prox === 'b') resultado += '\b';
+    else if (prox === 'f') resultado += '\f';
+    else if (/[0-7]/.test(prox)) {
+      let octal = prox;
+      for (let j = 0; j < 2 && /[0-7]/.test(literal[i + 1] || ''); j++) {
+        octal += literal[++i];
+      }
+      resultado += String.fromCharCode(parseInt(octal, 8));
+    } else {
+      resultado += prox;
+    }
+  }
+
+  return resultado;
+}
+
+function escaparPdfLiteral(texto = '') {
+  let escaped = '';
+
+  for (const char of String(texto)) {
+    if (char === '\\' || char === '(' || char === ')') escaped += '\\';
+    escaped += char;
+  }
+
+  return escaped;
+}
+
+function extrairLiteraisPdf(conteudo = '') {
+  const literais = [];
+
+  for (let i = 0; i < conteudo.length; i++) {
+    if (conteudo[i] !== '(') continue;
+
+    let profundidade = 1;
+    let fim = i + 1;
+
+    for (; fim < conteudo.length && profundidade > 0; fim++) {
+      if (conteudo[fim] === '\\') {
+        fim++;
+        continue;
+      }
+      if (conteudo[fim] === '(') profundidade++;
+      else if (conteudo[fim] === ')') profundidade--;
+    }
+
+    if (profundidade !== 0) continue;
+    const literal = conteudo.slice(i + 1, fim - 1);
+    literais.push(decodificarPdfLiteral(literal));
+    i = fim - 1;
+  }
+
+  return literais;
+}
+
+function aplicarEspecificacoesEmArraysTJ(texto, specs) {
+  const segmentos = [];
+
+  texto.replace(/\[((?:\\.|[^\]])*)\]\s*TJ/g, (match, conteudoArray, offset) => {
+    if (/<[^>]+>/.test(conteudoArray)) return match;
+
+    const valor = extrairLiteraisPdf(conteudoArray).join('');
+    if (!valor) return match;
+
+    segmentos.push({
+      match,
+      offset,
+      end: offset + match.length,
+      valor,
+      startTexto: 0,
+      endTexto: 0
+    });
+
+    return match;
+  });
+
+  if (!segmentos.length) return { text: texto, hits: {}, changed: false };
+
+  let textoVisivel = '';
+  for (const segmento of segmentos) {
+    segmento.startTexto = textoVisivel.length;
+    textoVisivel += segmento.valor;
+    segmento.endTexto = textoVisivel.length;
+  }
+
+  const caracteres = textoVisivel.split('');
+  const rangesAplicados = [];
+  const hits = {};
+
+  for (const spec of specs) {
+    const pares = spec.pairs || [];
+
+    for (const [original, substituto] of pares) {
+      if (!original || !substituto || original.length !== substituto.length) continue;
+
+      let pos = textoVisivel.indexOf(original);
+      while (pos !== -1) {
+        const fim = pos + original.length;
+        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+
+        if (!sobrepoe) {
+          caracteres.splice(pos, original.length, ...substituto.split(''));
+          rangesAplicados.push({ inicio: pos, fim });
+          hits[spec.id] = (hits[spec.id] || 0) + 1;
+        }
+
+        pos = textoVisivel.indexOf(original, pos + original.length);
+      }
+    }
+  }
+
+  if (!rangesAplicados.length) return { text: texto, hits: {}, changed: false };
+
+  const textoRedatado = caracteres.join('');
+  const partes = [];
+  let ultimo = 0;
+
+  for (const segmento of segmentos) {
+    partes.push(texto.slice(ultimo, segmento.offset));
+
+    const mudouSegmento = rangesAplicados.some(range =>
+      range.inicio < segmento.endTexto && range.fim > segmento.startTexto
+    );
+
+    if (mudouSegmento) {
+      const novoValor = textoRedatado.slice(segmento.startTexto, segmento.endTexto);
+      partes.push(`[(${escaparPdfLiteral(novoValor)})] TJ`);
+    } else {
+      partes.push(segmento.match);
+    }
+
+    ultimo = segmento.end;
+  }
+
+  partes.push(texto.slice(ultimo));
+
+  return {
+    text: partes.join(''),
+    hits,
+    changed: true
+  };
+}
+
+function aplicarEspecificacoesEmLiteraisTjFragmentados(texto, specs) {
+  const segmentos = [];
+
+  texto.replace(/\((?:\\.|[^\\()])*\)\s*Tj/g, (match, offset) => {
+    const literal = match.slice(1, match.lastIndexOf(')'));
+    const valor = decodificarPdfLiteral(literal);
+    if (!valor) return match;
+
+    segmentos.push({
+      match,
+      offset,
+      end: offset + match.length,
+      valor,
+      startTexto: 0,
+      endTexto: 0
+    });
+
+    return match;
+  });
+
+  if (!segmentos.length) return { text: texto, hits: {}, changed: false };
+
+  let textoVisivel = '';
+  for (const segmento of segmentos) {
+    segmento.startTexto = textoVisivel.length;
+    textoVisivel += segmento.valor;
+    segmento.endTexto = textoVisivel.length;
+  }
+
+  const caracteres = textoVisivel.split('');
+  const rangesAplicados = [];
+  const hits = {};
+
+  for (const spec of specs) {
+    const pares = spec.pairs || [];
+
+    for (const [original, substituto] of pares) {
+      if (!original || !substituto || original.length !== substituto.length) continue;
+
+      let pos = textoVisivel.indexOf(original);
+      while (pos !== -1) {
+        const fim = pos + original.length;
+        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+
+        if (!sobrepoe) {
+          caracteres.splice(pos, original.length, ...substituto.split(''));
+          rangesAplicados.push({ inicio: pos, fim });
+          hits[spec.id] = (hits[spec.id] || 0) + 1;
+        }
+
+        pos = textoVisivel.indexOf(original, pos + original.length);
+      }
+    }
+  }
+
+  if (!rangesAplicados.length) return { text: texto, hits: {}, changed: false };
+
+  const textoRedatado = caracteres.join('');
+  const partes = [];
+  let ultimo = 0;
+
+  for (const segmento of segmentos) {
+    partes.push(texto.slice(ultimo, segmento.offset));
+
+    const mudouSegmento = rangesAplicados.some(range =>
+      range.inicio < segmento.endTexto && range.fim > segmento.startTexto
+    );
+
+    if (mudouSegmento) {
+      const novoValor = textoRedatado.slice(segmento.startTexto, segmento.endTexto);
+      partes.push(`(${escaparPdfLiteral(novoValor)}) Tj`);
+    } else {
+      partes.push(segmento.match);
+    }
+
+    ultimo = segmento.end;
+  }
+
+  partes.push(texto.slice(ultimo));
+
+  return {
+    text: partes.join(''),
+    hits,
+    changed: true
+  };
+}
+
+function aplicarEspecificacoesEmHexArraysTJ(texto, specsHex) {
+  const segmentos = [];
+
+  texto.replace(/\[((?:\\.|[^\]])*)\]\s*TJ/g, (match, conteudoArray, offset) => {
+    const hexes = [...conteudoArray.matchAll(/<([0-9A-Fa-f]+)>/g)].map(item => item[1].toUpperCase());
+    if (!hexes.length) return match;
+
+    const valor = hexes.join('');
+    if (!valor) return match;
+
+    segmentos.push({
+      match,
+      offset,
+      end: offset + match.length,
+      valor,
+      startHex: 0,
+      endHex: 0
+    });
+
+    return match;
+  });
+
+  if (!segmentos.length) return { text: texto, hits: {}, changed: false };
+
+  let hexVisivel = '';
+  for (const segmento of segmentos) {
+    segmento.startHex = hexVisivel.length;
+    hexVisivel += segmento.valor;
+    segmento.endHex = hexVisivel.length;
+  }
+
+  const caracteres = hexVisivel.split('');
+  const rangesAplicados = [];
+  const hits = {};
+
+  for (const spec of specsHex) {
+    for (const [original, substituto] of spec.pairs || []) {
+      if (!original || !substituto || original.length !== substituto.length) continue;
+
+      const originalUpper = original.toUpperCase();
+      const substitutoUpper = substituto.toUpperCase();
+      let pos = hexVisivel.indexOf(originalUpper);
+
+      while (pos !== -1) {
+        const fim = pos + originalUpper.length;
+        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+
+        if (!sobrepoe) {
+          caracteres.splice(pos, originalUpper.length, ...substitutoUpper.split(''));
+          rangesAplicados.push({ inicio: pos, fim });
+          hits[spec.id] = (hits[spec.id] || 0) + 1;
+        }
+
+        pos = hexVisivel.indexOf(originalUpper, pos + originalUpper.length);
+      }
+    }
+  }
+
+  if (!rangesAplicados.length) return { text: texto, hits: {}, changed: false };
+
+  const hexRedatado = caracteres.join('');
+  const partes = [];
+  let ultimo = 0;
+
+  for (const segmento of segmentos) {
+    partes.push(texto.slice(ultimo, segmento.offset));
+
+    const mudouSegmento = rangesAplicados.some(range =>
+      range.inicio < segmento.endHex && range.fim > segmento.startHex
+    );
+
+    if (mudouSegmento) {
+      const novoValor = hexRedatado.slice(segmento.startHex, segmento.endHex);
+      partes.push(`[<${novoValor}>] TJ`);
+    } else {
+      partes.push(segmento.match);
+    }
+
+    ultimo = segmento.end;
+  }
+
+  partes.push(texto.slice(ultimo));
+
+  return {
+    text: partes.join(''),
+    hits,
+    changed: true
+  };
+}
+
+function aplicarEspecificacoesEmHexTjFragmentado(texto, specsHex) {
+  const segmentos = [];
+
+  texto.replace(/<([0-9A-Fa-f]+)>\s*Tj/g, (match, hex, offset) => {
+    segmentos.push({
+      match,
+      offset,
+      end: offset + match.length,
+      valor: hex.toUpperCase(),
+      startHex: 0,
+      endHex: 0
+    });
+    return match;
+  });
+
+  if (!segmentos.length) return { text: texto, hits: {}, changed: false };
+
+  let hexVisivel = '';
+  for (const segmento of segmentos) {
+    segmento.startHex = hexVisivel.length;
+    hexVisivel += segmento.valor;
+    segmento.endHex = hexVisivel.length;
+  }
+
+  const caracteres = hexVisivel.split('');
+  const rangesAplicados = [];
+  const hits = {};
+
+  for (const spec of specsHex) {
+    for (const [original, substituto] of spec.pairs || []) {
+      if (!original || !substituto || original.length !== substituto.length) continue;
+
+      const originalUpper = original.toUpperCase();
+      const substitutoUpper = substituto.toUpperCase();
+      let pos = hexVisivel.indexOf(originalUpper);
+
+      while (pos !== -1) {
+        const fim = pos + originalUpper.length;
+        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+
+        if (!sobrepoe) {
+          caracteres.splice(pos, originalUpper.length, ...substitutoUpper.split(''));
+          rangesAplicados.push({ inicio: pos, fim });
+          hits[spec.id] = (hits[spec.id] || 0) + 1;
+        }
+
+        pos = hexVisivel.indexOf(originalUpper, pos + originalUpper.length);
+      }
+    }
+  }
+
+  if (!rangesAplicados.length) return { text: texto, hits: {}, changed: false };
+
+  const hexRedatado = caracteres.join('');
+  const partes = [];
+  let ultimo = 0;
+
+  for (const segmento of segmentos) {
+    partes.push(texto.slice(ultimo, segmento.offset));
+
+    const mudouSegmento = rangesAplicados.some(range =>
+      range.inicio < segmento.endHex && range.fim > segmento.startHex
+    );
+
+    if (mudouSegmento) {
+      const novoValor = hexRedatado.slice(segmento.startHex, segmento.endHex);
+      partes.push(`<${novoValor}> Tj`);
+    } else {
+      partes.push(segmento.match);
+    }
+
+    ultimo = segmento.end;
+  }
+
+  partes.push(texto.slice(ultimo));
+
+  return {
+    text: partes.join(''),
+    hits,
+    changed: true
+  };
+}
+
 function algumMapaCodificaPar(original, substituto, mapasHex) {
   return mapasHex.some(mapa =>
     encodeTextWithCMap(original, mapa) && encodeTextWithCMap(substituto, mapa)
@@ -483,6 +900,38 @@ function aplicarEspecificacoesNoTexto(texto, specs) {
     }
   }
 
+  const resultTj = aplicarEspecificacoesEmLiteraisTjFragmentados(atualizado, specs);
+  atualizado = resultTj.text;
+  mergeHits(hits, resultTj.hits);
+
+  const resultArrays = aplicarEspecificacoesEmArraysTJ(atualizado, specs);
+  atualizado = resultArrays.text;
+  mergeHits(hits, resultArrays.hits);
+
+  atualizado = atualizado.replace(/\[((?:\\.|[^\]])*)\]\s*TJ/g, (match, conteudoArray) => {
+    if (/<[^>]+>/.test(conteudoArray)) return match;
+
+    const textoArray = extrairLiteraisPdf(conteudoArray).join('');
+    if (!textoArray) return match;
+
+    let textoRedatado = textoArray;
+    const hitsArray = {};
+
+    for (const spec of specs) {
+      for (const [regex, repl] of spec.compiledPairs || precompilarPares(spec.pairs)) {
+        const matches = textoRedatado.match(regex);
+        if (!matches) continue;
+
+        textoRedatado = textoRedatado.replace(regex, repl);
+        hitsArray[spec.id] = (hitsArray[spec.id] || 0) + matches.length;
+      }
+    }
+
+    if (textoRedatado === textoArray) return match;
+    mergeHits(hits, hitsArray);
+    return `[(${escaparPdfLiteral(textoRedatado)})] TJ`;
+  });
+
   return {
     text: atualizado,
     hits,
@@ -572,6 +1021,31 @@ function encodeTextWithCMap(texto, reverseMap) {
   return encoded;
 }
 
+function ajustarSubstitutoParaMapa(original, substituto, reverseMap) {
+  if (!original || !substituto || original.length !== substituto.length) return '';
+
+  const chars = [];
+
+  for (let i = 0; i < original.length; i++) {
+    const orig = original[i];
+    const repl = substituto[i];
+    const candidatos = [];
+
+    if (reverseMap[repl]) candidatos.push(repl);
+    if (/\d/.test(orig)) candidatos.push('0', '9', ' ');
+    else if (/[A-Za-zÀ-ÿ]/.test(orig)) candidatos.push(' ', 'X', 'A', 'N', 'L');
+    else candidatos.push(orig, ' ');
+
+    const escolhido = candidatos.find(char => reverseMap[char]);
+    if (!escolhido) return '';
+    chars.push(escolhido);
+  }
+
+  const ajustado = chars.join('');
+  if (ajustado === original) return '';
+  return ajustado;
+}
+
 function encodedHexToLatin1(hex) {
   if (!hex || hex.length % 2 !== 0) return '';
 
@@ -608,7 +1082,6 @@ function extrairMapasHexPorFonte(pdfDoc) {
   for (const [, obj] of pdfDoc.context.enumerateIndirectObjects()) {
     if (!obj?.dict || typeof obj.dict.get !== 'function') continue;
     if (obj.dict.get(PDFLib.PDFName.of('Type'))?.toString() !== '/Font') continue;
-    if (obj.dict.get(PDFLib.PDFName.of('Subtype'))?.toString() !== '/Type0') continue;
 
     const toUnicodeRef = obj.dict.get(PDFLib.PDFName.of('ToUnicode'));
     if (!toUnicodeRef) continue;
@@ -656,7 +1129,14 @@ function montarEspecificacoesHex(specs, mapasHex) {
     for (const mapa of mapasHex) {
       for (const [orig, repl] of spec.pairs) {
         const originalHex = encodeTextWithCMap(orig, mapa);
-        const replacementHex = encodeTextWithCMap(repl, mapa);
+        let replacementHex = encodeTextWithCMap(repl, mapa);
+        let replacement = repl;
+
+        if (originalHex && !replacementHex) {
+          replacement = ajustarSubstitutoParaMapa(orig, repl, mapa);
+          replacementHex = encodeTextWithCMap(replacement, mapa);
+        }
+
         if (originalHex && replacementHex) {
           pairs.push([originalHex, replacementHex]);
           pairsRaw.push([
@@ -703,7 +1183,21 @@ function aplicarEspecificacoesEmHex(texto, specsHex) {
   const hits = {};
   let changed = false;
 
-  const atualizado = texto.replace(/<([0-9A-Fa-f]+)>/g, (match, hexString) => {
+  const fragmentado = aplicarEspecificacoesEmHexArraysTJ(texto, specsHex);
+  let textoBase = fragmentado.text;
+  if (fragmentado.changed) {
+    changed = true;
+    mergeHits(hits, fragmentado.hits);
+  }
+
+  const fragmentadoTj = aplicarEspecificacoesEmHexTjFragmentado(textoBase, specsHex);
+  textoBase = fragmentadoTj.text;
+  if (fragmentadoTj.changed) {
+    changed = true;
+    mergeHits(hits, fragmentadoTj.hits);
+  }
+
+  const atualizado = textoBase.replace(/<([0-9A-Fa-f]+)>/g, (match, hexString) => {
     let hexAtualizado = hexString;
 
     for (const spec of specsHex) {
@@ -1110,6 +1604,38 @@ async function _extrairTextoCompleto(pdfBytes) {
   return textos.join('\n');
 }
 
+async function verificarSubstituicoesNoTextoExtraido(pdfBytes, specs) {
+  let texto = '';
+
+  try {
+    texto = await _extrairTextoCompleto(pdfBytes);
+  } catch {
+    return [];
+  }
+
+  const unreplaced = [];
+
+  for (const spec of specs) {
+    const encontrou = spec.verifyOriginals.some(original =>
+      original && texto.includes(normalizarEspacos(original))
+    );
+
+    if (encontrou && !unreplaced.includes(spec.label)) unreplaced.push(spec.label);
+  }
+
+  return unreplaced;
+}
+
+function ehCampoCriticoNaoRedatado(label = '') {
+  const valor = String(label);
+  if (/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/.test(valor)) return true;
+  if (/\bOAB\b|[A-Z]{2}\d{4,6}\b/i.test(valor)) return true;
+  if (/\b(?:CRM|CREMERJ)\b/i.test(valor)) return true;
+  if (/\b(?:RG|Identidade|Ident\.?|Id\.?)\b/i.test(valor)) return true;
+  if (/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(valor)) return true;
+  return false;
+}
+
 async function processarDocumentoJudicial(pdfBytes) {
   const pdfBytesArr = toUint8Array(pdfBytes);
   const texto = await _extrairTextoCompleto(pdfBytesArr);
@@ -1169,10 +1695,19 @@ async function processarDocumentoJudicial(pdfBytes) {
     mergeHits(hits, fallback.hits);
   }
 
-  const unreplacedFields = await verificarSubstituicoesNoPDF(bytesTrabalho, specs);
+  const unreplacedFieldsBrutos = [
+    ...new Set([
+      ...(await verificarSubstituicoesNoPDF(bytesTrabalho, specs)),
+      ...(await verificarSubstituicoesNoTextoExtraido(bytesTrabalho, specs))
+    ])
+  ];
+  const unreplacedFields = unreplacedFieldsBrutos.filter(ehCampoCriticoNaoRedatado);
+  const residuosNaoCriticos = unreplacedFieldsBrutos.filter(label => !ehCampoCriticoNaoRedatado(label));
   const unmatchedFields = specs
     .filter(spec => !hits[spec.id])
-    .map(spec => spec.label);
+    .map(spec => spec.label)
+    .concat(residuosNaoCriticos)
+    .filter((label, index, lista) => lista.indexOf(label) === index);
   const appliedCount = specs.filter(spec => hits[spec.id]).length;
 
   return {
