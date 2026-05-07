@@ -87,6 +87,29 @@ test('mapearSubstitutos detecta OAB compacta e nomes de capa/evento', () => {
   assert.ok(pares.find(p => p.original === 'MARIANGELA MENDES ALBUQUERQUE MARQUES DE OLIVEIRA'));
 });
 
+test('mapearSubstitutos detecta nome de parte por rotulo processual sem depender do primeiro nome', () => {
+  const texto = [
+    'AUTOR: GILVALDO ARGOLO SILVA',
+    'RÉU: INSTITUTO NACIONAL DO SEGURO SOCIAL - INSS',
+    'GILVALDO ARGOLO SILVA propõe ação em face do INSS.'
+  ].join(' ');
+  const pares = api.mapearSubstitutos(texto);
+
+  assert.ok(pares.find(p => p.original === 'GILVALDO ARGOLO SILVA'));
+  assert.equal(pares.find(p => p.original.includes('INSTITUTO NACIONAL')), undefined);
+});
+
+test('mapearSubstitutos detecta rotulos processuais variados de partes', () => {
+  const pares = api.mapearSubstitutos(
+    'RECORRENTE: JURACI DE SOUZA LIMA RECORRIDO: INSS AGRAVANTE: MARCOS DOS ANJOS PEREIRA RECORRIDO(S): GILVALDO ARGOLO SILVA'
+  );
+
+  assert.ok(pares.find(p => p.original === 'JURACI DE SOUZA LIMA'));
+  assert.ok(pares.find(p => p.original === 'MARCOS DOS ANJOS PEREIRA'));
+  assert.ok(pares.find(p => p.original === 'GILVALDO ARGOLO SILVA'));
+  assert.equal(pares.find(p => p.original === 'INSS'), undefined);
+});
+
 test('mapearSubstitutos detecta CRM preservando label', () => {
   const pares = api.mapearSubstitutos('Medico CRM/RJ 12345 emitiu laudo.');
   const par = pares.find(p => p.original.includes('CRM'));
@@ -96,11 +119,12 @@ test('mapearSubstitutos detecta CRM preservando label', () => {
 });
 
 test('mapearSubstitutos detecta telefone e zerifica digitos preservando separadores', () => {
-  const pares = api.mapearSubstitutos('Contato: (21) 99999-8888');
+  const pares = api.mapearSubstitutos('Contato: (21) 99999-8888 | 98805-0822');
   const par = pares.find(p => p.original.includes('99999'));
   assert.ok(par, 'deve detectar telefone');
   assert.equal(par.substituto, par.original.replace(/\d/g, '0'));
   assert.equal(par.substituto.length, par.original.length);
+  assert.equal(pares.find(p => p.original === '98805-0822')?.substituto, '00000-0000');
 });
 
 test('mapearSubstitutos detecta email e mascara com asteriscos de mesmo comprimento', () => {
@@ -109,6 +133,21 @@ test('mapearSubstitutos detecta email e mascara com asteriscos de mesmo comprime
   assert.ok(par, 'deve detectar email');
   assert.equal(par.substituto, '*'.repeat(par.original.length));
   assert.equal(par.substituto.length, par.original.length);
+});
+
+test('mapearSubstitutos redige codigo verificador de documento judicial', () => {
+  const texto = [
+    'mediante o preenchimento do código verificador 510016141883v5 e do código CRC 7159f385.',
+    '5080099-57.2024.4.02.5101 510016141883 .V5'
+  ].join(' ');
+  const pares = api.mapearSubstitutos(texto);
+
+  assert.equal(
+    pares.find(p => p.original === 'código verificador 510016141883v5')?.substituto,
+    'código verificador 000000000000v5'
+  );
+  assert.equal(pares.find(p => p.original === '510016141883 .V5')?.substituto, '000000000000 .V5');
+  assert.equal(pares.find(p => p.original.includes('5080099')), undefined);
 });
 
 test('mapearSubstitutos detecta endereco e mascara com asteriscos de mesmo comprimento', () => {
