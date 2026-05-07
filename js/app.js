@@ -84,7 +84,7 @@ function atualizarModoUI() {
 }
 
 function limparEstado() {
-  resultados = [];
+  resultados.length = 0;
   modoResultados = modoAtual;
   listaEl.textContent = '';
   listaEl.classList.add('oculto');
@@ -140,16 +140,39 @@ zonaUpload.addEventListener('drop', event => {
 // ── LOTE ──────────────────────────────────────────────────────────────────────
 
 async function iniciarLote(arquivos) {
-  resultados = [];
+  resultados.length = 0;
   modoResultados = modoAtual;
   listaEl.textContent = '';
   listaEl.classList.remove('oculto');
   acoesEl.classList.add('oculto');
 
   const itens = arquivos.map(file => criarItemLista(file.name));
+  const processados = new Array(arquivos.length);
 
-  for (let i = 0; i < arquivos.length; i++) {
-    await processarArquivo(arquivos[i], itens[i], i, arquivos.length, modoResultados);
+  let index = 0;
+  let ativo = 0;
+  const limite = 3;
+
+  await new Promise(resolve => {
+    function proximo() {
+      if (index >= arquivos.length && ativo === 0) {
+        resolve();
+        return;
+      }
+      while (ativo < limite && index < arquivos.length) {
+        const i = index++;
+        ativo++;
+        processarArquivo(arquivos[i], itens[i], i, arquivos.length, modoResultados)
+          .then(res => { processados[i] = res; })
+          .catch(console.error)
+          .finally(() => { ativo--; proximo(); });
+      }
+    }
+    proximo();
+  });
+
+  for (const res of processados) {
+    if (res) resultados.push(res);
   }
 
   if (resultados.length === 0) return;
@@ -185,7 +208,7 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
   if (file.size > MAX_PDF_SIZE) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Arquivo muito grande (máx. 50 MB)');
-    return;
+    return null;
   }
 
   const header = new Uint8Array(await file.slice(0, 5).arrayBuffer());
@@ -195,12 +218,11 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
   if (!isPDF) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Arquivo não é um PDF válido');
-    return;
+    return null;
   }
 
   if (modoLote === 'processo-judicial') {
-    await processarArquivoJudicial(file, item, indice, totalArquivos);
-    return;
+    return await processarArquivoJudicial(file, item, indice, totalArquivos);
   }
 
   setProgresso(item, 30);
@@ -231,7 +253,7 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
         setStatus(item, 'erro', 'Falha segura: nenhuma substituição pôde ser confirmada');
       }
 
-      return;
+      return null;
     }
 
     setProgresso(item, 100, true);
@@ -243,14 +265,15 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
       setStatus(item, 'ok', 'Anonimizado ✓');
     }
 
-    resultados.push({
+    return {
       nome: gerarNomeSaida(dadosOriginais.nome, indice, totalArquivos, modoLote),
       bytes: resultadoPdf.bytes
-    });
+    };
   } catch (err) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Erro ao processar o PDF. Verifique se o arquivo é válido.');
     console.error('[CNIS]', err);
+    return null;
   }
 }
 
@@ -282,7 +305,7 @@ async function processarArquivoJudicial(file, item, indice, totalArquivos) {
         setStatus(item, 'erro', 'Falha segura: nenhuma substituição pôde ser confirmada');
       }
 
-      return;
+      return null;
     }
 
     setProgresso(item, 100, true);
@@ -292,14 +315,15 @@ async function processarArquivoJudicial(file, item, indice, totalArquivos) {
       setStatus(item, 'ok', 'Anonimizado ✓');
     }
 
-    resultados.push({
+    return {
       nome: gerarNomeSaida(null, indice, totalArquivos, 'processo-judicial'),
       bytes: resultado.bytes
-    });
+    };
   } catch (err) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Erro ao processar o PDF. Verifique se o arquivo é válido.');
     console.error('[Processo Judicial]', err);
+    return null;
   }
 }
 

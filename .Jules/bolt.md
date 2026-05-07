@@ -1,0 +1,3 @@
+## 2025-05-18 - Optimized Batch PDF Processing with Worker Pool
+**Learning:** Sequential processing of multiple PDFs (using `await` in a loop) blocks throughput. However, unrestricted concurrency (e.g., `Promise.all` over all files) risks browser memory exhaustion or UI thread starvation, particularly with large PDFs.
+**Action:** Implement a bounded concurrency worker pool (e.g., max 3 active workers) that collects individual returned results to maintain deterministic file order, and mutate the global `resultados` array in place (`resultados.length = 0`) instead of reassigning it, to preserve references.
