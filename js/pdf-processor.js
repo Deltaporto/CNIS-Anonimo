@@ -1585,8 +1585,21 @@ function coletarTextosDecodificadosViaBytes(pdfBytes) {
 
 // ── MODO PROCESSO JUDICIAL ────────────────────────────────────────────────────
 
-async function _extrairTextoCompleto(pdfBytes) {
+async function _emitirProgressoJudicial(onProgress, payload) {
+  if (typeof onProgress !== 'function') return;
+  try {
+    onProgress(payload);
+  } catch {}
+  await new Promise(resolve => setTimeout(resolve, 0));
+}
+
+async function _extrairTextoCompleto(pdfBytes, onProgress = null) {
   const copia = toUint8Array(pdfBytes).slice().buffer;
+  await _emitirProgressoJudicial(onProgress, {
+    percent: 12,
+    etapa: 'Abrindo PDF',
+    detalhe: 'Preparando leitura das páginas'
+  });
   const pdf = await pdfjsLib.getDocument({ data: copia }).promise;
   const textos = [];
 
@@ -1595,6 +1608,13 @@ async function _extrairTextoCompleto(pdfBytes) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       textos.push(normalizarEspacos(content.items.map(item => item.str).join(' ')));
+      if (i === 1 || i === pdf.numPages || i % 5 === 0) {
+        await _emitirProgressoJudicial(onProgress, {
+          percent: 12 + Math.round((i / pdf.numPages) * 20),
+          etapa: 'Extraindo texto',
+          detalhe: `Página ${i} de ${pdf.numPages}`
+        });
+      }
     }
   } finally {
     try { pdf.cleanup(); } catch {}
@@ -1636,13 +1656,24 @@ function ehCampoCriticoNaoRedatado(label = '') {
   return false;
 }
 
-async function processarDocumentoJudicial(pdfBytes) {
+async function processarDocumentoJudicial(pdfBytes, opcoes = {}) {
+  const onProgress = typeof opcoes === 'function' ? opcoes : opcoes?.onProgress;
   const pdfBytesArr = toUint8Array(pdfBytes);
-  const texto = await _extrairTextoCompleto(pdfBytesArr);
+  const texto = await _extrairTextoCompleto(pdfBytesArr, onProgress);
+  await _emitirProgressoJudicial(onProgress, {
+    percent: 36,
+    etapa: 'Detectando dados',
+    detalhe: 'Mapeando documentos, nomes, aliases e contatos'
+  });
   const pares = mapearSubstitutos(texto);
   const achados = contarAchados(texto);
 
   if (!pares.length) {
+    await _emitirProgressoJudicial(onProgress, {
+      percent: 100,
+      etapa: 'Finalizado',
+      detalhe: 'Nenhum dado sensível encontrado'
+    });
     return {
       bytes: pdfBytesArr,
       ok: true,
@@ -1665,26 +1696,50 @@ async function processarDocumentoJudicial(pdfBytes) {
   let bytesTrabalho = pdfBytesArr;
   let alterouStreams = false;
 
+  await _emitirProgressoJudicial(onProgress, {
+    percent: 44,
+    etapa: 'Preparando substituições',
+    detalhe: `${specs.length} alvos mapeados`
+  });
   const pdfDoc = await PDFLib.PDFDocument.load(pdfBytesArr, {
     ignoreEncryption: true,
     updateMetadata: false
   });
   const mapasHex = extrairMapasHexPorFonte(pdfDoc);
   const specsHex = montarEspecificacoesHex(specs, mapasHex);
+  const objetos = [...pdfDoc.context.enumerateIndirectObjects()];
 
-  for (const [, obj] of pdfDoc.context.enumerateIndirectObjects()) {
+  for (let i = 0; i < objetos.length; i++) {
+    const [, obj] = objetos[i];
     if (!(obj.contents instanceof Uint8Array) || !obj.dict) continue;
     const result = _processarStream(obj, specs, specsHex);
     if (result.changed) alterouStreams = true;
     mergeHits(hits, result.hits);
+    if (i === 0 || i === objetos.length - 1 || i % 40 === 0) {
+      await _emitirProgressoJudicial(onProgress, {
+        percent: 48 + Math.round((i / Math.max(1, objetos.length - 1)) * 26),
+        etapa: 'Reescrevendo PDF',
+        detalhe: `Objeto ${i + 1} de ${objetos.length}`
+      });
+    }
   }
 
   if (alterouStreams) {
+    await _emitirProgressoJudicial(onProgress, {
+      percent: 76,
+      etapa: 'Salvando alterações',
+      detalhe: 'Recriando o PDF anonimizado'
+    });
     bytesTrabalho = await pdfDoc.save({ useObjectStreams: false });
   }
 
   const specsPendentes = specs.filter(spec => !hits[spec.id]);
   if (!alterouStreams || specsPendentes.length > 0) {
+    await _emitirProgressoJudicial(onProgress, {
+      percent: 82,
+      etapa: 'Aplicando fallback',
+      detalhe: `${alterouStreams ? specsPendentes.length : specs.length} alvos pendentes`
+    });
     const specsHexPendentes = specsHex.filter(spec => !hits[spec.id]);
     const fallback = await _substituirViaBytesRaw(
       bytesTrabalho,
@@ -1695,6 +1750,11 @@ async function processarDocumentoJudicial(pdfBytes) {
     mergeHits(hits, fallback.hits);
   }
 
+  await _emitirProgressoJudicial(onProgress, {
+    percent: 90,
+    etapa: 'Verificando saída',
+    detalhe: 'Procurando resíduos críticos no PDF gerado'
+  });
   const unreplacedFieldsBrutos = [
     ...new Set([
       ...(await verificarSubstituicoesNoPDF(bytesTrabalho, specs)),
@@ -1709,6 +1769,12 @@ async function processarDocumentoJudicial(pdfBytes) {
     .concat(residuosNaoCriticos)
     .filter((label, index, lista) => lista.indexOf(label) === index);
   const appliedCount = specs.filter(spec => hits[spec.id]).length;
+
+  await _emitirProgressoJudicial(onProgress, {
+    percent: 98,
+    etapa: 'Consolidando resultado',
+    detalhe: `${appliedCount} substituições confirmadas`
+  });
 
   return {
     bytes: bytesTrabalho,

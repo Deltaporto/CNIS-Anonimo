@@ -255,18 +255,26 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
 }
 
 async function processarArquivoJudicial(file, item, indice, totalArquivos) {
-  setProgresso(item, 30);
+  setProgresso(item, 8);
+  setDetalheProcessamento(item, 'Inicializando modo judicial no navegador');
 
   try {
     if (typeof inicializarRedactorPadrao === 'function') {
+      setStatus(item, 'processando', 'Carregando detector');
       await inicializarRedactorPadrao();
     }
 
+    setStatus(item, 'processando', 'Lendo arquivo');
+    setDetalheProcessamento(item, formatarBytes(file.size) + ' · leitura local');
     const pdfBytes = await file.arrayBuffer();
-    setProgresso(item, 50);
+    setProgresso(item, 10);
 
-    const resultado = await processarDocumentoJudicial(pdfBytes);
-    setProgresso(item, 90);
+    const resultado = await processarDocumentoJudicial(pdfBytes, {
+      onProgress: progresso => atualizarProgressoJudicial(item, progresso)
+    });
+    setProgresso(item, 96);
+    setStatus(item, 'processando', 'Montando resumo');
+    setDetalheProcessamento(item, 'Consolidando contadores e confirmação de resíduos');
     mostrarAchados(item, resultado.achados);
 
     if (!resultado.ok) {
@@ -287,8 +295,10 @@ async function processarArquivoJudicial(file, item, indice, totalArquivos) {
 
     setProgresso(item, 100, true);
     if (resultado.unmatchedFields?.length) {
+      setDetalheProcessamento(item, `${resultado.appliedCount || 0} de ${resultado.expectedCount || 0} alvos confirmados`);
       setStatus(item, 'aviso', 'Concluído (não confirmado: ' + resultado.unmatchedFields.join(', ') + ')');
     } else {
+      setDetalheProcessamento(item, `${resultado.appliedCount || 0} de ${resultado.expectedCount || 0} alvos confirmados`);
       setStatus(item, 'ok', 'Anonimizado ✓');
     }
 
@@ -377,10 +387,15 @@ function criarItemLista(nomeArquivo) {
   progressoBarra.className = 'progresso-barra';
   progressoWrap.appendChild(progressoBarra);
 
+  const progressoDetalhe = document.createElement('div');
+  progressoDetalhe.className = 'arquivo-progresso-detalhe';
+  progressoDetalhe.setAttribute('aria-live', 'polite');
+  progressoDetalhe.textContent = 'Na fila de processamento';
+
   const subs = document.createElement('div');
   subs.className = 'arquivo-subs';
 
-  item.append(cab, progressoWrap, subs);
+  item.append(cab, progressoWrap, progressoDetalhe, subs);
   listaEl.appendChild(item);
   return item;
 }
@@ -396,6 +411,30 @@ function setProgresso(item, pct, completo = false, erro = false) {
   barra.style.width = pct + '%';
   if (completo) barra.classList.add('completo');
   if (erro) barra.classList.add('erro');
+}
+
+function setDetalheProcessamento(item, texto) {
+  const el = item.querySelector('.arquivo-progresso-detalhe');
+  if (!el) return;
+  el.textContent = texto || '';
+  el.classList.toggle('vazio', !texto);
+}
+
+function atualizarProgressoJudicial(item, progresso = {}) {
+  const pct = Math.max(0, Math.min(99, Number(progresso.percent) || 0));
+  if (pct) setProgresso(item, pct);
+  if (progresso.etapa) setStatus(item, 'processando', progresso.etapa);
+  const partes = [];
+  if (progresso.detalhe) partes.push(progresso.detalhe);
+  if (Number.isFinite(progresso.percent)) partes.push(Math.round(pct) + '%');
+  setDetalheProcessamento(item, partes.join(' · '));
+}
+
+function formatarBytes(bytes) {
+  if (!Number.isFinite(bytes)) return 'Tamanho desconhecido';
+  if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1).replace('.', ',') + ' MB';
+  if (bytes >= 1024) return Math.round(bytes / 1024) + ' KB';
+  return bytes + ' bytes';
 }
 
 function mascarar(valor, campo) {

@@ -10,6 +10,35 @@ const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const ENDERECO_PATTERN = /\b(?:Rua|R\.|Avenida|Av\.?|Travessa|Trav\.?|Pra[cç]a|Rodovia|Rod\.?|Estrada|Estr\.?)\b(?!\s+PERICIAL\b)\s+.+?(?=\s+(?:Processo|CPF|OAB|CRM|Contato|E-?mail|Endere[cç]o|Parte|P[aá]gina|C[aá]lcul[oa])\b|[,;\n]|$)/i;
 const CODIGO_VERIFICADOR_PATTERN = /\b(c[oó]digo\s+verificador\s+)(\d{8,14})(v\d+)?\b/i;
 const CODIGO_VERIFICADOR_RODAPE_PATTERN = /\b(\d{8,14})(\s*\.?\s*V\d+)\b/i;
+const SOBRENOMES_COMUNS = new Set([
+  'ALMEIDA',
+  'ALVES',
+  'ANDRADE',
+  'ARAUJO',
+  'BARBOSA',
+  'CARVALHO',
+  'COSTA',
+  'DIAS',
+  'FERNANDES',
+  'FERREIRA',
+  'GOMES',
+  'LIMA',
+  'LOPES',
+  'MARTINS',
+  'MENDES',
+  'MORAES',
+  'NASCIMENTO',
+  'OLIVEIRA',
+  'PEREIRA',
+  'RIBEIRO',
+  'ROCHA',
+  'RODRIGUES',
+  'SANTOS',
+  'SILVA',
+  'SOARES',
+  'SOUSA',
+  'SOUZA'
+]);
 
 let firstNameSet = new Set();
 
@@ -59,6 +88,16 @@ function redigirNome(original) {
     .join(' ');
   return iniciais.padEnd(original.length, ' ');
 }
+function redigirNomeComPrefixo(original) {
+  const conectivos = new Set(['de', 'da', 'das', 'do', 'dos', 'e']);
+  const tratamentos = new Set(['sr', 'sr.', 'sra', 'sra.', 'senhor', 'senhora']);
+  return original.replace(/[A-ZÀ-ÿ][A-ZÀ-ÿ.]+/g, palavra => {
+    const normalizada = palavra.toLowerCase();
+    if (tratamentos.has(normalizada)) return palavra;
+    if (conectivos.has(normalizada)) return ' '.repeat(palavra.length);
+    return (palavra[0].toUpperCase() + '.').padEnd(palavra.length, ' ');
+  });
+}
 function _globalizar(pattern, flagsExtras) {
   const base = pattern.flags + 'g' + (flagsExtras || '');
   const flags = [...new Set(base.split(''))].join('');
@@ -88,6 +127,33 @@ function _sobrepoeRangeProtegido(match, ranges) {
   const inicio = match.index;
   const fim = match.index + match[0].length;
   return ranges.some(range => inicio < range.fim && fim > range.inicio);
+}
+
+function _semAcentos(valor) {
+  return valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function _chaveToken(token) {
+  return _semAcentos(token).toUpperCase().replace(/[^A-Z]/g, '');
+}
+
+function _ehPrimeiroNomeComum(token) {
+  return firstNameSet.has(_semAcentos(token).toLowerCase()) ||
+    firstNameSet.has(token.toLowerCase());
+}
+
+function _ehSobrenomeComum(token) {
+  return SOBRENOMES_COMUNS.has(_chaveToken(token));
+}
+
+function _titleCaseNome(nome) {
+  return nome.toLowerCase().replace(/[a-zà-ÿ]+/gi, parte =>
+    parte.charAt(0).toUpperCase() + parte.slice(1)
+  );
+}
+
+function _escapeRegExp(valor) {
+  return valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function detectarNomesNoTexto(texto) {
@@ -253,6 +319,62 @@ function adicionarNomeComVariantes(pares, nome) {
   }
 }
 
+function _adicionarAliasNomeSePresente(pares, texto, alias) {
+  if (!alias || alias.length < 5) return;
+  const formas = new Set([alias, _titleCaseNome(alias)]);
+  for (const forma of formas) {
+    if (texto.includes(forma)) adicionarNomeComVariantes(pares, forma);
+  }
+}
+
+function _adicionarAliasesComTratamento(pares, texto, alvos) {
+  for (const alvo of alvos) {
+    if (!alvo || alvo.length < 4) continue;
+    const pattern = new RegExp(`\\b(?:Sr\\.?|Sra\\.?|Senhor(?:a)?)\\s+${_escapeRegExp(alvo)}\\b`, 'gi');
+    for (const match of texto.matchAll(pattern)) {
+      _adicionarParUnico(pares, match[0], redigirNomeComPrefixo(match[0]));
+    }
+  }
+}
+
+function adicionarAliasesNomeParte(pares, texto, nome) {
+  const conectivos = new Set(['DE', 'DA', 'DAS', 'DO', 'DOS', 'E']);
+  const palavras = nome.trim().split(/\s+/);
+  const principais = palavras.filter(p => !conectivos.has(_chaveToken(p)));
+  if (principais.length < 2) return;
+
+  const primeiro = principais[0];
+  const ultimo = principais[principais.length - 1];
+  const penultimo = principais[principais.length - 2];
+  const primeiroIncomum = !_ehPrimeiroNomeComum(primeiro);
+  const ultimoIncomum = !_ehSobrenomeComum(ultimo);
+  const penultimoIncomum = !_ehSobrenomeComum(penultimo);
+
+  if (primeiroIncomum || ultimoIncomum) {
+    _adicionarAliasNomeSePresente(pares, texto, `${primeiro} ${ultimo}`);
+  }
+
+  if (principais.length >= 3) {
+    _adicionarAliasNomeSePresente(pares, texto, `${primeiro} ${penultimo} ${ultimo}`);
+    if (penultimoIncomum || ultimoIncomum) {
+      _adicionarAliasNomeSePresente(pares, texto, `${penultimo} ${ultimo}`);
+    }
+
+    const intermediarios = principais.slice(1, -1);
+    const comIniciais = [primeiro, ...intermediarios.map(p => p[0] + '.'), ultimo].join(' ');
+    const comIniciaisSemPonto = [primeiro, ...intermediarios.map(p => p[0]), ultimo].join(' ');
+    _adicionarAliasNomeSePresente(pares, texto, comIniciais);
+    _adicionarAliasNomeSePresente(pares, texto, comIniciaisSemPonto);
+  }
+
+  if (primeiroIncomum) {
+    _adicionarAliasesComTratamento(pares, texto, [primeiro]);
+  }
+  if (penultimoIncomum || ultimoIncomum) {
+    _adicionarAliasesComTratamento(pares, texto, [`${penultimo} ${ultimo}`, ultimo]);
+  }
+}
+
 function mapearSubstitutos(texto) {
   const pares = [];
 
@@ -346,9 +468,11 @@ function mapearSubstitutos(texto) {
     }
   }
 
-  for (const nome of detectarNomesPorRotuloProcessual(texto)) {
+  const nomesPartes = detectarNomesPorRotuloProcessual(texto);
+  for (const nome of nomesPartes) {
     if (numerosProcesso.has(nome)) continue;
     adicionarNomeComVariantes(pares, nome);
+    adicionarAliasesNomeParte(pares, texto, nome);
   }
 
   return pares;

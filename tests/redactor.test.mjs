@@ -110,6 +110,34 @@ test('mapearSubstitutos detecta rotulos processuais variados de partes', () => {
   assert.equal(pares.find(p => p.original === 'INSS'), undefined);
 });
 
+test('mapearSubstitutos expande aliases seguros a partir do nome completo da parte', () => {
+  const texto = [
+    'AUTOR: GILVALDO ARGOLO SILVA.',
+    'GILVALDO SILVA pediu prioridade.',
+    'ARGOLO SILVA juntou documentos.',
+    'Gilvaldo A. Silva compareceu.',
+    'Sr. Gilvaldo reiterou o pedido.'
+  ].join(' ');
+  const pares = api.mapearSubstitutos(texto);
+
+  assert.ok(pares.find(p => p.original === 'GILVALDO ARGOLO SILVA'));
+  assert.ok(pares.find(p => p.original === 'GILVALDO SILVA'));
+  assert.ok(pares.find(p => p.original === 'ARGOLO SILVA'));
+  assert.ok(pares.find(p => p.original === 'Gilvaldo A. Silva'));
+  assert.ok(pares.find(p => p.original === 'Sr. Gilvaldo'));
+});
+
+test('mapearSubstitutos evita alias só com sobrenomes comuns da parte', () => {
+  const texto = [
+    'AUTOR: JOAO SILVA DOS SANTOS.',
+    'SILVA SANTOS consta em outro trecho.'
+  ].join(' ');
+  const pares = api.mapearSubstitutos(texto);
+
+  assert.ok(pares.find(p => p.original === 'JOAO SILVA DOS SANTOS'));
+  assert.equal(pares.find(p => p.original === 'SILVA SANTOS'), undefined);
+});
+
 test('mapearSubstitutos detecta CRM preservando label', () => {
   const pares = api.mapearSubstitutos('Medico CRM/RJ 12345 emitiu laudo.');
   const par = pares.find(p => p.original.includes('CRM'));
