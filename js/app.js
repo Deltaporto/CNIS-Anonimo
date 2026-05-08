@@ -131,8 +131,12 @@ zonaUpload.addEventListener('drop', event => {
   event.preventDefault();
   zonaUpload.classList.remove('drag-over');
 
-  const pdfs = Array.from(event.dataTransfer.files)
-    .filter(file => file.type === 'application/pdf' || file.name.endsWith('.pdf'));
+  const arquivos = Array.from(event.dataTransfer.files);
+  const pdfs = arquivos.filter(file => file.type === 'application/pdf' || file.name.endsWith('.pdf'));
+
+  if (arquivos.length > pdfs.length) {
+    alert('Alguns arquivos foram ignorados. Por favor, envie apenas arquivos PDF.');
+  }
 
   if (pdfs.length) iniciarLote(pdfs);
 });
@@ -163,7 +167,7 @@ async function iniciarLote(arquivos) {
       btnBaixarZip.textContent = config.botaoDownloadUm;
       baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
     } else {
-      btnBaixarZip.textContent = 'Gerando ZIP...';
+      btnBaixarZip.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span> Gerando ZIP...';
       const zip = new JSZip();
       for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
       const zipBytes = await zip.generateAsync({ type: 'uint8array' });
@@ -606,7 +610,7 @@ btnBaixarZip.addEventListener('click', async () => {
   const textoOriginal = btnBaixarZip.textContent;
   try {
     btnBaixarZip.disabled = true;
-    btnBaixarZip.textContent = 'Gerando ZIP...';
+    btnBaixarZip.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span> Gerando ZIP...';
     const zip = new JSZip();
     for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
     const zipBytes = await zip.generateAsync({ type: 'uint8array' });

@@ -8,3 +8,6 @@
 ## 2024-05-18 - Dynamic Content Accessibility
 **Learning:** For status texts generated dynamically in JavaScript (like file processing status changing from 'Aguardando' to 'Concluído'), screen readers will ignore these updates unless explicitly told to read them.
 **Action:** Always add `role="status"` and `aria-live="polite"` to dynamic text elements so updates are smoothly announced to screen reader users without stealing focus.
+## 2024-05-18 - Drag-and-drop flickering and silent filtering
+**Learning:** When users drag files over a custom upload zone, child elements (like text or SVGs) can trigger `dragleave` events on the parent, causing visual flickering. Also, silently filtering invalid files during a drag-and-drop operation is confusing for users; it's better to accept all files and show a clear error message in the UI for the invalid ones.
+**Action:** Always apply `pointer-events: none` to children of custom drag-and-drop zones. Never fail file validations silently; always surface actionable errors in the UI.
