@@ -140,16 +140,27 @@ zonaUpload.addEventListener('drop', event => {
 // ── LOTE ──────────────────────────────────────────────────────────────────────
 
 async function iniciarLote(arquivos) {
-  resultados = [];
+  resultados.length = 0;
   modoResultados = modoAtual;
   listaEl.textContent = '';
   listaEl.classList.remove('oculto');
   acoesEl.classList.add('oculto');
 
   const itens = arquivos.map(file => criarItemLista(file.name));
+  const tempResultados = new Array(arquivos.length);
 
-  for (let i = 0; i < arquivos.length; i++) {
-    await processarArquivo(arquivos[i], itens[i], i, arquivos.length, modoResultados);
+  let index = 0;
+  const workers = Array(Math.min(3, arquivos.length)).fill(null).map(async () => {
+    while (index < arquivos.length) {
+      const i = index++;
+      const result = await processarArquivo(arquivos[i], itens[i], i, arquivos.length, modoResultados);
+      if (result) tempResultados[i] = result;
+    }
+  });
+  await Promise.all(workers);
+
+  for (const res of tempResultados) {
+    if (res) resultados.push(res);
   }
 
   if (resultados.length === 0) return;
@@ -199,8 +210,7 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
   }
 
   if (modoLote === 'processo-judicial') {
-    await processarArquivoJudicial(file, item, indice, totalArquivos);
-    return;
+    return await processarArquivoJudicial(file, item, indice, totalArquivos);
   }
 
   setProgresso(item, 30);
@@ -243,14 +253,15 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
       setStatus(item, 'ok', 'Anonimizado ✓');
     }
 
-    resultados.push({
+    return {
       nome: gerarNomeSaida(dadosOriginais.nome, indice, totalArquivos, modoLote),
       bytes: resultadoPdf.bytes
-    });
+    };
   } catch (err) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Erro ao processar o PDF. Verifique se o arquivo é válido.');
     console.error('[CNIS]', err);
+    return null;
   }
 }
 
@@ -302,14 +313,15 @@ async function processarArquivoJudicial(file, item, indice, totalArquivos) {
       setStatus(item, 'ok', 'Anonimizado ✓');
     }
 
-    resultados.push({
+    return {
       nome: gerarNomeSaida(null, indice, totalArquivos, 'processo-judicial'),
       bytes: resultado.bytes
-    });
+    };
   } catch (err) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Erro ao processar o PDF. Verifique se o arquivo é válido.');
     console.error('[Processo Judicial]', err);
+    return null;
   }
 }
 
