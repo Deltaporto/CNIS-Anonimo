@@ -84,7 +84,7 @@ function atualizarModoUI() {
 }
 
 function limparEstado() {
-  resultados = [];
+  resultados.length = 0;
   modoResultados = modoAtual;
   listaEl.textContent = '';
   listaEl.classList.add('oculto');
@@ -140,7 +140,7 @@ zonaUpload.addEventListener('drop', event => {
 // ── LOTE ──────────────────────────────────────────────────────────────────────
 
 async function iniciarLote(arquivos) {
-  resultados = [];
+  resultados.length = 0;
   modoResultados = modoAtual;
   listaEl.textContent = '';
   listaEl.classList.remove('oculto');
@@ -148,9 +148,32 @@ async function iniciarLote(arquivos) {
 
   const itens = arquivos.map(file => criarItemLista(file.name));
 
-  for (let i = 0; i < arquivos.length; i++) {
-    await processarArquivo(arquivos[i], itens[i], i, arquivos.length, modoResultados);
+  // ⚡ Bolt: Use a worker pool with a concurrency limit to prevent UI blocking
+  // and improve processing speed without exhausting browser memory.
+  const LIMITE_CONCORRENCIA = 3;
+  let indiceAtual = 0;
+
+  async function trabalhador() {
+    while (indiceAtual < arquivos.length) {
+      const i = indiceAtual++;
+      const resultado = await processarArquivo(arquivos[i], itens[i], i, arquivos.length, modoResultados);
+      if (resultado) {
+        resultados[i] = resultado;
+      }
+    }
   }
+
+  const trabalhadores = [];
+  for (let i = 0; i < Math.min(LIMITE_CONCORRENCIA, arquivos.length); i++) {
+    trabalhadores.push(trabalhador());
+  }
+
+  await Promise.all(trabalhadores);
+
+  // Filter out empty/undefined slots
+  const resultadosValidos = resultados.filter(Boolean);
+  resultados.length = 0;
+  resultados.push(...resultadosValidos);
 
   if (resultados.length === 0) return;
 
@@ -185,7 +208,7 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
   if (file.size > MAX_PDF_SIZE) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Arquivo muito grande (máx. 50 MB)');
-    return;
+    return null;
   }
 
   const header = new Uint8Array(await file.slice(0, 5).arrayBuffer());
@@ -195,12 +218,11 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
   if (!isPDF) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Arquivo não é um PDF válido');
-    return;
+    return null;
   }
 
   if (modoLote === 'processo-judicial') {
-    await processarArquivoJudicial(file, item, indice, totalArquivos);
-    return;
+    return await processarArquivoJudicial(file, item, indice, totalArquivos);
   }
 
   setProgresso(item, 30);
@@ -231,7 +253,7 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
         setStatus(item, 'erro', 'Falha segura: nenhuma substituição pôde ser confirmada');
       }
 
-      return;
+      return null;
     }
 
     setProgresso(item, 100, true);
@@ -243,14 +265,15 @@ async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
       setStatus(item, 'ok', 'Anonimizado ✓');
     }
 
-    resultados.push({
+    return {
       nome: gerarNomeSaida(dadosOriginais.nome, indice, totalArquivos, modoLote),
       bytes: resultadoPdf.bytes
-    });
+    };
   } catch (err) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Erro ao processar o PDF. Verifique se o arquivo é válido.');
     console.error('[CNIS]', err);
+    return null;
   }
 }
 
@@ -290,7 +313,7 @@ async function processarArquivoJudicial(file, item, indice, totalArquivos) {
         setStatus(item, 'erro', 'Falha segura: nenhuma substituição pôde ser confirmada');
       }
 
-      return;
+      return null;
     }
 
     setProgresso(item, 100, true);
@@ -302,14 +325,15 @@ async function processarArquivoJudicial(file, item, indice, totalArquivos) {
       setStatus(item, 'ok', 'Anonimizado ✓');
     }
 
-    resultados.push({
+    return {
       nome: gerarNomeSaida(null, indice, totalArquivos, 'processo-judicial'),
       bytes: resultado.bytes
-    });
+    };
   } catch (err) {
     setProgresso(item, 100, false, true);
     setStatus(item, 'erro', 'Erro ao processar o PDF. Verifique se o arquivo é válido.');
     console.error('[Processo Judicial]', err);
+    return null;
   }
 }
 
