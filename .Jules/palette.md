@@ -8,3 +8,9 @@
 ## 2024-05-18 - Dynamic Content Accessibility
 **Learning:** For status texts generated dynamically in JavaScript (like file processing status changing from 'Aguardando' to 'Concluído'), screen readers will ignore these updates unless explicitly told to read them.
 **Action:** Always add `role="status"` and `aria-live="polite"` to dynamic text elements so updates are smoothly announced to screen reader users without stealing focus.
+## 2024-05-18 - Drag and Drop File Filtering UX
+**Learning:** Silently failing when users drag and drop invalid files leads to confusion. While a native `alert()` is not the most delightful UX, providing immediate, explicit feedback about which files were rejected is far better than no feedback.
+**Action:** Always provide explicit error feedback when filtering files during a drag-and-drop event, using a non-blocking toast notification if available, or a native alert as a fallback.
+## 2024-05-18 - Drag and Drop Flickering CSS Fix
+**Learning:** Applying `pointer-events: none` to all child elements of a dropzone to prevent hover/drag flickering is effective, but it can accidentally disable interactive text/links within the dropzone. It should be applied carefully only to non-interactive decorative elements like SVGs.
+**Action:** When fixing drag-over flickering, target only decorative child elements (like `.zona-upload svg`) with `pointer-events: none` rather than all child elements, to preserve clickability of nested manual upload triggers.

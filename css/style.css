@@ -185,6 +185,7 @@ main {
   background: #f0f5ff;
 }
 .zona-upload svg { opacity: .35; margin-bottom: 16px; transition: opacity .2s, transform .2s; }
+.zona-upload svg, .zona-upload p { pointer-events: none; }
 .zona-upload:hover svg { opacity: .6; transform: translateY(-3px); }
 .upload-titulo {
   font-family: 'Inter', sans-serif;

@@ -131,8 +131,14 @@ zonaUpload.addEventListener('drop', event => {
   event.preventDefault();
   zonaUpload.classList.remove('drag-over');
 
-  const pdfs = Array.from(event.dataTransfer.files)
-    .filter(file => file.type === 'application/pdf' || file.name.endsWith('.pdf'));
+  const arquivos = Array.from(event.dataTransfer.files);
+  const pdfs = arquivos.filter(file => file.type === 'application/pdf' || file.name.endsWith('.pdf'));
+  const rejeitados = arquivos.filter(file => file.type !== 'application/pdf' && !file.name.endsWith('.pdf'));
+
+  if (rejeitados.length > 0) {
+    const nomes = rejeitados.map(f => f.name).join('\n- ');
+    alert(`Os seguintes arquivos não são PDFs e foram ignorados:\n- ${nomes}`);
+  }
 
   if (pdfs.length) iniciarLote(pdfs);
 });
