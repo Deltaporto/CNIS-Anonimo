@@ -14,7 +14,7 @@ function encodeLatin1(str) {
 }
 
 function toUint8Array(bytes) {
-  if (bytes instanceof Uint8Array) return new Uint8Array(bytes);
+  if (bytes instanceof Uint8Array) return bytes;
   if (bytes instanceof ArrayBuffer) return new Uint8Array(bytes);
   return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 }

@@ -1,3 +1,7 @@
 ## 2024-05-24 - Parallelizing File Processing with Concurrency Pools
 **Learning:** Sequential await loops in asynchronous client-side file processing cause significant performance bottlenecks (~70% worse in mock benchmarks) due to UI thread starvation and unutilized resources. However, directly parallelizing them using Promise.all can exhaust browser memory on large batches. A worker-pool pattern with a concurrency limit (e.g., 3) maximizes throughput while maintaining safe bounds. Additionally, when workers contribute to a collective state, returning the result and assigning it by index guarantees deterministic output order. Finally, truncating global arrays (array.length = 0) instead of reassigning them preserves references held by other components.
 **Action:** Replace sequential loops for heavy I/O operations with a bounded worker pool. Ensure worker functions return their results rather than mutating global state directly, and reassemble them by original index to ensure order predictability.
+
+## 2026-05-10 - Unnecessary TypedArray Cloning Overhead
+**Learning:** In the `toUint8Array` helper, executing `new Uint8Array(bytes)` when `bytes` is already a `Uint8Array` triggers a complete memory reallocation and copy of the underlying `ArrayBuffer`. This overhead can be thousands of times slower than returning the existing array reference.
+**Action:** Always check `bytes instanceof Uint8Array` and return early before attempting instantiation or view creation on byte inputs.
