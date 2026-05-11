@@ -116,7 +116,16 @@ export async function loadPdfProcessorApi(redactorApi = null) {
     pako,
     pdfjsLib,
     mapearSubstitutos: redactorApi ? redactorApi.mapearSubstitutos : () => [],
-    contarAchados: redactorApi ? redactorApi.contarAchados : () => ({ cpfs: 0, oabs: 0, crms: 0, nomes: 0, numerosProcesso: [] })
+    contarAchados: redactorApi ? redactorApi.contarAchados : () => ({
+      cpfs: 0,
+      nits: 0,
+      oabs: 0,
+      crms: 0,
+      nomes: 0,
+      enderecos: 0,
+      identificadores: 0,
+      numerosProcesso: []
+    })
   });
 }
 

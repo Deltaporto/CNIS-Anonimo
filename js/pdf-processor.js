@@ -1238,6 +1238,12 @@ function aplicarEspecificacoesEmHex(texto, specsHex) {
   };
 }
 
+function normalizarBytesDecodificados(bytes) {
+  if (bytes instanceof Uint8Array) return bytes;
+  if (bytes instanceof ArrayBuffer) return new Uint8Array(bytes);
+  return null;
+}
+
 function decodificarStream(stream) {
   const filterStr = (stream.dict.get(PDFLib.PDFName.of('Filter')) || '').toString();
   const isFlate = filterStr.includes('FlateDecode');
@@ -1249,21 +1255,31 @@ function decodificarStream(stream) {
     };
   }
 
-  try {
-    return {
-      decoded: pako.inflate(stream.contents),
-      encode: bytes => pako.deflate(bytes)
-    };
-  } catch {
+  for (const inflar of [pako.inflate, pako.inflateRaw]) {
     try {
-      return {
-        decoded: pako.inflateRaw(stream.contents),
-        encode: bytes => pako.deflate(bytes)
-      };
-    } catch {
-      return null;
-    }
+      const decoded = normalizarBytesDecodificados(inflar(stream.contents));
+      if (decoded) {
+        return {
+          decoded,
+          encode: bytes => pako.deflate(bytes)
+        };
+      }
+    } catch {}
   }
+
+  if (typeof PDFLib.decodePDFRawStream === 'function') {
+    try {
+      const decoded = normalizarBytesDecodificados(PDFLib.decodePDFRawStream(stream).decode());
+      if (decoded) {
+        return {
+          decoded,
+          encode: bytes => pako.deflate(bytes)
+        };
+      }
+    } catch {}
+  }
+
+  return null;
 }
 
 // ── EXTRAÇÃO ──────────────────────────────────────────────────────────────────

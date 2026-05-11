@@ -576,10 +576,12 @@ function mostrarAchados(item, achados = {}) {
 
   const partes = [];
   if (achados.cpfs) partes.push('CPFs: ' + achados.cpfs);
+  if (achados.nits) partes.push('NITs: ' + achados.nits);
   if (achados.oabs) partes.push('OABs: ' + achados.oabs);
   if (achados.crms) partes.push('CRMs: ' + achados.crms);
   if (achados.nomes) partes.push('Nomes: ' + achados.nomes);
   if (achados.enderecos) partes.push('Endereços: ' + achados.enderecos);
+  if (achados.identificadores) partes.push('IDs: ' + achados.identificadores);
 
   const linha = document.createElement('div');
   linha.className = 'sub-linha';

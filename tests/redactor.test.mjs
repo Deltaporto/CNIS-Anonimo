@@ -61,7 +61,7 @@ test('mapearSubstitutos ignora CPF com checksum invalido', () => {
 });
 
 test('mapearSubstitutos detecta OAB preservando label e zerificando numero', () => {
-  const pares = api.mapearSubstitutos('Advogado OAB/RJ 123456 presente. Intimar OAB-RJ) sob o n. 169.859.');
+  const pares = api.mapearSubstitutos('Advogado OAB/RJ 123456 presente. Intimar OAB-RJ) sob o n. 169.859. 0AB/RJ 239.184');
   const par = pares.find(p => p.original.includes('OAB'));
   assert.ok(par, 'deve detectar OAB');
   assert.ok(par.substituto.startsWith('OAB/RJ '), 'label deve ser preservado');
@@ -70,6 +70,7 @@ test('mapearSubstitutos detecta OAB preservando label e zerificando numero', () 
     pares.find(p => p.original === 'OAB-RJ) sob o n. 169.859')?.substituto,
     'OAB-RJ) sob o n. 0000000'
   );
+  assert.equal(pares.find(p => p.original === '0AB/RJ 239.184')?.substituto, '0AB/RJ 0000000');
 });
 
 test('mapearSubstitutos detecta OAB compacta e nomes de capa/evento', () => {
@@ -139,11 +140,12 @@ test('mapearSubstitutos evita alias só com sobrenomes comuns da parte', () => {
 });
 
 test('mapearSubstitutos detecta CRM preservando label', () => {
-  const pares = api.mapearSubstitutos('Medico CRM/RJ 12345 emitiu laudo.');
+  const pares = api.mapearSubstitutos('Medico CRM/RJ 12345 emitiu laudo. CRMRJ94285 - RENATO CASTELO BRANCO.');
   const par = pares.find(p => p.original.includes('CRM'));
   assert.ok(par);
   assert.equal(par.substituto.length, par.original.length);
   assert.ok(par.substituto.includes('00000'));
+  assert.equal(pares.find(p => p.original === 'CRMRJ94285')?.substituto, 'CRMRJ00000');
 });
 
 test('mapearSubstitutos detecta telefone e zerifica digitos preservando separadores', () => {
@@ -220,6 +222,43 @@ test('mapearSubstitutos preserva numero de processo CNJ compacto sem redacao par
   assert.equal(pares.find(p => p.original.includes('50299468320254025101')), undefined);
   assert.equal(pares.find(p => p.original === '(21) 99999-8888')?.substituto, '(00) 00000-0000');
   assert.deepEqual(api.contarAchados(texto).numerosProcesso, ['50299468320254025101']);
+});
+
+test('mapearSubstitutos detecta NIT, beneficio e IDs administrativos sem afetar processo', () => {
+  const texto = [
+    'Processo 50100938520254025102.',
+    'NIT: 119.76548.37-8',
+    'Resumo 11976548378 20677236853 27/10/2019 CADSUS.',
+    'NB.: 7186726225.',
+    'Título de Eleitor Número: 067986700361.'
+  ].join(' ');
+  const pares = api.mapearSubstitutos(texto);
+
+  assert.equal(pares.find(p => p.original === '119.76548.37-8')?.substituto, '000.00000.00-0');
+  assert.equal(pares.find(p => p.original === '11976548378')?.substituto, '00000000000');
+  assert.equal(pares.find(p => p.original === '20677236853')?.substituto, '00000000000');
+  assert.equal(pares.find(p => p.original === 'NB.: 7186726225')?.substituto, 'NB.: 0000000000');
+  assert.equal(pares.find(p => p.original === '067986700361')?.substituto, '000000000000');
+  assert.equal(pares.find(p => p.original.includes('50100938520254025102')), undefined);
+});
+
+test('mapearSubstitutos detecta nomes de parte em rotulos mistos de evento processual', () => {
+  const texto = [
+    'Assistido(s): ELIANA DUTRA SOUZA DE OLIVEIRA',
+    'Autor principal: ELIANA DUTRA SOUZA DE OLIVEIRA',
+    'Beneficiário dos Honorários: Nome: RENATO CASTELO BRANCO CPF: 110.335.407-81'
+  ].join(' ');
+  const pares = api.mapearSubstitutos(texto);
+
+  assert.ok(pares.find(p => p.original === 'ELIANA DUTRA SOUZA DE OLIVEIRA'));
+  assert.ok(pares.find(p => p.original === 'RENATO CASTELO BRANCO'));
+  assert.equal(
+    pares.find(p => p.original === 'ELIANADUTRASOUZADEOLIVEIRA')?.substituto,
+    '*'.repeat('ELIANADUTRASOUZADEOLIVEIRA'.length)
+  );
+  assert.ok(pares.find(p => p.original === 'ELIANA'));
+  assert.ok(pares.find(p => p.original === 'RENATO CASTELO'));
+  assert.ok(pares.find(p => p.original === 'BRANCO'));
 });
 
 test('contarAchados retorna contagens corretas por tipo', () => {
