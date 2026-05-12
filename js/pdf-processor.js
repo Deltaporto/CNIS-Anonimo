@@ -1069,10 +1069,14 @@ function encodedHexToPdfLiteral(hex) {
   return escaped;
 }
 
+const HEX_LOOKUP = Array.from({length: 256}, (_, i) => i.toString(16).padStart(2, '0').toUpperCase());
+
 function encodeTextToLatin1Hex(texto) {
-  return Array.from(encodeLatin1(texto), byte =>
-    byte.toString(16).padStart(2, '0').toUpperCase()
-  ).join('');
+  let hex = '';
+  for (let i = 0; i < texto.length; i++) {
+    hex += HEX_LOOKUP[texto.charCodeAt(i) & 0xff];
+  }
+  return hex;
 }
 
 function extrairMapasHexPorFonte(pdfDoc) {
@@ -1457,7 +1461,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   let match;
 
   while ((match = regexStreams.exec(bin)) !== null) {
-    const raw = Uint8Array.from(match[1].split('').map(char => char.charCodeAt(0)));
+    const raw = encodeLatin1(match[1]);
 
     let decoded;
     try {
@@ -1500,7 +1504,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   }
 
   partes.push(bin.slice(last));
-  const resultBytes = Uint8Array.from(partes.join('').split(''), char => char.charCodeAt(0));
+  const resultBytes = encodeLatin1(partes.join(''));
 
   try {
     const doc = await PDFLib.PDFDocument.load(resultBytes, { ignoreEncryption: true, updateMetadata: false });
@@ -1582,7 +1586,7 @@ function coletarTextosDecodificadosViaBytes(pdfBytes) {
   let match;
 
   while ((match = regexStreams.exec(bin)) !== null) {
-    const raw = Uint8Array.from(match[1].split('').map(char => char.charCodeAt(0)));
+    const raw = encodeLatin1(match[1]);
 
     try {
       const texto = decoderLatin1.decode(pako.inflate(raw));
