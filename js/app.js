@@ -396,6 +396,7 @@ function criarItemLista(nomeArquivo) {
 
   const icone = document.createElement('span');
   icone.className = 'arquivo-icone';
+  icone.setAttribute('aria-hidden', 'true');
   icone.textContent = '📄';
 
   const nome = document.createElement('span');
@@ -412,6 +413,10 @@ function criarItemLista(nomeArquivo) {
 
   const progressoWrap = document.createElement('div');
   progressoWrap.className = 'progresso-wrap';
+  progressoWrap.setAttribute('role', 'progressbar');
+  progressoWrap.setAttribute('aria-valuemin', '0');
+  progressoWrap.setAttribute('aria-valuemax', '100');
+  progressoWrap.setAttribute('aria-valuenow', '0');
 
   const progressoBarra = document.createElement('div');
   progressoBarra.className = 'progresso-barra';
@@ -437,8 +442,10 @@ function setStatus(item, tipo, texto) {
 }
 
 function setProgresso(item, pct, completo = false, erro = false) {
+  const wrap = item.querySelector('.progresso-wrap');
+  if (wrap) wrap.setAttribute('aria-valuenow', pct);
   const barra = item.querySelector('.progresso-barra');
-  barra.style.width = pct + '%';
+  if (barra) barra.style.width = pct + '%';
   if (completo) barra.classList.add('completo');
   if (erro) barra.classList.add('erro');
 }
@@ -554,6 +561,7 @@ function mostrarSubs(item, originais, ficticios, modo) {
 
     const seta = document.createElement('span');
     seta.className = 'sub-seta';
+    seta.setAttribute('aria-hidden', 'true');
     seta.textContent = '→';
 
     const novo = document.createElement('span');

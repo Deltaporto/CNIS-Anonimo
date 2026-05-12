@@ -14,3 +14,6 @@
 ## 2024-05-18 - Drag and Drop Flickering CSS Fix
 **Learning:** Applying `pointer-events: none` to all child elements of a dropzone to prevent hover/drag flickering is effective, but it can accidentally disable interactive text/links within the dropzone. It should be applied carefully only to non-interactive decorative elements like SVGs.
 **Action:** When fixing drag-over flickering, target only decorative child elements (like `.zona-upload svg`) with `pointer-events: none` rather than all child elements, to preserve clickability of nested manual upload triggers.
+## 2024-05-18 - Accessible Custom Progress Indicators
+**Learning:** Using generic HTML elements like `div` to build progress bars leaves screen readers completely unaware of the loading state or its progression. Decorative text (like emojis or arrows) used in these dynamically built UI elements add significant noise.
+**Action:** Always set `role="progressbar"`, `aria-valuemin`, `aria-valuemax`, and dynamically update `aria-valuenow` for custom progress indicators. Apply `aria-hidden="true"` to decorative text nodes.
