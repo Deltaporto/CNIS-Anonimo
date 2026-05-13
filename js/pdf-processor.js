@@ -1447,7 +1447,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   }
 
   const bytes = toUint8Array(pdfBytes);
-  let bin = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  let bin = decoderLatin1.decode(bytes);
 
   const regexStreams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   const partes = [];
@@ -1576,7 +1576,7 @@ async function coletarTextosDecodificados(pdfBytes) {
 
 function coletarTextosDecodificadosViaBytes(pdfBytes) {
   const bytes = toUint8Array(pdfBytes);
-  const bin = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  const bin = decoderLatin1.decode(bytes);
   const textos = [];
   const regexStreams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   let match;
