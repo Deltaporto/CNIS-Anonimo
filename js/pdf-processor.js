@@ -1286,7 +1286,7 @@ function decodificarStream(stream) {
 
 async function extrairDadosSensiveis(pdfBytes) {
   const copia = toUint8Array(pdfBytes).slice().buffer;
-  const pdf = await pdfjsLib.getDocument({ data: copia }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: copia, isEvalSupported: false }).promise;
   const resultado = {
     tipoDocumento: 'cnis',
     nome: '',
@@ -1616,7 +1616,7 @@ async function _extrairTextoCompleto(pdfBytes, onProgress = null) {
     etapa: 'Abrindo PDF',
     detalhe: 'Preparando leitura das páginas'
   });
-  const pdf = await pdfjsLib.getDocument({ data: copia }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: copia, isEvalSupported: false }).promise;
   const textos = [];
 
   try {
