@@ -1,3 +1,7 @@
 ## 2024-05-24 - Parallelizing File Processing with Concurrency Pools
 **Learning:** Sequential await loops in asynchronous client-side file processing cause significant performance bottlenecks (~70% worse in mock benchmarks) due to UI thread starvation and unutilized resources. However, directly parallelizing them using Promise.all can exhaust browser memory on large batches. A worker-pool pattern with a concurrency limit (e.g., 3) maximizes throughput while maintaining safe bounds. Additionally, when workers contribute to a collective state, returning the result and assigning it by index guarantees deterministic output order. Finally, truncating global arrays (array.length = 0) instead of reassigning them preserves references held by other components.
 **Action:** Replace sequential loops for heavy I/O operations with a bounded worker pool. Ensure worker functions return their results rather than mutating global state directly, and reassemble them by original index to ensure order predictability.
+
+## 2024-05-24 - String to Uint8Array Conversion Performance
+**Learning:** Converting strings to Uint8Arrays using `Uint8Array.from(str.split('').map(char => char.charCodeAt(0)))` is very slow due to excessive array allocations and garbage collection overhead.
+**Action:** Use the existing `encodeLatin1(str)` helper function, which uses a pre-allocated Uint8Array and a bounded loop, to significantly improve execution speed when performing this conversion.
