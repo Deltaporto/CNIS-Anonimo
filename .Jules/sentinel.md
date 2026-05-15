@@ -1,0 +1,4 @@
+## 2025-05-15 - Prevent DOM-based XSS in Configuration Setup
+**Vulnerability:** Use of `innerHTML` for configuration strings in `uploadSubEl.innerHTML = config.uploadSub` combined with inline markup (`<strong>`) in configuration object (`MODOS_DOCUMENTO.uploadSub`).
+**Learning:** Bypassing standard `textContent` assignment using `innerHTML` to inject hardcoded layout configuration (`<strong>`) creates an architectural pattern that can lead to DOM-based Cross-Site Scripting (XSS). If this configuration is eventually sourced from an external API, database, or URL parameters, an attacker could execute arbitrary scripts.
+**Prevention:** Remove inline tags (`<strong>`) from configuration objects, use `textContent` to safely assign strings, and manipulate the DOM natively (e.g., creating elements and appending them) or rely on structural markup within the HTML template rather than injecting HTML strings via JS.
