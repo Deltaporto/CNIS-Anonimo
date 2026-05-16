@@ -6,7 +6,7 @@ const MODOS_DOCUMENTO = {
     prefixoArquivo: 'CNIS',
     zipNome: 'CNIS_anonimizados.zip',
     uploadTitulo: 'Arraste os extratos CNIS aqui',
-    uploadSub: 'ou <strong>clique para selecionar</strong> · um ou vários arquivos · download automático ao concluir',
+    uploadSub: 'ou clique para selecionar · um ou vários arquivos · download automático ao concluir',
     ariaLabel: 'Selecionar arquivos PDF do CNIS para anonimizar',
     botaoDownloadUm: 'Baixar novamente',
     botaoDownloadVarios: 'Baixar ZIP novamente'
@@ -16,7 +16,7 @@ const MODOS_DOCUMENTO = {
     prefixoArquivo: 'Carta de Concessao',
     zipNome: 'Cartas_de_concessao_anonimizadas.zip',
     uploadTitulo: 'Arraste as cartas de concessão aqui',
-    uploadSub: 'ou <strong>clique para selecionar</strong> · PDFs de carta de concessão ou memória de cálculo · download automático ao concluir',
+    uploadSub: 'ou clique para selecionar · PDFs de carta de concessão ou memória de cálculo · download automático ao concluir',
     ariaLabel: 'Selecionar arquivos PDF de carta de concessão para anonimizar',
     botaoDownloadUm: 'Baixar novamente',
     botaoDownloadVarios: 'Baixar ZIP novamente'
@@ -26,7 +26,7 @@ const MODOS_DOCUMENTO = {
     prefixoArquivo: 'Processo',
     zipNome: 'Processos_anonimizados.zip',
     uploadTitulo: 'Arraste as peças processuais aqui',
-    uploadSub: 'ou <strong>clique para selecionar</strong> · petições, sentenças, acórdãos · download automático ao concluir',
+    uploadSub: 'ou clique para selecionar · petições, sentenças, acórdãos · download automático ao concluir',
     ariaLabel: 'Selecionar arquivos PDF de processos judiciais para anonimizar',
     botaoDownloadUm: 'Baixar novamente',
     botaoDownloadVarios: 'Baixar ZIP novamente'
@@ -58,7 +58,19 @@ function atualizarModoUI() {
   if (document.body?.dataset) document.body.dataset.modo = modoAtual;
 
   if (uploadTituloEl) uploadTituloEl.textContent = config.uploadTitulo;
-  if (uploadSubEl) uploadSubEl.innerHTML = config.uploadSub;
+  if (uploadSubEl) {
+    uploadSubEl.textContent = '';
+    const parts = config.uploadSub.split('clique para selecionar');
+    if (parts.length === 2) {
+      uploadSubEl.appendChild(document.createTextNode(parts[0]));
+      const strong = document.createElement('strong');
+      strong.textContent = 'clique para selecionar';
+      uploadSubEl.appendChild(strong);
+      uploadSubEl.appendChild(document.createTextNode(parts[1]));
+    } else {
+      uploadSubEl.textContent = config.uploadSub;
+    }
+  }
   if (zonaUpload && typeof zonaUpload.setAttribute === 'function') {
     zonaUpload.setAttribute('aria-label', config.ariaLabel);
   }
