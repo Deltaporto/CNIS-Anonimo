@@ -148,8 +148,8 @@ zonaUpload.addEventListener('drop', event => {
   const rejeitados = arquivos.filter(file => file.type !== 'application/pdf' && !file.name.endsWith('.pdf'));
 
   if (rejeitados.length > 0) {
-    const nomes = rejeitados.map(f => f.name).join('\n- ');
-    alert(`Os seguintes arquivos não são PDFs e foram ignorados:\n- ${nomes}`);
+    const nomes = rejeitados.map(f => f.name).join(', ');
+    mostrarToast(`Arquivos ignorados (apenas PDF): ${nomes}`);
   }
 
   if (pdfs.length) iniciarLote(pdfs);
@@ -408,6 +408,7 @@ function criarItemLista(nomeArquivo) {
 
   const icone = document.createElement('span');
   icone.className = 'arquivo-icone';
+  icone.setAttribute('aria-hidden', 'true');
   icone.textContent = '📄';
 
   const nome = document.createElement('span');
@@ -573,6 +574,7 @@ function mostrarSubs(item, originais, ficticios, modo) {
 
     const seta = document.createElement('span');
     seta.className = 'sub-seta';
+    seta.setAttribute('aria-hidden', 'true');
     seta.textContent = '→';
 
     const novo = document.createElement('span');
@@ -672,3 +674,30 @@ btnLimpar.addEventListener('click', () => {
   limparEstado();
   atualizarModoUI();
 });
+
+// ── TOAST ──────────────────────────────────────────────────────────────────────
+function mostrarToast(mensagem) {
+  let toastContainer = document.getElementById('toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'toast-container';
+    toastContainer.className = 'toast-container';
+    document.body.appendChild(toastContainer);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'toast-notificacao';
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'assertive');
+  toast.textContent = mensagem;
+
+  toastContainer.appendChild(toast);
+
+  setTimeout(() => toast.classList.add('mostrar'), 10);
+
+  setTimeout(() => {
+    toast.classList.remove('mostrar');
+    toast.classList.add('ocultar');
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
