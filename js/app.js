@@ -84,14 +84,17 @@ function atualizarModoUI() {
   if (btnModoCnis && typeof btnModoCnis.setAttribute === 'function') {
     btnModoCnis.setAttribute('aria-pressed', String(modoAtual === 'cnis'));
     btnModoCnis.setAttribute('aria-selected', String(modoAtual === 'cnis'));
+    btnModoCnis.setAttribute('tabindex', modoAtual === 'cnis' ? '0' : '-1');
   }
   if (btnModoCarta && typeof btnModoCarta.setAttribute === 'function') {
     btnModoCarta.setAttribute('aria-pressed', String(modoAtual === 'carta-concessao'));
     btnModoCarta.setAttribute('aria-selected', String(modoAtual === 'carta-concessao'));
+    btnModoCarta.setAttribute('tabindex', modoAtual === 'carta-concessao' ? '0' : '-1');
   }
   if (btnModoProcesso && typeof btnModoProcesso.setAttribute === 'function') {
     btnModoProcesso.setAttribute('aria-pressed', String(modoAtual === 'processo-judicial'));
     btnModoProcesso.setAttribute('aria-selected', String(modoAtual === 'processo-judicial'));
+    btnModoProcesso.setAttribute('tabindex', modoAtual === 'processo-judicial' ? '0' : '-1');
   }
 }
 
@@ -116,6 +119,41 @@ atualizarModoUI();
 btnModoCnis?.addEventListener('click', () => trocarModo('cnis'));
 btnModoCarta?.addEventListener('click', () => trocarModo('carta-concessao'));
 btnModoProcesso?.addEventListener('click', () => trocarModo('processo-judicial'));
+
+const tablist = document.querySelector('.modo-selector');
+if (tablist) {
+  tablist.addEventListener('keydown', (e) => {
+    const tabs = [btnModoCnis, btnModoCarta, btnModoProcesso].filter(Boolean);
+    if (!tabs.length) return;
+
+    let currentIndex = tabs.findIndex(tab => tab.getAttribute('aria-selected') === 'true');
+    if (currentIndex === -1) currentIndex = 0;
+
+    let newIndex = currentIndex;
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      newIndex = (currentIndex + 1) % tabs.length;
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      newIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    } else if (e.key === 'Home') {
+      newIndex = 0;
+    } else if (e.key === 'End') {
+      newIndex = tabs.length - 1;
+    }
+
+    if (newIndex !== currentIndex) {
+      e.preventDefault();
+      const novoBotao = tabs[newIndex];
+      const modos = {
+        'btn-modo-cnis': 'cnis',
+        'btn-modo-carta': 'carta-concessao',
+        'btn-modo-processo': 'processo-judicial'
+      };
+      trocarModo(modos[novoBotao.id]);
+      novoBotao.focus();
+    }
+  });
+}
 
 // ── UPLOAD ────────────────────────────────────────────────────────────────────
 

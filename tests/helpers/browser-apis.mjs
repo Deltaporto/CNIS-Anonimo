@@ -2,7 +2,9 @@ import fs from 'node:fs/promises';
 import { webcrypto } from 'node:crypto';
 import * as PDFLib from 'pdf-lib';
 import pako from 'pako';
-import * as pdfjsBase from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const pdfjsBase = require('pdfjs-dist/legacy/build/pdf.js');
 
 const ROOT_URL = new URL('../../', import.meta.url);
 const CNIS_FIXTURES_URL = new URL('teste/', ROOT_URL);
@@ -144,6 +146,8 @@ export async function loadAppApi() {
     document: {
       getElementById() { return createElementStub(); },
       createElement() { return createElementStub(); },
+      createTextNode(text) { return { textContent: text }; },
+      querySelector() { return createElementStub(); },
       body: createElementStub()
     },
     URL: {

@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as PDFLib from 'pdf-lib';
-import * as pdfjsBase from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const pdfjsBase = require('pdfjs-dist/legacy/build/pdf.js');
 
 import {
   loadRedactorApi,
