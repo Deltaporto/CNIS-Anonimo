@@ -7,6 +7,21 @@ if (typeof window !== 'undefined' && typeof pdfjsLib !== 'undefined' && pdfjsLib
 
 const decoderLatin1 = new TextDecoder('latin1');
 
+const HEX_LOOKUP = new Array(256);
+for (let i = 0; i < 256; i++) {
+  HEX_LOOKUP[i] = i.toString(16).padStart(2, '0').toUpperCase();
+}
+
+function bytesToLatin1String(bytes) {
+  let str = '';
+  const chunk = 8192;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    str += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return str;
+}
+
+
 function encodeLatin1(str) {
   const bytes = new Uint8Array(str.length);
   for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i) & 0xff;
@@ -1070,9 +1085,12 @@ function encodedHexToPdfLiteral(hex) {
 }
 
 function encodeTextToLatin1Hex(texto) {
-  return Array.from(encodeLatin1(texto), byte =>
-    byte.toString(16).padStart(2, '0').toUpperCase()
-  ).join('');
+  const bytes = encodeLatin1(texto);
+  const hexArr = new Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) {
+    hexArr[i] = HEX_LOOKUP[bytes[i]];
+  }
+  return hexArr.join("");
 }
 
 function extrairMapasHexPorFonte(pdfDoc) {
@@ -1447,7 +1465,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
   }
 
   const bytes = toUint8Array(pdfBytes);
-  let bin = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  let bin = bytesToLatin1String(bytes);
 
   const regexStreams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   const partes = [];
@@ -1486,10 +1504,7 @@ async function _substituirViaBytesRaw(pdfBytes, specs, specsHex = []) {
     modificou = true;
     mergeHits(hits, result.hits);
 
-    const newBin = Array.from(
-      pako.deflate(encodeLatin1(result.text)),
-      byte => String.fromCharCode(byte)
-    ).join('');
+    const newBin = bytesToLatin1String(pako.deflate(encodeLatin1(result.text)));
 
     partes.push(bin.slice(last, match.index) + 'stream\n' + newBin + '\nendstream');
     last = match.index + match[0].length;
@@ -1576,7 +1591,7 @@ async function coletarTextosDecodificados(pdfBytes) {
 
 function coletarTextosDecodificadosViaBytes(pdfBytes) {
   const bytes = toUint8Array(pdfBytes);
-  const bin = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  const bin = bytesToLatin1String(bytes);
   const textos = [];
   const regexStreams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   let match;
