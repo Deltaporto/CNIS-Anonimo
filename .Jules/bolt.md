@@ -4,3 +4,6 @@
 ## 2024-05-24 - Intermediate Array Allocation Overhead in Hot Paths
 **Learning:** Using `split('').map()` and `Uint8Array.from` on large strings (like PDF binary streams) generates massive memory allocation and GC overhead. In tests, `Uint8Array.from(str.split('').map(...))` on a 5MB string took ~200ms, while a simple loop with a pre-allocated Uint8Array (`encodeLatin1`) took ~26ms.
 **Action:** Always use bounded loops and pre-allocated typed arrays (like the existing `encodeLatin1` utility) for converting strings to bytes in performance-critical paths, avoiding intermediate array creation functions.
+## 2025-02-23 - Massive overhead using Array.from to decode large Uint8Arrays
+**Learning:** Using `Array.from(bytes, byte => String.fromCharCode(byte)).join('')` generates significant memory allocation and garbage collection overhead, bottlenecking operations on large PDF streams (taking ~780ms for 5MB). Using a chunked `String.fromCharCode.apply` approach eliminates intermediate array creation, completing the same operation in ~40ms (almost 20x faster).
+**Action:** Always use pre-allocated buffers, lookup tables, and chunked loop combinations (like `bytesToLatin1String`) for large byte-array-to-string or byte-array-to-hex formatting instead of iterator-based `Array.from` maps.
