@@ -168,6 +168,7 @@ zonaUpload.addEventListener('keydown', event => {
 
 inputArquivo.addEventListener('change', event => {
   if (event.target.files.length) iniciarLote(Array.from(event.target.files));
+  event.target.value = '';
 });
 
 zonaUpload.addEventListener('dragover', event => {
@@ -467,6 +468,7 @@ function criarItemLista(nomeArquivo) {
   progressoWrap.setAttribute('aria-valuemin', '0');
   progressoWrap.setAttribute('aria-valuemax', '100');
   progressoWrap.setAttribute('aria-valuenow', '0');
+  progressoWrap.setAttribute('aria-label', `Progresso de ${nomeArquivo}`);
 
   const progressoBarra = document.createElement('div');
   progressoBarra.className = 'progresso-barra';
@@ -711,6 +713,7 @@ btnBaixarZip.addEventListener('click', async () => {
 btnLimpar.addEventListener('click', () => {
   limparEstado();
   atualizarModoUI();
+  zonaUpload.focus();
 });
 
 // ── TOAST ──────────────────────────────────────────────────────────────────────
