@@ -13,3 +13,7 @@
 ## 2024-05-19 - Prevent keyboard focus drop when hiding active elements
 **Learning:** When a user interacts with a button (like "Clear state") that conditionally hides itself or its parent container, keyboard focus is abruptly lost and dropped back to the `<body>` element. This creates a disorienting experience for screen reader and keyboard-only users, forcing them to navigate back from the top of the page.
 **Action:** When hiding an interactive element that currently has focus, programmatically shift focus to the next logical step in the user's workflow (e.g., the primary upload zone) to maintain continuous keyboard accessibility.
+
+## 2024-05-24 - Semantic Headings and Text Truncation Tooltips
+**Learning:** The application lacked semantic headings (`<h1>`, `<h2>`), which severely impacts screen reader navigation. Furthermore, dynamically generated values in grid columns use CSS text truncation (`text-overflow: ellipsis`), which hides full data from all users.
+**Action:** Always map structural elements that act as visual headings to native heading tags (`<h1>`-`<h6>`) to establish a proper document outline. When using `text-overflow: ellipsis` on dynamic data, always bind the element's `title` attribute to the full text to ensure accessibility via hover tooltips.
