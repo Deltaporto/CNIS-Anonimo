@@ -7,3 +7,6 @@
 ## 2025-02-23 - Massive overhead using Array.from to decode large Uint8Arrays
 **Learning:** Using `Array.from(bytes, byte => String.fromCharCode(byte)).join('')` generates significant memory allocation and garbage collection overhead, bottlenecking operations on large PDF streams (taking ~780ms for 5MB). Using a chunked `String.fromCharCode.apply` approach eliminates intermediate array creation, completing the same operation in ~40ms (almost 20x faster).
 **Action:** Always use pre-allocated buffers, lookup tables, and chunked loop combinations (like `bytesToLatin1String`) for large byte-array-to-string or byte-array-to-hex formatting instead of iterator-based `Array.from` maps.
+## 2025-05-20 - Unnecessary Array Copying Overhead
+**Learning:** Returning `new Uint8Array(bytes)` when `bytes` is already a `Uint8Array` performs an unnecessary deep copy of the underlying buffer. For large byte arrays like PDF files, this introduces significant memory allocation and garbage collection overhead. Simply returning the input array directly eliminates this O(N) allocation bottleneck.
+**Action:** In utility functions dealing with large arrays, check the input type and return the reference early if it's already the expected type instead of re-wrapping or copying it.
