@@ -611,6 +611,7 @@ function mostrarSubs(item, originais, ficticios, modo) {
     const originalEl = document.createElement('span');
     originalEl.className = 'sub-original';
     originalEl.textContent = mascarar(original, campo);
+    originalEl.title = originalEl.textContent;
 
     const seta = document.createElement('span');
     seta.className = 'sub-seta';
@@ -619,7 +620,9 @@ function mostrarSubs(item, originais, ficticios, modo) {
 
     const novo = document.createElement('span');
     novo.className = 'sub-novo';
-    novo.textContent = fake ? fake.toUpperCase() : '—';
+    const textoNovo = fake ? fake.toUpperCase() : '—';
+    novo.textContent = textoNovo;
+    if (fake) novo.title = textoNovo;
 
     linha.append(lbl, originalEl, seta, novo);
     tabela.appendChild(linha);
