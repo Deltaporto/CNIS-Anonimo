@@ -82,17 +82,14 @@ function atualizarModoUI() {
   }
 
   if (btnModoCnis && typeof btnModoCnis.setAttribute === 'function') {
-    btnModoCnis.setAttribute('aria-pressed', String(modoAtual === 'cnis'));
     btnModoCnis.setAttribute('aria-selected', String(modoAtual === 'cnis'));
     btnModoCnis.setAttribute('tabindex', modoAtual === 'cnis' ? '0' : '-1');
   }
   if (btnModoCarta && typeof btnModoCarta.setAttribute === 'function') {
-    btnModoCarta.setAttribute('aria-pressed', String(modoAtual === 'carta-concessao'));
     btnModoCarta.setAttribute('aria-selected', String(modoAtual === 'carta-concessao'));
     btnModoCarta.setAttribute('tabindex', modoAtual === 'carta-concessao' ? '0' : '-1');
   }
   if (btnModoProcesso && typeof btnModoProcesso.setAttribute === 'function') {
-    btnModoProcesso.setAttribute('aria-pressed', String(modoAtual === 'processo-judicial'));
     btnModoProcesso.setAttribute('aria-selected', String(modoAtual === 'processo-judicial'));
     btnModoProcesso.setAttribute('tabindex', modoAtual === 'processo-judicial' ? '0' : '-1');
   }
@@ -441,6 +438,7 @@ function gerarNomeSaida(nomeOriginal, indice, totalArquivos, modo = 'cnis') {
 function criarItemLista(nomeArquivo) {
   const item = document.createElement('div');
   item.className = 'arquivo-item';
+  item.setAttribute('role', 'listitem');
 
   const cab = document.createElement('div');
   cab.className = 'arquivo-cabecalho';

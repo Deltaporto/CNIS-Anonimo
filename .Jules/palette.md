@@ -17,3 +17,7 @@
 ## 2024-05-24 - Semantic Headings and Text Truncation Tooltips
 **Learning:** The application lacked semantic headings (`<h1>`, `<h2>`), which severely impacts screen reader navigation. Furthermore, dynamically generated values in grid columns use CSS text truncation (`text-overflow: ellipsis`), which hides full data from all users.
 **Action:** Always map structural elements that act as visual headings to native heading tags (`<h1>`-`<h6>`) to establish a proper document outline. When using `text-overflow: ellipsis` on dynamic data, always bind the element's `title` attribute to the full text to ensure accessibility via hover tooltips.
+
+## 2024-05-24 - Restore list semantics for dynamically generated div lists
+**Learning:** Using generic `div` containers for dynamic lists strips out list semantics, making it difficult for screen reader users to understand the quantity of items or navigate between them effectively. Also, using `aria-pressed` on a `role="tab"` element is invalid according to WCAG.
+**Action:** Always apply `role="list"` to the container and `role="listitem"` to the dynamically generated children to restore native list accessibility for screen readers. Ensure correct attributes like `aria-selected` are used for tabs rather than `aria-pressed`.
