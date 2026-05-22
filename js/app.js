@@ -441,6 +441,7 @@ function gerarNomeSaida(nomeOriginal, indice, totalArquivos, modo = 'cnis') {
 function criarItemLista(nomeArquivo) {
   const item = document.createElement('div');
   item.className = 'arquivo-item';
+  item.setAttribute("role", "listitem");
 
   const cab = document.createElement('div');
   cab.className = 'arquivo-cabecalho';

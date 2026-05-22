@@ -17,3 +17,6 @@
 ## 2024-05-24 - Semantic Headings and Text Truncation Tooltips
 **Learning:** The application lacked semantic headings (`<h1>`, `<h2>`), which severely impacts screen reader navigation. Furthermore, dynamically generated values in grid columns use CSS text truncation (`text-overflow: ellipsis`), which hides full data from all users.
 **Action:** Always map structural elements that act as visual headings to native heading tags (`<h1>`-`<h6>`) to establish a proper document outline. When using `text-overflow: ellipsis` on dynamic data, always bind the element's `title` attribute to the full text to ensure accessibility via hover tooltips.
+## 2024-05-24 - Restore native list accessibility to generic generic DOM containers
+**Learning:** When using generic `<div>` tags to render dynamic lists, the screen reader loses all context about the list structure and the total number of items, causing a degraded experience.
+**Action:** Always add `role="list"` to the parent container element and `role="listitem"` to every generated child element. This simple semantic addition restores the expected behavior for assistive technologies without requiring structural HTML changes.
