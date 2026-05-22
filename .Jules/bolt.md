@@ -10,3 +10,6 @@
 ## 2025-05-20 - Unnecessary Array Copying Overhead
 **Learning:** Returning `new Uint8Array(bytes)` when `bytes` is already a `Uint8Array` performs an unnecessary deep copy of the underlying buffer. For large byte arrays like PDF files, this introduces significant memory allocation and garbage collection overhead. Simply returning the input array directly eliminates this O(N) allocation bottleneck.
 **Action:** In utility functions dealing with large arrays, check the input type and return the reference early if it's already the expected type instead of re-wrapping or copying it.
+## 2025-05-24 - Optimizing String to Hexadecimal Conversion Loop overhead
+**Learning:** Extracting an intermediate buffer just to create a hex string creates unnecessary object instantiation and loop passes. By pre-allocating the results array and accessing characters natively with `texto.charCodeAt(i) & 0xff` in `encodeTextToLatin1Hex`, we eliminate the `encodeLatin1` intermediary step altogether.
+**Action:** Always fuse byte-extraction directly with hexadecimal formatting lookups to avoid intermediate string or byte array allocations when translating between plain string and encoded formats.
