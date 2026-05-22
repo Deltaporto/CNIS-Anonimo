@@ -2,3 +2,7 @@
 **Vulnerability:** The application was injecting configuration strings (`config.uploadSub`) directly into the DOM using `innerHTML` (`uploadSubEl.innerHTML = config.uploadSub;`). This pattern exposes the application to DOM-based XSS if configuration values are ever influenced by user input or external sources.
 **Learning:** Using `innerHTML` for displaying structural configuration strings is an insecure pattern. It's safer to keep configuration as plain text and apply visual formatting (like `<strong>` tags) programmatically in the UI layer.
 **Prevention:** Use `textContent` for plain text data and construct required DOM structures using `document.createElement()` and `appendChild()`. Keep UI state configurations as plain text rather than pre-formatted HTML strings.
+## 2024-05-24 - [Arbitrary Code Execution via PDF.js]
+**Vulnerability:** Arbitrary JavaScript execution (CVE-2024-4367) when processing untrusted PDFs.
+**Learning:** By default, older versions of pdfjs-dist execute JS embedded in PDFs.
+**Prevention:** Always set `isEvalSupported: false` when calling `pdfjsLib.getDocument()` on untrusted files.
