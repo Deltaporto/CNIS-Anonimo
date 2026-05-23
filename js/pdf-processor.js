@@ -12,6 +12,12 @@ for (let i = 0; i < 256; i++) {
   HEX_LOOKUP[i] = i.toString(16).padStart(2, '0').toUpperCase();
 }
 
+const HEX_CHAR_TO_INT = new Uint8Array(256);
+for (let i = 0; i < 256; i++) HEX_CHAR_TO_INT[i] = 0;
+for (let i = 48; i <= 57; i++) HEX_CHAR_TO_INT[i] = i - 48; // 0-9
+for (let i = 65; i <= 70; i++) HEX_CHAR_TO_INT[i] = i - 55; // A-F
+for (let i = 97; i <= 102; i++) HEX_CHAR_TO_INT[i] = i - 87; // a-f
+
 function bytesToLatin1String(bytes) {
   let str = '';
   const chunk = 8192;
@@ -962,7 +968,11 @@ function decodeUtf16BeHex(hex = '') {
   let resultado = '';
 
   for (let i = 0; i + 3 < hex.length; i += 4) {
-    resultado += String.fromCharCode(parseInt(hex.slice(i, i + 4), 16));
+    const code = (HEX_CHAR_TO_INT[hex.charCodeAt(i)] << 12) |
+                 (HEX_CHAR_TO_INT[hex.charCodeAt(i + 1)] << 8) |
+                 (HEX_CHAR_TO_INT[hex.charCodeAt(i + 2)] << 4) |
+                 HEX_CHAR_TO_INT[hex.charCodeAt(i + 3)];
+    resultado += String.fromCharCode(code);
   }
 
   return resultado;
@@ -1064,9 +1074,11 @@ function ajustarSubstitutoParaMapa(original, substituto, reverseMap) {
 function encodedHexToLatin1(hex) {
   if (!hex || hex.length % 2 !== 0) return '';
 
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+  const len = hex.length / 2;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    const p = i * 2;
+    bytes[i] = (HEX_CHAR_TO_INT[hex.charCodeAt(p)] << 4) | HEX_CHAR_TO_INT[hex.charCodeAt(p + 1)];
   }
 
   return decoderLatin1.decode(bytes);
