@@ -20,3 +20,7 @@
 ## 2024-05-24 - Restore native list accessibility to generic generic DOM containers
 **Learning:** When using generic `<div>` tags to render dynamic lists, the screen reader loses all context about the list structure and the total number of items, causing a degraded experience.
 **Action:** Always add `role="list"` to the parent container element and `role="listitem"` to every generated child element. This simple semantic addition restores the expected behavior for assistive technologies without requiring structural HTML changes.
+
+## 2024-05-24 - Incorrect ARIA attributes on tab buttons
+**Learning:** Elements using `role="tab"` should use the `aria-selected` attribute to indicate their active state, not `aria-pressed` (which is reserved for toggle buttons).
+**Action:** Remove `aria-pressed` from `role="tab"` elements and strictly use `aria-selected` for tab components to prevent incorrect semantics being announced by screen readers.
