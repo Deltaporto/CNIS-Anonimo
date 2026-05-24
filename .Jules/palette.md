@@ -24,3 +24,6 @@
 ## 2024-05-24 - Incorrect ARIA attributes on tab buttons
 **Learning:** Elements using `role="tab"` should use the `aria-selected` attribute to indicate their active state, not `aria-pressed` (which is reserved for toggle buttons).
 **Action:** Remove `aria-pressed` from `role="tab"` elements and strictly use `aria-selected` for tab components to prevent incorrect semantics being announced by screen readers.
+## 2024-05-24 - Dynamic Action Labels for Batch Operations
+**Learning:** Using static batch action labels (e.g., "Download all (ZIP)") when only a single item is processed creates cognitive friction. Users expect the UI to reflect the actual outcome (a single file).
+**Action:** Dynamically update batch action buttons to reflect singular outcomes when the result set contains only one item.
