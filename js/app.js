@@ -164,7 +164,18 @@ zonaUpload.addEventListener('keydown', event => {
 });
 
 inputArquivo.addEventListener('change', event => {
-  if (event.target.files.length) iniciarLote(Array.from(event.target.files));
+  if (event.target.files.length) {
+    const arquivos = Array.from(event.target.files);
+    const pdfs = arquivos.filter(file => file.type === 'application/pdf' || file.name.endsWith('.pdf'));
+    const rejeitados = arquivos.filter(file => file.type !== 'application/pdf' && !file.name.endsWith('.pdf'));
+
+    if (rejeitados.length > 0) {
+      const nomes = rejeitados.map(f => f.name).join(', ');
+      mostrarToast(`Arquivos ignorados (apenas PDF): ${nomes}`);
+    }
+
+    if (pdfs.length) iniciarLote(pdfs);
+  }
   event.target.value = '';
 });
 
@@ -700,6 +711,7 @@ btnBaixarZip.addEventListener('click', async () => {
   const textoOriginal = btnBaixarZip.textContent;
   try {
     btnBaixarZip.disabled = true;
+    btnBaixarZip.setAttribute('aria-busy', 'true');
     btnBaixarZip.textContent = 'Gerando ZIP...';
     const zip = new JSZip();
     for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
@@ -707,6 +719,7 @@ btnBaixarZip.addEventListener('click', async () => {
     baixarBlob(zipBytes, 'application/zip', config.zipNome);
   } finally {
     btnBaixarZip.disabled = false;
+    btnBaixarZip.removeAttribute('aria-busy');
     btnBaixarZip.textContent = textoOriginal;
   }
 });
