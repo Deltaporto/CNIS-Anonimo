@@ -29,8 +29,9 @@ function bytesToLatin1String(bytes) {
 
 
 function encodeLatin1(str) {
-  const bytes = new Uint8Array(str.length);
-  for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i) & 0xff;
+  const len = str.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = str.charCodeAt(i) & 0xff;
   return bytes;
 }
 
