@@ -248,7 +248,7 @@ main {
   letter-spacing: .03em;
   text-transform: uppercase;
 }
-.status-aguardando  { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+.status-aguardando  { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 .status-processando { background: var(--blue-bg); color: var(--blue); border: 1px solid #bfdbfe; }
 .status-ok          { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
 .status-erro        { background: var(--red-bg); color: var(--red); border: 1px solid #fca5a5; }

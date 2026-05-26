@@ -27,3 +27,6 @@
 ## 2024-05-24 - Dynamic Action Labels for Batch Operations
 **Learning:** Using static batch action labels (e.g., "Download all (ZIP)") when only a single item is processed creates cognitive friction. Users expect the UI to reflect the actual outcome (a single file).
 **Action:** Dynamically update batch action buttons to reflect singular outcomes when the result set contains only one item.
+## 2025-02-14 - Improve contrast ratio for Aguardando status pill
+**Learning:** Light gray text (`#64748b`) on light gray backgrounds (`#f1f5f9`) frequently fails WCAG AA contrast guidelines for small text.
+**Action:** Use darker grays (e.g., `#475569`) to ensure accessible contrast ratios (> 4.5:1) for status indicators and badges.
