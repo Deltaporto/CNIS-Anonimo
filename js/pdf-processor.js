@@ -339,26 +339,32 @@ function escaparPdfLiteral(texto = '') {
 
 function extrairLiteraisPdf(conteudo = '') {
   const literais = [];
+  const len = conteudo.length;
+  let i = conteudo.indexOf('(');
 
-  for (let i = 0; i < conteudo.length; i++) {
-    if (conteudo[i] !== '(') continue;
-
+  while (i !== -1 && i < len) {
     let profundidade = 1;
     let fim = i + 1;
 
-    for (; fim < conteudo.length && profundidade > 0; fim++) {
-      if (conteudo[fim] === '\\') {
+    for (; fim < len && profundidade > 0; fim++) {
+      const char = conteudo[fim];
+      if (char === '\\') {
         fim++;
-        continue;
+      } else if (char === '(') {
+        profundidade++;
+      } else if (char === ')') {
+        profundidade--;
       }
-      if (conteudo[fim] === '(') profundidade++;
-      else if (conteudo[fim] === ')') profundidade--;
     }
 
-    if (profundidade !== 0) continue;
-    const literal = conteudo.slice(i + 1, fim - 1);
-    literais.push(decodificarPdfLiteral(literal));
-    i = fim - 1;
+    if (profundidade === 0) {
+      literais.push(decodificarPdfLiteral(conteudo.slice(i + 1, fim - 1)));
+      i = fim;
+    } else {
+      i++;
+    }
+
+    i = conteudo.indexOf('(', i);
   }
 
   return literais;
