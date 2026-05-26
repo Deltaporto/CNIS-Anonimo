@@ -9,7 +9,13 @@ const SOBRENOME_FICTICIO = 'FAKE DOS SANTOS';
 const ALFABETO_MAIUSCULO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 function randomInt(max) {
-  return crypto.getRandomValues(new Uint32Array(1))[0] % max;
+  const maxVal = 4294967296;
+  const limit = maxVal - (maxVal % max);
+  let val;
+  do {
+    val = crypto.getRandomValues(new Uint32Array(1))[0];
+  } while (val >= limit);
+  return val % max;
 }
 
 function escolha(arr) {
