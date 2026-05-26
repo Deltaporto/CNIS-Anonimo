@@ -7,3 +7,6 @@
 ## 2024-05-25 - V8 native string scanning via indexOf
 **Learning:** In large multi-megabyte text payloads, iterating character-by-character in JavaScript (e.g. `if (str[i] === '(')`) is vastly slower than using native C++ routines exposed by V8. By using `String.prototype.indexOf('(')` to jump between matches, we observed a massive ~165x speedup (1.436s vs 8.684ms on 2MB strings with sparse matches).
 **Action:** When scanning large strings for specific sparse delimiters, always prefer `indexOf` or `lastIndex` with Regex over manual JS character iteration loops.
+## 2025-02-14 - Regex replace vs loop string allocation
+**Learning:** For bulk escaping PDF literals (backslash, parentheses), native V8 regex `replace(/[\\()]/g, '\\$&')` is over 10x faster than manually iterating characters and concatenating a string (`for (const char of texto)`).
+**Action:** Use native RegExp replace with string substitution patterns (`$&`) instead of manual iterative string building when escaping known character sets.
