@@ -135,7 +135,7 @@ export async function loadAppApi() {
   const source = await readSource('js/app.js');
 
   return new Function('deps', `
-    const { document, URL, Blob, JSZip } = deps;
+    const { window, document, URL, Blob, JSZip } = deps;
     ${source}
     return {
       gerarNomeSaida,
@@ -149,6 +149,9 @@ export async function loadAppApi() {
       createTextNode(text) { return { textContent: text }; },
       querySelector() { return createElementStub(); },
       body: createElementStub()
+    },
+    window: {
+      addEventListener() {}
     },
     URL: {
       createObjectURL() { return 'blob:test'; },
