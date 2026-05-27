@@ -327,14 +327,7 @@ function decodificarPdfLiteral(literal = '') {
 }
 
 function escaparPdfLiteral(texto = '') {
-  let escaped = '';
-
-  for (const char of String(texto)) {
-    if (char === '\\' || char === '(' || char === ')') escaped += '\\';
-    escaped += char;
-  }
-
-  return escaped;
+  return String(texto).replace(/[\\()]/g, '\\$&');
 }
 
 function extrairLiteraisPdf(conteudo = '') {
