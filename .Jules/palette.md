@@ -30,3 +30,7 @@
 ## 2025-02-14 - Improve contrast ratio for Aguardando status pill
 **Learning:** Light gray text (`#64748b`) on light gray backgrounds (`#f1f5f9`) frequently fails WCAG AA contrast guidelines for small text.
 **Action:** Use darker grays (e.g., `#475569`) to ensure accessible contrast ratios (> 4.5:1) for status indicators and badges.
+
+## 2024-05-18 - Global Drag and Drop Overlay
+**Learning:** Attaching drag-and-drop events to a specific container (like an upload zone) can lead to accidental browser navigation and data loss if the user drops the file slightly outside the bounding box.
+**Action:** Attach `dragover`, `dragleave`, and `drop` event listeners directly to the `window` object to create a forgiving, page-wide drop zone, using `event.relatedTarget === null` to correctly manage the hover state when the cursor leaves the viewport entirely.

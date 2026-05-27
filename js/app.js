@@ -179,14 +179,19 @@ inputArquivo.addEventListener('change', event => {
   event.target.value = '';
 });
 
-zonaUpload.addEventListener('dragover', event => {
+window.addEventListener('dragover', event => {
   event.preventDefault();
   zonaUpload.classList.add('drag-over');
 });
 
-zonaUpload.addEventListener('dragleave', () => zonaUpload.classList.remove('drag-over'));
+window.addEventListener('dragleave', event => {
+  event.preventDefault();
+  if (event.relatedTarget === null) {
+    zonaUpload.classList.remove('drag-over');
+  }
+});
 
-zonaUpload.addEventListener('drop', event => {
+window.addEventListener('drop', event => {
   event.preventDefault();
   zonaUpload.classList.remove('drag-over');
 

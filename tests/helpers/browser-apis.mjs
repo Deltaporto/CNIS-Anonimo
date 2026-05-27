@@ -135,7 +135,7 @@ export async function loadAppApi() {
   const source = await readSource('js/app.js');
 
   return new Function('deps', `
-    const { document, URL, Blob, JSZip } = deps;
+    const { window, document, URL, Blob, JSZip } = deps;
     ${source}
     return {
       gerarNomeSaida,
@@ -143,6 +143,9 @@ export async function loadAppApi() {
       coletarObservacoes
     };
   `)({
+    window: {
+      addEventListener() {}
+    },
     document: {
       getElementById() { return createElementStub(); },
       createElement() { return createElementStub(); },
