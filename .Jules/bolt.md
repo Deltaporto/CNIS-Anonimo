@@ -10,3 +10,6 @@
 ## 2024-05-25 - V8 native string replacement
 **Learning:** Iterating character-by-character in large text segments causes significant performance degradation due to intermediate string allocation in tight loops. In `escaparPdfLiteral`, using a manual `for...of` string concatenation loop was ~35x slower than a native V8 RegExp replacement.
 **Action:** Always prefer native string replacement methods (like `String.prototype.replace(/[\\()]/g, '\\$&')`) over manual character iteration loops for bulk string escaping.
+## 2024-05-18 - Avoid micro-optimizations; Use native fast paths
+**Learning:** Caching `.length` in a local variable before a tight loop is a micro-optimization that yields virtually zero measurable performance benefit in modern JavaScript engines (like V8) because the engine already inlines and optimizes this lookup. However, when parsing large strings for rare sequences (like escape characters in PDF literals), using a native fast path like `String.prototype.includes()` to bypass the parsing loop entirely yields massive speedups (from ~300ms down to ~0.2ms).
+**Action:** Do not attempt to optimize code by manually caching array or string lengths. Instead, focus on algorithmic improvements or leveraging highly optimized native methods (like `includes` or `indexOf`) to fast-path or skip expensive manual iterations whenever possible.
