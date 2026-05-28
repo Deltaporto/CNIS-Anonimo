@@ -296,6 +296,11 @@ function precompilarPares(pares) {
 }
 
 function decodificarPdfLiteral(literal = '') {
+  // ⚡ Bolt: Fast-path optimization. Most PDF literals do not contain escape sequences.
+  // Using an early return with `includes` bypasses the expensive O(N) character-by-character
+  // iteration, yielding a massive speedup for the vast majority of literal strings.
+  if (!literal.includes('\\')) return literal;
+
   let resultado = '';
 
   for (let i = 0; i < literal.length; i++) {
