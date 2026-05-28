@@ -599,13 +599,17 @@ function mostrarSubs(item, originais, ficticios, modo) {
 
   const tabela = document.createElement('div');
   tabela.className = 'subs-tabela';
+  tabela.setAttribute('role', 'table');
+  tabela.setAttribute('aria-label', 'Resumo das substituições');
 
   const header = document.createElement('div');
   header.className = 'subs-header';
+  header.setAttribute('role', 'row');
 
   ['Campo', 'Original', '', 'Substituído'].forEach((txt, i) => {
     const span = document.createElement('span');
     span.textContent = txt;
+    span.setAttribute('role', 'columnheader');
     if (i === 1) span.className = 'col-original';
     if (i === 3) span.className = 'col-novo';
     header.appendChild(span);
@@ -617,19 +621,23 @@ function mostrarSubs(item, originais, ficticios, modo) {
   pares.filter(([, original]) => original).forEach(([label, original, fake, campo]) => {
     const linha = document.createElement('div');
     linha.className = 'sub-linha';
+    linha.setAttribute('role', 'row');
 
     const lbl = document.createElement('span');
     lbl.className = 'sub-label';
     lbl.textContent = label;
+    lbl.setAttribute('role', 'cell');
 
     const originalEl = document.createElement('span');
     originalEl.className = 'sub-original';
     originalEl.textContent = mascarar(original, campo);
     originalEl.title = originalEl.textContent;
+    originalEl.setAttribute('role', 'cell');
 
     const seta = document.createElement('span');
     seta.className = 'sub-seta';
     seta.setAttribute('aria-hidden', 'true');
+    seta.setAttribute('role', 'cell');
     seta.textContent = '→';
 
     const novo = document.createElement('span');
@@ -637,6 +645,7 @@ function mostrarSubs(item, originais, ficticios, modo) {
     const textoNovo = fake ? fake.toUpperCase() : '—';
     novo.textContent = textoNovo;
     if (fake) novo.title = textoNovo;
+    novo.setAttribute('role', 'cell');
 
     linha.append(lbl, originalEl, seta, novo);
     tabela.appendChild(linha);
@@ -651,6 +660,8 @@ function mostrarAchados(item, achados = {}) {
 
   const resumo = document.createElement('div');
   resumo.className = 'subs-tabela';
+  resumo.setAttribute('role', 'list');
+  resumo.setAttribute('aria-label', 'Resumo do processo judicial');
 
   const partes = [];
   if (achados.cpfs) partes.push('CPFs: ' + achados.cpfs);
@@ -664,6 +675,7 @@ function mostrarAchados(item, achados = {}) {
   const linha = document.createElement('div');
   linha.className = 'sub-linha';
   linha.style.gridTemplateColumns = '1fr';
+  linha.setAttribute('role', 'listitem');
 
   const textoEl = document.createElement('span');
   textoEl.className = 'sub-label';
@@ -677,6 +689,7 @@ function mostrarAchados(item, achados = {}) {
     const processoLinha = document.createElement('div');
     processoLinha.className = 'sub-linha';
     processoLinha.style.gridTemplateColumns = '1fr';
+    processoLinha.setAttribute('role', 'listitem');
 
     const processoEl = document.createElement('span');
     processoEl.className = 'sub-original';

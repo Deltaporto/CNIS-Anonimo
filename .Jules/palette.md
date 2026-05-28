@@ -34,3 +34,7 @@
 ## 2024-05-18 - Global Drag and Drop Overlay
 **Learning:** Attaching drag-and-drop events to a specific container (like an upload zone) can lead to accidental browser navigation and data loss if the user drops the file slightly outside the bounding box.
 **Action:** Attach `dragover`, `dragleave`, and `drop` event listeners directly to the `window` object to create a forgiving, page-wide drop zone, using `event.relatedTarget === null` to correctly manage the hover state when the cursor leaves the viewport entirely.
+
+## 2025-02-14 - Improve accessibility of tabular data rendered with generic elements
+**Learning:** The application renders dynamic grid-based tables (for summarizing redactions) using generic `<div>` and `<span>` elements. Screen readers treat these as flat text, making it extremely difficult to associate "Campo" with its corresponding "Original" and "Substituído" values.
+**Action:** Add explicit ARIA table roles (`role="table"`, `role="row"`, `role="columnheader"`, `role="cell"`) to generic elements that visually function as data grids, restoring proper tabular navigation for assistive technologies.
