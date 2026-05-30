@@ -3,6 +3,8 @@
 // ── Variáveis de módulo ───────────────────────────────────────────────────────
 
 let _ocrWorker = null;
+let _tesseractLoadPromise = null;
+let _tesseractLoadFailed = false;
 
 // ── Funções internas ──────────────────────────────────────────────────────────
 
@@ -22,8 +24,9 @@ function flattenOutline(items) {
 
 function isEprocEventTitle(title) {
   if (!title) return false;
-  if (/^capa/i.test(title.trim())) return true;
-  return title.startsWith('Evento.');
+  const normalized = title.trim();
+  if (/^capa(?:\b|$)/i.test(normalized)) return true;
+  return /^evento(?:\.|\s+)\s*\d+/i.test(normalized);
 }
 
 async function resolveOutlinePageIndex(pdfDoc, item) {
@@ -53,7 +56,7 @@ function sanitizeFilename(title) {
   if (!title) return 'evento_sem_nome';
 
   // Normalizar caracteres acentuados para ASCII equivalente
-  let result = title.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  let result = title.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
   // Remover espaços após ponto (ex: "Evento. 1" → "Evento.1")
   result = result.replace(/\.\s+/g, '.');
@@ -71,6 +74,25 @@ function sanitizeFilename(title) {
   if (result.length > 200) result = result.slice(0, 200);
 
   return result || 'evento_sem_nome';
+}
+
+function buildDocumentTitle(filename) {
+  if (!filename) return 'Documento';
+  return filename.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim() || 'Documento';
+}
+
+function buildSingleDocumentEvent(filename, totalPages) {
+  const docTitle = buildDocumentTitle(filename);
+  return {
+    title: docTitle,
+    filename: sanitizeFilename(docTitle) + '.md',
+    startPageIndex: 0,
+    endPageIndexExclusive: totalPages,
+    startPageLabel: 1,
+    endPageLabel: totalPages,
+    pageCount: totalPages,
+    ocr: false
+  };
 }
 
 function buildEventRanges(outlineItems, totalPages) {
@@ -154,17 +176,32 @@ async function renderPageToCanvas(page) {
 
 async function ensureTesseractLoaded(onProgress = () => {}) {
   if (typeof window !== 'undefined' && window.Tesseract) return true;
+  if (_tesseractLoadFailed) return false;
+
+  if (typeof document === 'undefined' || !document.createElement) {
+    onProgress({
+      type: 'warn',
+      message: 'OCR indisponível neste ambiente.'
+    });
+    _tesseractLoadFailed = true;
+    return false;
+  }
 
   try {
-    await new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-      script.onload = resolve;
-      script.onerror = () => reject(new Error('Falha ao carregar Tesseract.js'));
-      document.head.appendChild(script);
-    });
-    return true;
+    if (!_tesseractLoadPromise) {
+      _tesseractLoadPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Falha ao carregar Tesseract.js'));
+        document.head.appendChild(script);
+      });
+    }
+
+    await _tesseractLoadPromise;
+    return typeof window !== 'undefined' && !!window.Tesseract;
   } catch (err) {
+    _tesseractLoadFailed = true;
     onProgress({
       type: 'warn',
       message: 'OCR indisponível: não foi possível carregar Tesseract.js (' + err.message + ')'
@@ -175,7 +212,16 @@ async function ensureTesseractLoaded(onProgress = () => {}) {
 
 async function initOcrWorker() {
   if (_ocrWorker) return _ocrWorker;
-  _ocrWorker = await Tesseract.createWorker('por', 1, {
+
+  const tesseract = typeof Tesseract !== 'undefined'
+    ? Tesseract
+    : (typeof window !== 'undefined' ? window.Tesseract : null);
+
+  if (!tesseract) {
+    throw new Error('Tesseract.js não está carregado');
+  }
+
+  _ocrWorker = await tesseract.createWorker('por', 1, {
     logger: () => {}
   });
   return _ocrWorker;
@@ -192,42 +238,218 @@ async function ocrFromCanvas(canvas) {
   }
 }
 
-function inferProcessNumber(filename) {
-  if (!filename) return 'Processo';
-  // Número CNJ já formatado: NNNNNNN-NN.NNNN.N.NN.NNNN
-  const cnj = filename.match(/\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/);
-  if (cnj) return cnj[0];
-  // 20 dígitos consecutivos (Eproc legado) → converter para CNJ
-  const legacy = filename.match(/\d{20}/);
-  if (legacy) {
-    const d = legacy[0];
-    return `${d.slice(0,7)}-${d.slice(7,9)}.${d.slice(9,13)}.${d.slice(13,14)}.${d.slice(14,16)}.${d.slice(16,20)}`;
+function formatCnjDigits(digits) {
+  return `${digits.slice(0,7)}-${digits.slice(7,9)}.${digits.slice(9,13)}.${digits.slice(13,14)}.${digits.slice(14,16)}.${digits.slice(16,20)}`;
+}
+
+function extractProcessNumberFromText(value) {
+  if (!value) return null;
+  const text = String(value);
+
+  const cnj = text.match(/(?:^|\D)(\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4})(?!\d)/);
+  if (cnj) return cnj[1];
+
+  const legacy = text.match(/(?:^|\D)(\d{20})(?!\d)/);
+  if (legacy) return formatCnjDigits(legacy[1]);
+
+  return null;
+}
+
+function inferProcessNumber(...sources) {
+  const queue = [...sources];
+
+  while (queue.length) {
+    const source = queue.shift();
+    if (!source) continue;
+
+    if (Array.isArray(source)) {
+      queue.push(...source);
+      continue;
+    }
+
+    if (typeof source === 'object') {
+      if (source.title) queue.push(source.title);
+      if (source.filename) queue.push(source.filename);
+      if (source.pageTexts) queue.push(source.pageTexts);
+      if (source.evento) queue.push(source.evento);
+      continue;
+    }
+
+    const processNumber = extractProcessNumberFromText(source);
+    if (processNumber) return processNumber;
   }
+
   return 'Processo';
+}
+
+function escapeMarkdownLinkText(text) {
+  return String(text || '').replace(/([\\\[\]])/g, '\\$1');
+}
+
+function buildPageTextFallback(evento, index) {
+  return `[Texto não extraído da página ${evento.startPageLabel + index}.]`;
+}
+
+function getMarkdownRedactor() {
+  const mapper = typeof mapearSubstitutos === 'function' ? mapearSubstitutos : null;
+  const counter = typeof contarAchados === 'function' ? contarAchados : null;
+  if (!mapper || !counter) return null;
+  return { mapearSubstitutos: mapper, contarAchados: counter };
+}
+
+function aplicarParesNoTexto(text, pares) {
+  if (!text || !pares || pares.length === 0) return text;
+  const ordered = [...pares].sort((a, b) => b.original.length - a.original.length);
+  let result = text;
+  for (const { original, substituto } of ordered) {
+    if (!original || substituto === undefined) continue;
+    result = result.split(original).join(substituto);
+  }
+  return result;
+}
+
+function buildUniqueEventFilenames(eventos) {
+  const seen = new Map();
+
+  for (const evento of eventos) {
+    const base = sanitizeFilename(evento.title).replace(/\.md$/i, '') || 'evento_sem_nome';
+    const count = seen.get(base) || 0;
+    seen.set(base, count + 1);
+    evento.filename = count === 0 ? `${base}.md` : `${base}_${count + 1}.md`;
+  }
+}
+
+function contarAchadosSensiveis(achados = {}) {
+  return (achados.cpfs || 0) +
+    (achados.nits || 0) +
+    (achados.oabs || 0) +
+    (achados.crms || 0) +
+    (achados.nomes || 0) +
+    (achados.enderecos || 0) +
+    (achados.identificadores || 0);
+}
+
+function formatarLinhaAchado(label, value) {
+  return `- ${label}: ${Number(value) || 0}`;
+}
+
+function buildRedactionReport(processNumber, eventos, summary) {
+  const achados = summary.achadosAntes || {};
+  const residuais = summary.achadosDepois || {};
+  const lines = [
+    '# Relatório de anonimização',
+    '',
+    `- Modo: Markdown anonimizado`,
+    `- Processo: ${processNumber && processNumber !== 'Processo' ? processNumber : 'não identificado'}`,
+    `- Peças extraídas: ${eventos.length}`,
+    `- Páginas com OCR: ${summary.ocrCount || 0}`,
+    `- Páginas sem texto extraído: ${summary.ocrFailCount || 0}`,
+    `- Substituições textuais mapeadas: ${summary.replacementCount || 0}`,
+    `- Resíduos sensíveis detectáveis após anonimização: ${summary.residualSensitiveCount || 0}`,
+    '',
+    '## Achados antes da anonimização',
+    '',
+    formatarLinhaAchado('CPFs', achados.cpfs),
+    formatarLinhaAchado('NITs/NIS/PIS', achados.nits),
+    formatarLinhaAchado('OABs', achados.oabs),
+    formatarLinhaAchado('CRMs', achados.crms),
+    formatarLinhaAchado('Nomes', achados.nomes),
+    formatarLinhaAchado('Endereços', achados.enderecos),
+    formatarLinhaAchado('Identificadores longos', achados.identificadores),
+    '',
+    '## Conferência após anonimização',
+    '',
+    formatarLinhaAchado('CPFs', residuais.cpfs),
+    formatarLinhaAchado('NITs/NIS/PIS', residuais.nits),
+    formatarLinhaAchado('OABs', residuais.oabs),
+    formatarLinhaAchado('CRMs', residuais.crms),
+    formatarLinhaAchado('Nomes', residuais.nomes),
+    formatarLinhaAchado('Endereços', residuais.enderecos),
+    formatarLinhaAchado('Identificadores longos', residuais.identificadores),
+    '',
+    '## Observação',
+    '',
+    'O número do processo é preservado para conferência. Revise o material antes de compartilhar: OCR ruim, imagens e dados fora de padrão podem escapar da anonimização automática.',
+    ''
+  ];
+  return lines.join('\n');
+}
+
+function anonimizarMarkdownExtraido(pagesData, eventos, options = {}) {
+  if (!options.anonymizeMarkdown) {
+    return {
+      mode: 'texto_fiel',
+      enabled: false,
+      replacementCount: 0,
+      achadosAntes: null,
+      achadosDepois: null,
+      residualSensitiveCount: null
+    };
+  }
+
+  const redactor = getMarkdownRedactor();
+  if (!redactor) {
+    throw new Error('Anonimizador de Markdown indisponível. Recarregue a página e tente novamente.');
+  }
+
+  const originalText = pagesData
+    .flatMap(({ pageTexts }) => pageTexts)
+    .join('\n');
+  const pares = redactor.mapearSubstitutos(originalText);
+  const achadosAntes = redactor.contarAchados(originalText);
+
+  for (const item of pagesData) {
+    item.pageTexts = item.pageTexts.map(text => aplicarParesNoTexto(text, pares));
+  }
+
+  for (const evento of eventos) {
+    const redactedTitle = aplicarParesNoTexto(evento.title, pares).replace(/\s{2,}/g, ' ').trim();
+    if (redactedTitle) evento.title = redactedTitle;
+  }
+  buildUniqueEventFilenames(eventos);
+
+  const redactedText = pagesData
+    .flatMap(({ pageTexts }) => pageTexts)
+    .join('\n');
+  const achadosDepois = redactor.contarAchados(redactedText);
+
+  return {
+    mode: 'anonimizado',
+    enabled: true,
+    replacementCount: pares.length,
+    achadosAntes,
+    achadosDepois,
+    residualSensitiveCount: contarAchadosSensiveis(achadosDepois)
+  };
 }
 
 function buildMarkdownForEvent(evento, pageTexts) {
   const header = `# ${evento.title}\n\n<!-- páginas ${evento.startPageLabel}-${evento.endPageLabel} do PDF original -->\n\n`;
-  const body = pageTexts.join('\n\n---\n\n');
+  const body = pageTexts
+    .map((text, index) => text && text.trim() ? text : buildPageTextFallback(evento, index))
+    .join('\n\n---\n\n');
   return header + body + '\n\n---\n';
 }
 
 function buildIndexMarkdown(processNumber, eventos) {
-  const lines = [`# Índice do Processo ${processNumber}`, ''];
+  const title = processNumber && processNumber !== 'Processo'
+    ? `# Índice do Processo ${processNumber}`
+    : '# Índice das Peças Extraídas';
+  const lines = [title, ''];
 
   for (const evento of eventos) {
     const ocrMark = evento.ocr ? ' *(OCR)*' : '';
     const pages = evento.pageCount === 1
       ? `p. ${evento.startPageLabel}`
       : `pp. ${evento.startPageLabel}-${evento.endPageLabel}`;
-    lines.push(`- [${evento.title}](eventos/${evento.filename})${ocrMark} — ${pages}`);
+    lines.push(`- [${escapeMarkdownLinkText(evento.title)}](eventos/${evento.filename})${ocrMark} — ${pages}`);
   }
 
   lines.push('');
   return lines.join('\n');
 }
 
-async function buildZip(processNumber, eventos, pagesData) {
+async function buildZip(processNumber, eventos, pagesData, redactionSummary = null) {
   const zip = new JSZip();
 
   // Gerar markdowns de cada evento
@@ -237,6 +459,10 @@ async function buildZip(processNumber, eventos, pagesData) {
 
   // indice.md
   zip.file('indice.md', buildIndexMarkdown(processNumber, eventos));
+
+  if (redactionSummary?.enabled) {
+    zip.file('relatorio_anonimizacao.md', buildRedactionReport(processNumber, eventos, redactionSummary));
+  }
 
   // integral.md
   zip.file('integral.md', markdowns.join('\n'));
@@ -251,7 +477,7 @@ async function buildZip(processNumber, eventos, pagesData) {
 
 // ── Função principal ──────────────────────────────────────────────────────────
 
-async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '') {
+async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', options = {}) {
   // 1. Carregar PDF
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
   const pdfDoc = await loadingTask.promise;
@@ -273,27 +499,25 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '') 
       }))
     );
     eventos = buildEventRanges(itemsWithPage, totalPages);
-    onProgress({
-      type: 'outline',
-      message: `${eventos.length} eventos identificados no índice do processo`,
-      percent: 5,
-      eventTotal: eventos.length
-    });
+    if (eventos.length > 0) {
+      onProgress({
+        type: 'outline',
+        message: `${eventos.length} eventos identificados no índice do processo`,
+        percent: 5,
+        eventTotal: eventos.length
+      });
+    } else {
+      eventos = [buildSingleDocumentEvent(filename, totalPages)];
+      onProgress({
+        type: 'warning',
+        message: 'O índice foi encontrado, mas não foi possível resolver as páginas. Extraindo o texto completo do documento...',
+        percent: 5,
+        eventTotal: 1
+      });
+    }
   } else {
     // Fallback: qualquer PDF sem índice Eproc → documento único
-    const docTitle = filename
-      ? filename.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim() || 'Documento'
-      : 'Documento';
-    eventos = [{
-      title: docTitle,
-      filename: sanitizeFilename(docTitle) + '.md',
-      startPageIndex: 0,
-      endPageIndexExclusive: totalPages,
-      startPageLabel: 1,
-      endPageLabel: totalPages,
-      pageCount: totalPages,
-      ocr: false
-    }];
+    eventos = [buildSingleDocumentEvent(filename, totalPages)];
     onProgress({
       type: 'warning',
       message: 'Nenhum índice de eventos encontrado. Extraindo o texto completo do documento...',
@@ -344,9 +568,15 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '') 
           // Liberar memória do canvas
           canvas.width = 0;
           canvas.height = 0;
-          pageTexts.push(ocrText);
-          ocrFlags.push(true);
-          ocrCount++;
+          if (ocrText.trim()) {
+            pageTexts.push(ocrText);
+            ocrFlags.push(true);
+            ocrCount++;
+          } else {
+            pageTexts.push('');
+            ocrFlags.push(false);
+            ocrFailCount++;
+          }
         } else {
           onProgress({
             type: 'warning',
@@ -384,10 +614,23 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '') 
     percent: 92
   });
 
-  // Inferir número do processo a partir do nome do arquivo
-  const processNumber = inferProcessNumber(filename);
+  // Inferir número do processo a partir do nome do arquivo, índice e texto extraído.
+  const processNumber = inferProcessNumber(filename, eventos, pagesData);
 
-  const zip = await buildZip(processNumber, eventos, pagesData);
+  const anonymizeMarkdown = options.anonymizeMarkdown === true;
+  onProgress({
+    type: anonymizeMarkdown ? 'redaction' : 'redaction-skip',
+    message: anonymizeMarkdown ? 'Anonimizando Markdown...' : 'Mantendo texto fiel ao PDF...',
+    percent: 90
+  });
+
+  const redactionSummary = anonimizarMarkdownExtraido(pagesData, eventos, {
+    anonymizeMarkdown
+  });
+  redactionSummary.ocrCount = ocrCount;
+  redactionSummary.ocrFailCount = ocrFailCount;
+
+  const zip = await buildZip(processNumber, eventos, pagesData, redactionSummary);
 
   onProgress({
     type: 'done',
@@ -400,5 +643,5 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '') 
   // invocar splitEprocPdf múltiplas vezes sem pagar o overhead de inicialização
   // repetida. O browser libera o worker ao fechar/recarregar a página.
 
-  return { zip, eventos, ocrCount, ocrFailCount, totalPages, processNumber };
+  return { zip, eventos, ocrCount, ocrFailCount, totalPages, processNumber, redactionSummary };
 }

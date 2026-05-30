@@ -139,8 +139,11 @@ export async function loadAppApi() {
     ${source}
     return {
       gerarNomeSaida,
+      formatarPecasExtraidas,
+      gerarNomeZipSplit,
       construirParesSubstituicao,
       coletarObservacoes,
+      obterSplitAnonimizarMarkdown,
       obterConfigModo
     };
   `)({
@@ -152,6 +155,7 @@ export async function loadAppApi() {
       createElement() { return createElementStub(); },
       createTextNode(text) { return { textContent: text }; },
       querySelector() { return createElementStub(); },
+      querySelectorAll() { return []; },
       body: createElementStub()
     },
     URL: {

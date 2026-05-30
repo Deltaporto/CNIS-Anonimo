@@ -36,7 +36,7 @@ const MODOS_DOCUMENTO = {
     prefixoArquivo: 'Processo',
     zipNome: 'Pecas_do_processo.zip',
     uploadTitulo: 'Arraste a íntegra do processo (Eproc)',
-    uploadSub: 'Extrai o texto de cada evento em arquivo separado — pesquisável e copiável. Funciona também com páginas escaneadas. clique para selecionar · Use o PDF do "Baixar Íntegra" do Eproc.',
+    uploadSub: 'Preferencial: no Eproc, abra a árvore do processo, marque todos, use Versão p/ impressão e selecione o separador Ambos (Evento e Documento). clique para selecionar',
     ariaLabel: 'Selecionar PDF da íntegra do processo para extrair as peças em texto',
     botaoDownloadUm: 'Baixar peças extraídas novamente',
     botaoDownloadVarios: 'Baixar peças extraídas novamente',
@@ -57,6 +57,7 @@ const btnModoExtrair = document.getElementById('btn-modo-extrair');
 const uploadTituloEl = document.getElementById('upload-titulo');
 const uploadSubEl = document.getElementById('upload-sub');
 const infoExtrairEl = document.getElementById('info-extrair');
+const saidaMdRadios = document.querySelectorAll('input[name="saida-md"]');
 
 let resultados = [];
 let modoAtual = 'cnis';
@@ -66,9 +67,28 @@ function obterConfigModo(modo = 'cnis') {
   return MODOS_DOCUMENTO[modo] || MODOS_DOCUMENTO.cnis;
 }
 
+function obterSplitAnonimizarMarkdown() {
+  const selecionado = document.querySelector('input[name="saida-md"]:checked');
+  return !selecionado || selecionado.value !== 'fiel';
+}
+
+function atualizarSaidaMdUI() {
+  const anonimizado = obterSplitAnonimizarMarkdown();
+  for (const radio of saidaMdRadios || []) {
+    const label = radio.closest ? radio.closest('.saida-opcao') : null;
+    if (label?.classList) {
+      label.classList.toggle('saida-opcao-ativa', radio.checked);
+    }
+  }
+  if (document.body?.dataset) {
+    document.body.dataset.saidaMd = anonimizado ? 'anonimizado' : 'fiel';
+  }
+}
+
 function atualizarModoUI() {
   const config = obterConfigModo(modoAtual);
   if (document.body?.dataset) document.body.dataset.modo = modoAtual;
+  atualizarSaidaMdUI();
 
   if (uploadTituloEl) uploadTituloEl.textContent = config.uploadTitulo;
   if (uploadSubEl) {
@@ -144,6 +164,9 @@ btnModoCnis?.addEventListener('click', () => trocarModo('cnis'));
 btnModoCarta?.addEventListener('click', () => trocarModo('carta-concessao'));
 btnModoProcesso?.addEventListener('click', () => trocarModo('processo-judicial'));
 btnModoExtrair?.addEventListener('click', () => trocarModo('extrair-pecas'));
+for (const radio of saidaMdRadios || []) {
+  radio.addEventListener('change', atualizarSaidaMdUI);
+}
 
 const tablist = document.querySelector('.modo-selector');
 if (tablist) {
@@ -315,6 +338,18 @@ const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50 MB
 let _splitLogEl = null;
 let _splitResumoEl = null;
 
+function formatarPecasExtraidas(total) {
+  return total === 1 ? '1 peça extraída' : `${total} peças extraídas`;
+}
+
+function gerarNomeZipSplit(resultado, anonimizado = true) {
+  const suffix = anonimizado ? 'pecas_anonimizadas' : 'pecas_texto_fiel';
+  if (resultado?.processNumber && resultado.processNumber !== 'Processo') {
+    return `Processo_${resultado.processNumber}_${suffix}.zip`;
+  }
+  return anonimizado ? 'Pecas_anonimizadas.zip' : 'Pecas_texto_fiel.zip';
+}
+
 function atualizarLogSplit(progresso) {
   if (!_splitLogEl) return;
   if (!progresso || !progresso.message) return;
@@ -329,6 +364,18 @@ function renderizarCardsSplit(resultado) {
   _splitResumoEl.textContent = '';
 
   if (!resultado || !resultado.eventos || resultado.eventos.length === 0) return;
+
+  if (resultado.redactionSummary?.enabled) {
+    const avisoAnon = document.createElement('p');
+    avisoAnon.className = 'aviso-anonimizacao';
+    avisoAnon.textContent = `Markdown anonimizado: ${resultado.redactionSummary.replacementCount || 0} substituição(ões) mapeadas. Revise antes de compartilhar.`;
+    _splitResumoEl.appendChild(avisoAnon);
+  } else {
+    const avisoFiel = document.createElement('p');
+    avisoFiel.className = 'aviso-texto-fiel';
+    avisoFiel.textContent = 'Markdown fiel ao PDF: os textos extraídos podem conter dados sensíveis.';
+    _splitResumoEl.appendChild(avisoFiel);
+  }
 
   // Caso 1: OCR funcionou em algumas páginas
   if (resultado.ocrCount > 0) {
@@ -425,31 +472,41 @@ async function iniciarSplitEproc(arquivos) {
 
   // 6. Chamar splitEprocPdf
   try {
+    const anonimizarMarkdown = obterSplitAnonimizarMarkdown();
+    if (anonimizarMarkdown && typeof inicializarRedactorPadrao === 'function') {
+      setStatus(item, 'processando', 'Carregando anonimizador');
+      setDetalheProcessamento(item, 'Preparando dicionário local de nomes');
+      await inicializarRedactorPadrao();
+    }
+
     const resultado = await splitEprocPdf(arrayBuffer, (progresso) => {
       atualizarLogSplit(progresso);
-      if (progresso.percent) setProgresso(item, progresso.percent);
+      if (Number.isFinite(progresso.percent)) setProgresso(item, progresso.percent);
+      if (progresso.message) setDetalheProcessamento(item, progresso.message);
       if (progresso.type === 'event') {
         setStatus(item, 'processando', progresso.message);
       } else if (progresso.type === 'ocr') {
         setStatus(item, 'processando', 'OCR…');
+      } else if (progresso.type === 'redaction') {
+        setStatus(item, 'processando', 'Anonimizando Markdown');
+      } else if (progresso.type === 'redaction-skip') {
+        setStatus(item, 'processando', 'Preparando texto fiel');
       } else if (progresso.type === 'zip') {
         setStatus(item, 'processando', 'Empacotando…');
       } else if (progresso.type === 'done') {
         setStatus(item, 'ok', 'Concluído ✓');
       }
-    }, arquivo.name);
+    }, arquivo.name, { anonymizeMarkdown: anonimizarMarkdown });
 
     setProgresso(item, 100, true);
-    setStatus(item, 'ok', `${resultado.eventos.length} peças extraídas ✓`);
+    setStatus(item, 'ok', `${formatarPecasExtraidas(resultado.eventos.length)} ✓`);
 
     // 7. Renderizar cards de eventos
     renderizarCardsSplit(resultado);
 
     // 8. Baixar ZIP automaticamente com nome baseado no número do processo
-    const config = obterConfigModo(modoAtual);
-    const zipNome = resultado.processNumber && resultado.processNumber !== 'Processo'
-      ? `Processo_${resultado.processNumber}.zip`
-      : 'Pecas_do_processo.zip';
+    const config = obterConfigModo(modoResultados);
+    const zipNome = gerarNomeZipSplit(resultado, anonimizarMarkdown);
     baixarBlob(resultado.zip, 'application/zip', zipNome);
 
     // 9. Armazenar resultado para rebaixar

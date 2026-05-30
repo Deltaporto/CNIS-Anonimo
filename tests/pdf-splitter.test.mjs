@@ -21,15 +21,19 @@ async function loadPdfSplitterApi() {
   };
 
   return new Function('deps', `
-    const { pdfjsLib, JSZip, document, window } = deps;
+    const { pdfjsLib, JSZip, document, window, mapearSubstitutos, contarAchados } = deps;
     ${source}
     return {
       flattenOutline,
       isEprocEventTitle,
       sanitizeFilename,
       inferProcessNumber,
+      buildSingleDocumentEvent,
       buildEventRanges,
       pageNeedsOcr,
+      aplicarParesNoTexto,
+      anonimizarMarkdownExtraido,
+      buildRedactionReport,
       buildMarkdownForEvent,
       buildIndexMarkdown
     };
@@ -37,7 +41,29 @@ async function loadPdfSplitterApi() {
     pdfjsLib: mockPdfjsLib,
     JSZip: mockJSZip,
     document: null,
-    window: {}
+    window: {},
+    mapearSubstitutos(texto) {
+      const pares = [];
+      if (texto.includes('913.665.347-00')) {
+        pares.push({ original: '913.665.347-00', substituto: '***.***.***-**' });
+      }
+      if (texto.includes('JOAO SILVA DOS SANTOS')) {
+        pares.push({ original: 'JOAO SILVA DOS SANTOS', substituto: 'J. S. D. S.          ' });
+      }
+      return pares;
+    },
+    contarAchados(texto) {
+      return {
+        cpfs: texto.includes('913.665.347-00') ? 1 : 0,
+        nits: 0,
+        oabs: 0,
+        crms: 0,
+        nomes: texto.includes('JOAO SILVA DOS SANTOS') ? 1 : 0,
+        enderecos: 0,
+        identificadores: 0,
+        numerosProcesso: [...texto.matchAll(/\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g)].map(m => m[0])
+      };
+    }
   });
 }
 
@@ -121,6 +147,18 @@ test('flattenOutline: preserva referência ao objeto original', () => {
 
 test('isEprocEventTitle: evento numerado → true', () => {
   assert.equal(api.isEprocEventTitle('Evento.1 - Doc.1 - PETIÇÃO INICIAL'), true);
+});
+
+test('isEprocEventTitle: evento com espaço após ponto → true', () => {
+  assert.equal(api.isEprocEventTitle('Evento. 12 - Doc.1 - SENTENÇA'), true);
+});
+
+test('isEprocEventTitle: evento sem ponto do Download Completo → true', () => {
+  assert.equal(api.isEprocEventTitle('Evento 12 - Doc. 1 - SENTENÇA'), true);
+});
+
+test('isEprocEventTitle: evento em maiúsculas → true', () => {
+  assert.equal(api.isEprocEventTitle('EVENTO.12 - DOC.1'), true);
 });
 
 test('isEprocEventTitle: CAPA maiúsculo → true', () => {
@@ -282,6 +320,17 @@ test('inferProcessNumber: aceita formato CNJ já formatado', () => {
   );
 });
 
+test('inferProcessNumber: encontra CNJ no texto extraído', () => {
+  assert.equal(
+    api.inferProcessNumber('integra.pdf', [{ pageTexts: ['Processo 5003813-50.2025.4.02.5118 em tramitação'] }]),
+    '5003813-50.2025.4.02.5118'
+  );
+});
+
+test('inferProcessNumber: não extrai 20 dígitos dentro de sequência maior', () => {
+  assert.equal(api.inferProcessNumber('abc123456789012345678901xyz.pdf'), 'Processo');
+});
+
 test('inferProcessNumber: sem 20 dígitos → "Processo"', () => {
   assert.equal(api.inferProcessNumber('processo.pdf'), 'Processo');
 });
@@ -329,6 +378,69 @@ test('buildMarkdownForEvent: inclui todas as páginas separadas por divisor', ()
   assert.ok(result.includes('---'));
 });
 
+test('buildMarkdownForEvent: sinaliza páginas sem texto extraído', () => {
+  const evento = {
+    title: 'Evento.3 - DOCUMENTO ESCANEADO',
+    filename: 'Evento.3.md',
+    startPageLabel: 9,
+    endPageLabel: 10,
+    pageCount: 2
+  };
+  const result = api.buildMarkdownForEvent(evento, ['texto ok', '']);
+  assert.ok(result.includes('[Texto não extraído da página 10.]'));
+});
+
+// ── anonimização do Markdown ─────────────────────────────────────────────────
+
+test('aplicarParesNoTexto: substitui todos os pares sem alterar número do processo', () => {
+  const result = api.aplicarParesNoTexto(
+    'Processo 5002849-72.2025.4.02.5113 com CPF 913.665.347-00',
+    [{ original: '913.665.347-00', substituto: '***.***.***-**' }]
+  );
+  assert.ok(result.includes('5002849-72.2025.4.02.5113'));
+  assert.ok(result.includes('***.***.***-**'));
+  assert.ok(!result.includes('913.665.347-00'));
+});
+
+test('anonimizarMarkdownExtraido: anonimiza páginas e títulos com relatório de achados', () => {
+  const eventos = [{
+    title: 'Evento.1 - JOAO SILVA DOS SANTOS',
+    filename: 'Evento.1.md',
+    startPageLabel: 1,
+    endPageLabel: 1,
+    pageCount: 1
+  }];
+  const pagesData = [{
+    evento: eventos[0],
+    pageTexts: ['Processo 5002849-72.2025.4.02.5113\nJOAO SILVA DOS SANTOS CPF 913.665.347-00']
+  }];
+
+  const summary = api.anonimizarMarkdownExtraido(pagesData, eventos, { anonymizeMarkdown: true });
+
+  assert.equal(summary.enabled, true);
+  assert.equal(summary.replacementCount, 2);
+  assert.ok(pagesData[0].pageTexts[0].includes('***.***.***-**'));
+  assert.ok(!pagesData[0].pageTexts[0].includes('913.665.347-00'));
+  assert.ok(pagesData[0].pageTexts[0].includes('5002849-72.2025.4.02.5113'));
+  assert.ok(!eventos[0].title.includes('JOAO SILVA DOS SANTOS'));
+  assert.equal(summary.achadosAntes.cpfs, 1);
+  assert.equal(summary.achadosDepois.cpfs, 0);
+});
+
+test('buildRedactionReport: declara que o Markdown foi anonimizado', () => {
+  const report = api.buildRedactionReport('5002849-72.2025.4.02.5113', [{ title: 'Evento.1' }], {
+    replacementCount: 2,
+    ocrCount: 0,
+    ocrFailCount: 0,
+    residualSensitiveCount: 0,
+    achadosAntes: { cpfs: 1, nits: 0, oabs: 0, crms: 0, nomes: 1, enderecos: 0, identificadores: 0 },
+    achadosDepois: { cpfs: 0, nits: 0, oabs: 0, crms: 0, nomes: 0, enderecos: 0, identificadores: 0 }
+  });
+  assert.ok(report.includes('# Relatório de anonimização'));
+  assert.ok(report.includes('- Modo: Markdown anonimizado'));
+  assert.ok(report.includes('- Processo: 5002849-72.2025.4.02.5113'));
+});
+
 // ── buildIndexMarkdown ────────────────────────────────────────────────────────
 
 test('buildIndexMarkdown: gera título com número do processo', () => {
@@ -351,6 +463,25 @@ test('buildIndexMarkdown: gera lista com links relativos', () => {
   assert.ok(result.includes('pp. 1-5'));
 });
 
+test('buildIndexMarkdown: sem número usa título genérico claro', () => {
+  const result = api.buildIndexMarkdown('Processo', []);
+  assert.ok(result.includes('# Índice das Peças Extraídas'));
+  assert.ok(!result.includes('# Índice do Processo Processo'));
+});
+
+test('buildIndexMarkdown: escapa colchetes em títulos de links', () => {
+  const eventos = [{
+    title: 'Evento.1 - Documento [sigiloso]',
+    filename: 'Evento.1.md',
+    startPageLabel: 1,
+    endPageLabel: 1,
+    pageCount: 1,
+    ocr: false
+  }];
+  const result = api.buildIndexMarkdown('Processo', eventos);
+  assert.ok(result.includes('[Evento.1 - Documento \\[sigiloso\\]]'));
+});
+
 test('buildIndexMarkdown: marca eventos com OCR', () => {
   const eventos = [{
     title: 'Evento.1 - DIGITALIZADO',
@@ -367,24 +498,13 @@ test('buildIndexMarkdown: marca eventos com OCR', () => {
 // ── fallback documento único ──────────────────────────────────────────────────
 
 test('buildEventRanges: PDF sem outline gera evento único abrangendo todas as páginas', () => {
-  // Simula o que splitEprocPdf faz quando não há índice Eproc
-  const docTitle = 'contestacao-vr.pdf'.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim();
   const totalPages = 35;
-  const eventos = [{
-    title: docTitle,
-    filename: api.sanitizeFilename(docTitle) + '.md',
-    startPageIndex: 0,
-    endPageIndexExclusive: totalPages,
-    startPageLabel: 1,
-    endPageLabel: totalPages,
-    pageCount: totalPages,
-    ocr: false
-  }];
-  assert.equal(eventos.length, 1);
-  assert.equal(eventos[0].pageCount, 35);
-  assert.equal(eventos[0].startPageLabel, 1);
-  assert.equal(eventos[0].endPageLabel, 35);
-  assert.ok(eventos[0].filename.endsWith('.md'));
+  const evento = api.buildSingleDocumentEvent('contestacao-vr.pdf', totalPages);
+  assert.equal(evento.title, 'contestacao vr');
+  assert.equal(evento.pageCount, 35);
+  assert.equal(evento.startPageLabel, 1);
+  assert.equal(evento.endPageLabel, 35);
+  assert.ok(evento.filename.endsWith('.md'));
 });
 
 test('inferProcessNumber: nome de arquivo sem número retorna Processo', () => {

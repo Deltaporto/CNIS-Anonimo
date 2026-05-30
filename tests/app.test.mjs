@@ -70,6 +70,27 @@ test('modo extrair-pecas: resultado isZip é reconhecido como truthy e usa mime 
   assert.equal(mimeType, 'application/zip');
 });
 
+test('modo extrair-pecas: pluraliza quantidade de peças extraídas', () => {
+  assert.equal(appApi.formatarPecasExtraidas(1), '1 peça extraída');
+  assert.equal(appApi.formatarPecasExtraidas(2), '2 peças extraídas');
+});
+
+test('modo extrair-pecas: Markdown anonimizado é padrão quando não há rádio selecionado', () => {
+  assert.equal(appApi.obterSplitAnonimizarMarkdown(), true);
+});
+
+test('modo extrair-pecas: nome do ZIP deixa claro se Markdown está anonimizado ou fiel', () => {
+  const resultado = { processNumber: '5002849-72.2025.4.02.5113' };
+  assert.equal(
+    appApi.gerarNomeZipSplit(resultado, true),
+    'Processo_5002849-72.2025.4.02.5113_pecas_anonimizadas.zip'
+  );
+  assert.equal(
+    appApi.gerarNomeZipSplit(resultado, false),
+    'Processo_5002849-72.2025.4.02.5113_pecas_texto_fiel.zip'
+  );
+});
+
 test('modo extrair-pecas: gerarNomeSaida usa prefixo Processo', () => {
   // extrair-pecas herda prefixoArquivo = 'Processo' (igual a processo-judicial)
   // mas na prática o ZIP é nomeado diretamente; gerarNomeSaida não é chamado neste modo.

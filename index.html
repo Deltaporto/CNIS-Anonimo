@@ -68,12 +68,33 @@
 
   <!-- INFO: MODO EXTRAIR PEÇAS (visível só neste modo, via JS) -->
   <div id="info-extrair" class="info-modo-extrair oculto">
+    <fieldset class="saida-extrair" aria-label="Formato de saída das peças extraídas">
+      <legend>Saída do ZIP</legend>
+      <label class="saida-opcao saida-opcao-ativa" for="saida-md-anonimizado">
+        <input type="radio" id="saida-md-anonimizado" name="saida-md" value="anonimizado" checked />
+        <span>
+          <strong>Markdown anonimizado</strong>
+          <small>Remove dados sensíveis detectáveis e preserva o número do processo</small>
+        </span>
+      </label>
+      <label class="saida-opcao" for="saida-md-fiel">
+        <input type="radio" id="saida-md-fiel" name="saida-md" value="fiel" />
+        <span>
+          <strong>Markdown fiel ao PDF</strong>
+          <small>Mantém o texto extraído como está, incluindo dados sensíveis</small>
+        </span>
+      </label>
+    </fieldset>
+
     <details class="como-funciona">
       <summary>Como funciona?</summary>
       <div class="como-funciona-corpo">
         <ul>
-          <li><strong>Íntegra do Eproc (PDF com índice)</strong> — cada evento vira um arquivo de texto separado, com índice clicável</li>
-          <li><strong>Qualquer outro PDF</strong> — extrai o texto completo como documento único</li>
+          <li><strong>Caminho preferencial</strong> — na árvore do processo, clique em <strong>Marcar todos</strong>, depois <strong>Versão p/ impressão</strong>, escolha o separador <strong>Ambos (Evento e Documento)</strong> e baixe o PDF gerado</li>
+          <li><strong>Por que usar "Ambos"</strong> — o PDF preserva a separação por evento e por documento, permitindo gerar arquivos menores e nomes mais úteis para cada peça</li>
+          <li><strong>Markdown anonimizado</strong> — é o padrão. O número do processo é preservado, e dados sensíveis detectáveis são substituídos antes de montar os arquivos de texto</li>
+          <li><strong>Download Completo</strong> — use só como alternativa. Em processos grandes, o Eproc pode dividir em partes ou entregar um ZIP; se isso acontecer, extraia o ZIP e processe cada PDF PARTE na ordem</li>
+          <li><strong>Qualquer outro PDF</strong> — quando não houver índice de eventos, o texto completo é extraído como documento único</li>
           <li><strong>Páginas escaneadas ou com imagens</strong> — o texto é reconhecido automaticamente (OCR). Pode demorar alguns segundos por página; o navegador baixa o leitor de imagens na primeira vez que for necessário</li>
           <li><strong>O que você recebe</strong> — arquivo ZIP com textos pesquisáveis e copiáveis, prontos para usar em minutas, resumos ou pesquisa</li>
         </ul>
