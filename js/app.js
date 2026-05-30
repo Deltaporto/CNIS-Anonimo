@@ -31,15 +31,15 @@ const MODOS_DOCUMENTO = {
     botaoDownloadUm: 'Baixar novamente',
     botaoDownloadVarios: 'Baixar ZIP novamente'
   },
-  'separar-pecas': {
-    id: 'separar-pecas',
+  'extrair-pecas': {
+    id: 'extrair-pecas',
     prefixoArquivo: 'Processo',
     zipNome: 'Pecas_do_processo.zip',
-    uploadTitulo: 'Arraste o PDF da íntegra do processo (Eproc)',
-    uploadSub: 'Baixe pelo "Baixar Íntegra" do Eproc. clique para selecionar · Cada evento será extraído como arquivo de texto.',
-    ariaLabel: 'Selecionar PDF da íntegra do processo para separar em peças',
-    botaoDownloadUm: 'Baixar peças separadas novamente',
-    botaoDownloadVarios: 'Baixar peças separadas novamente',
+    uploadTitulo: 'Arraste a íntegra do processo (Eproc)',
+    uploadSub: 'Extrai o texto de cada evento em arquivo separado — pesquisável e copiável. Funciona também com páginas escaneadas. clique para selecionar · Use o PDF do "Baixar Íntegra" do Eproc.',
+    ariaLabel: 'Selecionar PDF da íntegra do processo para extrair as peças em texto',
+    botaoDownloadUm: 'Baixar peças extraídas novamente',
+    botaoDownloadVarios: 'Baixar peças extraídas novamente',
     isSplit: true
   }
 };
@@ -53,7 +53,7 @@ const btnLimpar = document.getElementById('btn-limpar');
 const btnModoCnis = document.getElementById('btn-modo-cnis');
 const btnModoCarta = document.getElementById('btn-modo-carta');
 const btnModoProcesso = document.getElementById('btn-modo-processo');
-const btnModoSeparar = document.getElementById('btn-modo-separar');
+const btnModoExtrair = document.getElementById('btn-modo-extrair');
 const uploadTituloEl = document.getElementById('upload-titulo');
 const uploadSubEl = document.getElementById('upload-sub');
 
@@ -96,7 +96,7 @@ function atualizarModoUI() {
     btnModoCnis.classList.toggle('modo-ativo', modoAtual === 'cnis');
     btnModoCarta?.classList.toggle('modo-ativo', modoAtual === 'carta-concessao');
     btnModoProcesso?.classList.toggle('modo-ativo', modoAtual === 'processo-judicial');
-    btnModoSeparar?.classList.toggle('modo-ativo-separar', modoAtual === 'separar-pecas');
+    btnModoExtrair?.classList.toggle('modo-ativo-extrair', modoAtual === 'extrair-pecas');
   }
 
   if (btnModoCnis && typeof btnModoCnis.setAttribute === 'function') {
@@ -111,9 +111,9 @@ function atualizarModoUI() {
     btnModoProcesso.setAttribute('aria-selected', String(modoAtual === 'processo-judicial'));
     btnModoProcesso.setAttribute('tabindex', modoAtual === 'processo-judicial' ? '0' : '-1');
   }
-  if (btnModoSeparar && typeof btnModoSeparar.setAttribute === 'function') {
-    btnModoSeparar.setAttribute('aria-selected', String(modoAtual === 'separar-pecas'));
-    btnModoSeparar.setAttribute('tabindex', modoAtual === 'separar-pecas' ? '0' : '-1');
+  if (btnModoExtrair && typeof btnModoExtrair.setAttribute === 'function') {
+    btnModoExtrair.setAttribute('aria-selected', String(modoAtual === 'extrair-pecas'));
+    btnModoExtrair.setAttribute('tabindex', modoAtual === 'extrair-pecas' ? '0' : '-1');
   }
 }
 
@@ -138,12 +138,12 @@ atualizarModoUI();
 btnModoCnis?.addEventListener('click', () => trocarModo('cnis'));
 btnModoCarta?.addEventListener('click', () => trocarModo('carta-concessao'));
 btnModoProcesso?.addEventListener('click', () => trocarModo('processo-judicial'));
-btnModoSeparar?.addEventListener('click', () => trocarModo('separar-pecas'));
+btnModoExtrair?.addEventListener('click', () => trocarModo('extrair-pecas'));
 
 const tablist = document.querySelector('.modo-selector');
 if (tablist) {
   tablist.addEventListener('keydown', (e) => {
-    const tabs = [btnModoCnis, btnModoCarta, btnModoProcesso, btnModoSeparar].filter(Boolean);
+    const tabs = [btnModoCnis, btnModoCarta, btnModoProcesso, btnModoExtrair].filter(Boolean);
     if (!tabs.length) return;
 
     let currentIndex = tabs.findIndex(tab => tab.getAttribute('aria-selected') === 'true');
@@ -168,7 +168,7 @@ if (tablist) {
         'btn-modo-cnis': 'cnis',
         'btn-modo-carta': 'carta-concessao',
         'btn-modo-processo': 'processo-judicial',
-        'btn-modo-separar': 'separar-pecas'
+        'btn-modo-extrair': 'extrair-pecas'
       };
       trocarModo(modos[novoBotao.id]);
       novoBotao.focus();
@@ -473,7 +473,7 @@ async function iniciarSplitEproc(arquivos) {
       setStatus(item, 'erro', 'Erro ao processar');
       mostrarToast(msg);
     }
-    console.error('[SepararPecas]', err);
+    console.error('[ExtrairPecas]', err);
   } finally {
     _splitLogEl = null;
     _splitResumoEl = null;

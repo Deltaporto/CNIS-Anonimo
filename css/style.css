@@ -158,17 +158,17 @@ main {
   box-shadow: 0 2px 12px rgba(26, 74, 138, .14);
 }
 
-.modo-btn.modo-ativo-separar {
+.modo-btn.modo-ativo-extrair {
   background-color: #e8f5e9;
   border-color: #4caf50;
   color: #2e7d32;
 }
 
-body[data-modo="separar-pecas"] .zona-upload {
+body[data-modo="extrair-pecas"] .zona-upload {
   border-color: #4caf50;
 }
 
-body[data-modo="separar-pecas"] .upload-sub strong {
+body[data-modo="extrair-pecas"] .upload-sub strong {
   color: #2e7d32;
 }
 
