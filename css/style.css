@@ -172,6 +172,55 @@ body[data-modo="extrair-pecas"] .upload-sub strong {
   color: #2e7d32;
 }
 
+.info-modo-extrair {
+  margin: 0.25rem 0 0.5rem;
+}
+
+.como-funciona summary {
+  cursor: pointer;
+  color: #2e7d32;
+  font-size: 0.875em;
+  font-weight: 500;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.como-funciona summary::before {
+  content: "ℹ";
+}
+
+.como-funciona[open] summary {
+  margin-bottom: 0.5rem;
+}
+
+.como-funciona-corpo {
+  font-size: 0.875em;
+  color: #444;
+  padding: 0.6rem 0.9rem;
+  background: #f9fbe7;
+  border-left: 3px solid #8bc34a;
+  border-radius: 4px;
+}
+
+.como-funciona-corpo ul {
+  margin: 0 0 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.como-funciona-corpo li {
+  margin: 0.3rem 0;
+  line-height: 1.4;
+}
+
+.info-privacidade {
+  margin: 0.5rem 0 0;
+  font-size: 0.8em;
+  color: #777;
+}
+
 .split-log {
   font-size: 0.9em;
   color: #555;

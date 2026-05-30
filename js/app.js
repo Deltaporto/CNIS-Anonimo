@@ -56,6 +56,7 @@ const btnModoProcesso = document.getElementById('btn-modo-processo');
 const btnModoExtrair = document.getElementById('btn-modo-extrair');
 const uploadTituloEl = document.getElementById('upload-titulo');
 const uploadSubEl = document.getElementById('upload-sub');
+const infoExtrairEl = document.getElementById('info-extrair');
 
 let resultados = [];
 let modoAtual = 'cnis';
@@ -97,6 +98,10 @@ function atualizarModoUI() {
     btnModoCarta?.classList.toggle('modo-ativo', modoAtual === 'carta-concessao');
     btnModoProcesso?.classList.toggle('modo-ativo', modoAtual === 'processo-judicial');
     btnModoExtrair?.classList.toggle('modo-ativo-extrair', modoAtual === 'extrair-pecas');
+  }
+
+  if (infoExtrairEl?.classList) {
+    infoExtrairEl.classList.toggle('oculto', modoAtual !== 'extrair-pecas');
   }
 
   if (btnModoCnis && typeof btnModoCnis.setAttribute === 'function') {
@@ -461,16 +466,10 @@ async function iniciarSplitEproc(arquivos) {
     setProgresso(item, 100, false, true);
 
     const msg = err.message || 'Erro ao processar o PDF.';
-
-    // Mapear erros conhecidos para mensagens amigáveis
-    if (msg.includes('marcadores') || msg.includes('outline') || msg.includes('índice')) {
-      setStatus(item, 'erro', 'PDF sem índice de eventos');
-      mostrarToast('Este PDF não possui índice de eventos. Use um PDF baixado pelo "Baixar Íntegra" do Eproc.');
-    } else if (msg.includes('eProc') || msg.includes('marcadores') || msg.includes('evento')) {
-      setStatus(item, 'erro', 'PDF sem eventos eProc');
-      mostrarToast('Este PDF não possui índice de eventos. Use um PDF baixado pelo "Baixar Íntegra" do Eproc.');
+    setStatus(item, 'erro', 'Erro ao processar');
+    if (msg.includes('memória') || msg.includes('memory') || msg.includes('out of memory')) {
+      mostrarToast('Não foi possível processar este PDF no navegador. Tente uma íntegra menor ou divida o arquivo na origem.');
     } else {
-      setStatus(item, 'erro', 'Erro ao processar');
       mostrarToast(msg);
     }
     console.error('[ExtrairPecas]', err);

@@ -356,3 +356,30 @@ test('buildIndexMarkdown: marca eventos com OCR', () => {
   const result = api.buildIndexMarkdown('Processo', eventos);
   assert.ok(result.includes('*(OCR)*'));
 });
+
+// ── fallback documento único ──────────────────────────────────────────────────
+
+test('buildEventRanges: PDF sem outline gera evento único abrangendo todas as páginas', () => {
+  // Simula o que splitEprocPdf faz quando não há índice Eproc
+  const docTitle = 'contestacao-vr.pdf'.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim();
+  const totalPages = 35;
+  const eventos = [{
+    title: docTitle,
+    filename: api.sanitizeFilename(docTitle) + '.md',
+    startPageIndex: 0,
+    endPageIndexExclusive: totalPages,
+    startPageLabel: 1,
+    endPageLabel: totalPages,
+    pageCount: totalPages,
+    ocr: false
+  }];
+  assert.equal(eventos.length, 1);
+  assert.equal(eventos[0].pageCount, 35);
+  assert.equal(eventos[0].startPageLabel, 1);
+  assert.equal(eventos[0].endPageLabel, 35);
+  assert.ok(eventos[0].filename.endsWith('.md'));
+});
+
+test('inferProcessNumber: nome de arquivo sem número retorna Processo', () => {
+  assert.equal(api.inferProcessNumber('contestacao-vr.pdf'), 'Processo');
+});

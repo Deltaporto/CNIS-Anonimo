@@ -224,45 +224,50 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '') 
   const pdfDoc = await loadingTask.promise;
   const totalPages = pdfDoc.numPages;
 
-  // 2. Obter outline
+  // 2. Tentar ler índice do Eproc; fallback para documento único se não houver
   const outline = await pdfDoc.getOutline();
-
-  if (!outline || outline.length === 0) {
-    throw new Error(
-      'Este PDF não possui marcadores (índice/outline). ' +
-      'Apenas processos do eProc com índice automático são suportados.'
-    );
-  }
-
-  // 3-4. Achatar e filtrar itens Eproc
-  const allItems = flattenOutline(outline);
+  const allItems = outline ? flattenOutline(outline) : [];
   const eprocItems = allItems.filter(item => isEprocEventTitle(item.title));
 
-  if (eprocItems.length === 0) {
-    throw new Error(
-      'Nenhum evento do eProc encontrado nos marcadores deste PDF. ' +
-      'Verifique se o arquivo é um processo judicial completo do eProc.'
+  let eventos;
+
+  if (eprocItems.length > 0) {
+    // Caminho normal: íntegra do Eproc com índice de eventos
+    const itemsWithPage = await Promise.all(
+      eprocItems.map(async item => ({
+        title: item.title,
+        pageIndex: await resolveOutlinePageIndex(pdfDoc, item)
+      }))
     );
+    eventos = buildEventRanges(itemsWithPage, totalPages);
+    onProgress({
+      type: 'outline',
+      message: `${eventos.length} eventos identificados no índice do processo`,
+      percent: 5,
+      eventTotal: eventos.length
+    });
+  } else {
+    // Fallback: qualquer PDF sem índice Eproc → documento único
+    const docTitle = filename
+      ? filename.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim() || 'Documento'
+      : 'Documento';
+    eventos = [{
+      title: docTitle,
+      filename: sanitizeFilename(docTitle) + '.md',
+      startPageIndex: 0,
+      endPageIndexExclusive: totalPages,
+      startPageLabel: 1,
+      endPageLabel: totalPages,
+      pageCount: totalPages,
+      ocr: false
+    }];
+    onProgress({
+      type: 'warning',
+      message: 'Nenhum índice de eventos encontrado. Extraindo o texto completo do documento...',
+      percent: 5,
+      eventTotal: 1
+    });
   }
-
-  // 5. Resolver pageIndex de cada item
-  const itemsWithPage = await Promise.all(
-    eprocItems.map(async item => ({
-      title: item.title,
-      pageIndex: await resolveOutlinePageIndex(pdfDoc, item)
-    }))
-  );
-
-  // 6. Calcular ranges de eventos
-  const eventos = buildEventRanges(itemsWithPage, totalPages);
-
-  // 7. Emitir progresso de outline
-  onProgress({
-    type: 'outline',
-    message: `${eventos.length} eventos identificados no índice do processo`,
-    percent: 5,
-    eventTotal: eventos.length
-  });
 
   const pagesData = [];
   let ocrCount = 0;
