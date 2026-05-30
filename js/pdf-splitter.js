@@ -266,6 +266,7 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '') 
 
   const pagesData = [];
   let ocrCount = 0;
+  let ocrFailCount = 0;
   const totalEventPages = eventos.reduce((sum, ev) => sum + ev.pageCount, 0);
   let processedPages = 0;
 
@@ -316,6 +317,7 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '') 
           });
           pageTexts.push('');
           ocrFlags.push(false);
+          ocrFailCount++;
         }
       } else {
         onProgress({
@@ -360,5 +362,5 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '') 
   // invocar splitEprocPdf múltiplas vezes sem pagar o overhead de inicialização
   // repetida. O browser libera o worker ao fechar/recarregar a página.
 
-  return { zip, eventos, ocrCount, totalPages };
+  return { zip, eventos, ocrCount, ocrFailCount, totalPages };
 }

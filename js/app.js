@@ -325,13 +325,20 @@ function renderizarCardsSplit(resultado) {
 
   if (!resultado || !resultado.eventos || resultado.eventos.length === 0) return;
 
-  const temOcr = resultado.ocrCount && resultado.ocrCount > 0;
+  // Caso 1: OCR funcionou em algumas páginas
+  if (resultado.ocrCount > 0) {
+    const avisoOcr = document.createElement('p');
+    avisoOcr.className = 'aviso-ocr';
+    avisoOcr.textContent = `${resultado.ocrCount} página(s) processadas por reconhecimento de imagem (OCR).`;
+    _splitResumoEl.appendChild(avisoOcr);
+  }
 
-  if (temOcr) {
-    const aviso = document.createElement('div');
-    aviso.className = 'aviso-ocr';
-    aviso.textContent = 'Não foi possível preparar o leitor de imagens. As peças com texto normal foram extraídas, mas páginas escaneadas podem ficar incompletas.';
-    _splitResumoEl.appendChild(aviso);
+  // Caso 2: OCR falhou em carregar mas havia páginas escaneadas
+  if (resultado.ocrFailCount > 0) {
+    const avisoFalha = document.createElement('p');
+    avisoFalha.className = 'aviso-ocr';
+    avisoFalha.textContent = 'Não foi possível preparar o leitor de imagens. As peças com texto normal foram extraídas, mas páginas escaneadas podem ficar incompletas.';
+    _splitResumoEl.appendChild(avisoFalha);
   }
 
   for (const evento of resultado.eventos) {

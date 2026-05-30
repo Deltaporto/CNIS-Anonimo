@@ -286,3 +286,69 @@ test('inferProcessNumber: null → "Processo"', () => {
 test('inferProcessNumber: número menor que 20 dígitos → "Processo"', () => {
   assert.equal(api.inferProcessNumber('1234567890.pdf'), 'Processo');
 });
+
+// ── buildMarkdownForEvent ─────────────────────────────────────────────────────
+
+test('buildMarkdownForEvent: gera cabeçalho com título e páginas', () => {
+  const evento = {
+    title: 'Evento.1 - PETIÇÃO INICIAL',
+    filename: 'Evento.1_-_PETICAO_INICIAL.md',
+    startPageLabel: 1,
+    endPageLabel: 5,
+    pageCount: 5
+  };
+  const result = api.buildMarkdownForEvent(evento, ['texto da página 1', 'texto página 2']);
+  assert.ok(result.includes('# Evento.1 - PETIÇÃO INICIAL'));
+  assert.ok(result.includes('páginas 1-5'));
+  assert.ok(result.includes('texto da página 1'));
+});
+
+test('buildMarkdownForEvent: inclui todas as páginas separadas por divisor', () => {
+  const evento = {
+    title: 'Evento.2 - SENTENÇA',
+    filename: 'Evento.2_-_SENTENCA.md',
+    startPageLabel: 6,
+    endPageLabel: 8,
+    pageCount: 3
+  };
+  const result = api.buildMarkdownForEvent(evento, ['pag A', 'pag B', 'pag C']);
+  assert.ok(result.includes('pag A'));
+  assert.ok(result.includes('pag B'));
+  assert.ok(result.includes('pag C'));
+  assert.ok(result.includes('---'));
+});
+
+// ── buildIndexMarkdown ────────────────────────────────────────────────────────
+
+test('buildIndexMarkdown: gera título com número do processo', () => {
+  const result = api.buildIndexMarkdown('50000000000000000000', []);
+  assert.ok(result.includes('# Índice do Processo 50000000000000000000'));
+});
+
+test('buildIndexMarkdown: gera lista com links relativos', () => {
+  const eventos = [{
+    title: 'Evento.1 - PETIÇÃO INICIAL',
+    filename: 'Evento.1_-_PETICAO_INICIAL.md',
+    startPageLabel: 1,
+    endPageLabel: 5,
+    pageCount: 5,
+    ocr: false
+  }];
+  const result = api.buildIndexMarkdown('50000000000000000000', eventos);
+  assert.ok(result.includes('[Evento.1 - PETIÇÃO INICIAL]'));
+  assert.ok(result.includes('eventos/Evento.1_-_PETICAO_INICIAL.md'));
+  assert.ok(result.includes('pp. 1-5'));
+});
+
+test('buildIndexMarkdown: marca eventos com OCR', () => {
+  const eventos = [{
+    title: 'Evento.1 - DIGITALIZADO',
+    filename: 'Evento.1.md',
+    startPageLabel: 1,
+    endPageLabel: 3,
+    pageCount: 3,
+    ocr: true
+  }];
+  const result = api.buildIndexMarkdown('Processo', eventos);
+  assert.ok(result.includes('*(OCR)*'));
+});
