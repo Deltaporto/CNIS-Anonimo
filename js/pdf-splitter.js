@@ -55,6 +55,9 @@ function sanitizeFilename(title) {
   // Normalizar caracteres acentuados para ASCII equivalente
   let result = title.normalize('NFD').replace(/[̀-ͯ]/g, '');
 
+  // Remover espaços após ponto (ex: "Evento. 1" → "Evento.1")
+  result = result.replace(/\.\s+/g, '.');
+
   // Substituir chars fora de [a-zA-Z0-9_.-] por _
   result = result.replace(/[^a-zA-Z0-9_.\-]/g, '_');
 
@@ -110,7 +113,28 @@ function buildEventRanges(outlineItems, totalPages) {
 
 async function extractPageText(page) {
   const content = await page.getTextContent();
-  return content.items.map(i => i.str).join(' ');
+  if (!content.items.length) return '';
+
+  const lines = [];
+  let currentLine = '';
+  let lastY = null;
+
+  for (const item of content.items) {
+    if (!item.str) continue;
+    const y = item.transform[5];
+    const newLine = item.hasEOL || (lastY !== null && Math.abs(y - lastY) > 8);
+    if (newLine) {
+      if (currentLine.trim()) lines.push(currentLine.trim());
+      currentLine = item.str;
+    } else {
+      const sep = currentLine && !currentLine.endsWith(' ') && !item.str.startsWith(' ') ? ' ' : '';
+      currentLine += sep + item.str;
+    }
+    lastY = y;
+  }
+  if (currentLine.trim()) lines.push(currentLine.trim());
+
+  return lines.join('\n');
 }
 
 function pageNeedsOcr(text) {
@@ -169,8 +193,14 @@ async function ocrFromCanvas(canvas) {
 }
 
 function inferProcessNumber(filename) {
-  const match = filename && filename.match(/\d{20}/);
-  return match ? match[0] : 'Processo';
+  if (!filename) return 'Processo';
+  // Número CNJ: NNNNNNN-NN.NNNN.N.NN.NNNN (ex: 5003813-50.2025.4.02.5118)
+  const cnj = filename.match(/\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/);
+  if (cnj) return cnj[0];
+  // 20 dígitos consecutivos (formato legado do Eproc no nome do arquivo)
+  const legacy = filename.match(/\d{20}/);
+  if (legacy) return legacy[0];
+  return 'Processo';
 }
 
 function buildMarkdownForEvent(evento, pageTexts) {
