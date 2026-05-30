@@ -151,7 +151,9 @@ async function ensureTesseractLoaded(onProgress = () => {}) {
 
 async function initOcrWorker() {
   if (_ocrWorker) return _ocrWorker;
-  _ocrWorker = await Tesseract.createWorker('por');
+  _ocrWorker = await Tesseract.createWorker('por', 1, {
+    logger: () => {}
+  });
   return _ocrWorker;
 }
 
@@ -287,20 +289,34 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '') 
       const text = await extractPageText(page);
 
       if (pageNeedsOcr(text)) {
-        onProgress({
-          type: 'ocr',
-          message: `OCR na página ${pi + 1}...`,
-          percent: Math.round(5 + (processedPages / totalEventPages) * 85),
-          pageIndex: pi,
-          pageTotal: totalPages
-        });
+        const loaded = await ensureTesseractLoaded(onProgress);
 
-        await ensureTesseractLoaded(onProgress);
-        const canvas = await renderPageToCanvas(page);
-        const ocrText = await ocrFromCanvas(canvas);
-        pageTexts.push(ocrText);
-        ocrFlags.push(true);
-        ocrCount++;
+        if (loaded) {
+          onProgress({
+            type: 'ocr',
+            message: `OCR na página ${pi + 1}...`,
+            percent: Math.round(5 + (processedPages / totalEventPages) * 85),
+            pageIndex: pi,
+            pageTotal: totalPages
+          });
+
+          const canvas = await renderPageToCanvas(page);
+          const ocrText = await ocrFromCanvas(canvas);
+          // Liberar memória do canvas
+          canvas.width = 0;
+          canvas.height = 0;
+          pageTexts.push(ocrText);
+          ocrFlags.push(true);
+          ocrCount++;
+        } else {
+          onProgress({
+            type: 'warning',
+            message: `Não foi possível preparar o leitor de imagens (página ${pi + 1} ignorada)`,
+            percent: Math.round(5 + (processedPages / totalEventPages) * 85)
+          });
+          pageTexts.push('');
+          ocrFlags.push(false);
+        }
       } else {
         onProgress({
           type: 'page',
