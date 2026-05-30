@@ -339,6 +339,16 @@ test('pageNeedsOcr: texto com exatamente 50 chars → false', () => {
   assert.equal(api.pageNeedsOcr(text), false);
 });
 
+test('pageNeedsOcr: rodapé textual do Eproc ainda precisa de OCR', () => {
+  const text = 'Processo 5002849-72.2025.4.02.5113, Evento 1, EXMMED13, Página 1';
+  assert.equal(api.pageNeedsOcr(text), true);
+});
+
+test('pageNeedsOcr: página de separação não precisa de OCR', () => {
+  const text = 'PÁGINA DE SEPARAÇÃO (Gerada automaticamente pelo sistema.) Tipo documento: Evento: EXAME MÉDICO';
+  assert.equal(api.pageNeedsOcr(text), false);
+});
+
 test('pageNeedsOcr: texto longo → false', () => {
   const text = 'Este é um texto bem longo com bastante conteúdo para não precisar de OCR.';
   assert.equal(api.pageNeedsOcr(text), false);

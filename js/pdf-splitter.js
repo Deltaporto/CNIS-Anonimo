@@ -224,7 +224,19 @@ async function extractPageText(page) {
 }
 
 function pageNeedsOcr(text) {
-  return text.trim().length < 50;
+  const normalized = normalizarTextoPagina(text);
+  if (!normalized) return true;
+  if (normalized.includes('PÁGINA DE SEPARAÇÃO')) return false;
+
+  const substantive = normalized
+    .replace(/Processo\s+\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4},?\s*/gi, ' ')
+    .replace(/Evento\s+\d+,?\s*/gi, ' ')
+    .replace(/[A-Z0-9]{4,}\d{1,3},?\s*/g, ' ')
+    .replace(/Página\s+\d+(?:\s+de\s+\d+)?/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return substantive.length < 50;
 }
 
 async function renderPageToCanvas(page) {
