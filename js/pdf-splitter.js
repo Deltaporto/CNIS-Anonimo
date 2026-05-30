@@ -194,12 +194,15 @@ async function ocrFromCanvas(canvas) {
 
 function inferProcessNumber(filename) {
   if (!filename) return 'Processo';
-  // Número CNJ: NNNNNNN-NN.NNNN.N.NN.NNNN (ex: 5003813-50.2025.4.02.5118)
+  // Número CNJ já formatado: NNNNNNN-NN.NNNN.N.NN.NNNN
   const cnj = filename.match(/\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/);
   if (cnj) return cnj[0];
-  // 20 dígitos consecutivos (formato legado do Eproc no nome do arquivo)
+  // 20 dígitos consecutivos (Eproc legado) → converter para CNJ
   const legacy = filename.match(/\d{20}/);
-  if (legacy) return legacy[0];
+  if (legacy) {
+    const d = legacy[0];
+    return `${d.slice(0,7)}-${d.slice(7,9)}.${d.slice(9,13)}.${d.slice(13,14)}.${d.slice(14,16)}.${d.slice(16,20)}`;
+  }
   return 'Processo';
 }
 
@@ -397,5 +400,5 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '') 
   // invocar splitEprocPdf múltiplas vezes sem pagar o overhead de inicialização
   // repetida. O browser libera o worker ao fechar/recarregar a página.
 
-  return { zip, eventos, ocrCount, ocrFailCount, totalPages };
+  return { zip, eventos, ocrCount, ocrFailCount, totalPages, processNumber };
 }

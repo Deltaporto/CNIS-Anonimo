@@ -445,13 +445,16 @@ async function iniciarSplitEproc(arquivos) {
     // 7. Renderizar cards de eventos
     renderizarCardsSplit(resultado);
 
-    // 8. Baixar ZIP automaticamente
+    // 8. Baixar ZIP automaticamente com nome baseado no número do processo
     const config = obterConfigModo(modoAtual);
-    baixarBlob(resultado.zip, 'application/zip', config.zipNome);
+    const zipNome = resultado.processNumber && resultado.processNumber !== 'Processo'
+      ? `Processo_${resultado.processNumber}.zip`
+      : 'Pecas_do_processo.zip';
+    baixarBlob(resultado.zip, 'application/zip', zipNome);
 
     // 9. Armazenar resultado para rebaixar
     resultados.push({
-      nome: config.zipNome,
+      nome: zipNome,
       bytes: resultado.zip,
       mimeType: 'application/zip',
       isZip: true

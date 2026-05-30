@@ -264,14 +264,21 @@ test('pageNeedsOcr: texto longo → false', () => {
 
 // ── inferProcessNumber ────────────────────────────────────────────────────────
 
-test('inferProcessNumber: extrai sequência de 20 dígitos', () => {
-  assert.equal(api.inferProcessNumber('50000000000000000000.pdf'), '50000000000000000000');
+test('inferProcessNumber: converte 20 dígitos para formato CNJ', () => {
+  assert.equal(api.inferProcessNumber('50000000000000000000.pdf'), '5000000-00.0000.0.00.0000');
 });
 
-test('inferProcessNumber: extrai número no meio do nome', () => {
+test('inferProcessNumber: extrai e converte número no meio do nome', () => {
   assert.equal(
     api.inferProcessNumber('processo_50123456789012345678_2024.pdf'),
-    '50123456789012345678'
+    '5012345-67.8901.2.34.5678'
+  );
+});
+
+test('inferProcessNumber: aceita formato CNJ já formatado', () => {
+  assert.equal(
+    api.inferProcessNumber('5003813-50.2025.4.02.5118.pdf'),
+    '5003813-50.2025.4.02.5118'
   );
 });
 
