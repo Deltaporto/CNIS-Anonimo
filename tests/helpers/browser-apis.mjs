@@ -2,14 +2,13 @@ import fs from 'node:fs/promises';
 import { webcrypto } from 'node:crypto';
 import * as PDFLib from 'pdf-lib';
 import pako from 'pako';
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
-const pdfjsBase = require('pdfjs-dist/legacy/build/pdf.js');
+const pdfjsBase = await import('pdfjs-dist/legacy/build/pdf.mjs');
 
 const ROOT_URL = new URL('../../', import.meta.url);
-const CNIS_FIXTURES_URL = new URL('teste/', ROOT_URL);
+const PROJECT_ROOT_URL = new URL('../../../../../', import.meta.url);
+const CNIS_FIXTURES_URL = new URL('teste/', PROJECT_ROOT_URL);
 const CARTA_CONCESSAO_FIXTURES_URL = new URL('teste-carta-de-concessao/', CNIS_FIXTURES_URL);
-const STANDARD_FONT_DATA_URL = new URL('node_modules/pdfjs-dist/standard_fonts/', ROOT_URL).href;
+const STANDARD_FONT_DATA_URL = new URL('node_modules/pdfjs-dist/standard_fonts/', PROJECT_ROOT_URL).href;
 const originalConsoleWarn = console.warn.bind(console);
 
 console.warn = (...args) => {
@@ -24,8 +23,9 @@ console.warn = (...args) => {
   originalConsoleWarn(...args);
 };
 
+const pdfjsNS = pdfjsBase.default ?? pdfjsBase;
 const pdfjsLib = {
-  ...pdfjsBase,
+  ...pdfjsNS,
   getDocument(src) {
     if (src && typeof src === 'object') {
       const normalized = {
@@ -37,10 +37,10 @@ const pdfjsLib = {
         normalized.data = new Uint8Array(normalized.data);
       }
 
-      return pdfjsBase.getDocument(normalized);
+      return pdfjsNS.getDocument(normalized);
     }
 
-    return pdfjsBase.getDocument(src);
+    return pdfjsNS.getDocument(src);
   }
 };
 
