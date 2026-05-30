@@ -219,6 +219,23 @@ body[data-modo="separar-pecas"] .upload-sub strong {
   color: #e65100;
 }
 
+.evento-titulo {
+  flex: 1;
+  font-weight: 600;
+}
+
+.evento-paginas {
+  color: #666;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.evento-tag-ocr {
+  color: #e65100;
+  font-size: 0.8em;
+  white-space: nowrap;
+}
+
 /* ── UPLOAD ── */
 .zona-upload {
   border: 2px dashed var(--border);

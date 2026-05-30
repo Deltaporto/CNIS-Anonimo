@@ -133,10 +133,6 @@ function trocarModo(modo) {
   atualizarModoUI();
 }
 
-function mostrarErro(mensagem) {
-  mostrarToast(mensagem);
-}
-
 atualizarModoUI();
 
 btnModoCnis?.addEventListener('click', () => trocarModo('cnis'));
@@ -343,14 +339,11 @@ function renderizarCardsSplit(resultado) {
     card.className = 'evento-card' + (evento.ocr ? ' evento-card-ocr' : '');
 
     const titulo = document.createElement('span');
-    titulo.style.flex = '1';
-    titulo.style.fontWeight = '600';
+    titulo.className = 'evento-titulo';
     titulo.textContent = evento.title;
 
     const paginas = document.createElement('span');
-    paginas.style.color = '#666';
-    paginas.style.fontSize = '0.85em';
-    paginas.style.whiteSpace = 'nowrap';
+    paginas.className = 'evento-paginas';
     const pageLabel = evento.pageCount === 1
       ? `p. ${evento.startPageLabel}`
       : `pp. ${evento.startPageLabel}–${evento.endPageLabel}`;
@@ -365,7 +358,7 @@ function renderizarCardsSplit(resultado) {
 async function iniciarSplitEproc(arquivos) {
   // 1. Recusar mais de um arquivo
   if (arquivos.length !== 1) {
-    mostrarErro('Envie apenas um PDF de íntegra por vez.');
+    mostrarToast('Envie apenas um PDF de íntegra por vez.');
     return;
   }
 
@@ -373,13 +366,13 @@ async function iniciarSplitEproc(arquivos) {
 
   // 2. Validar extensão
   if (!arquivo.name.toLowerCase().endsWith('.pdf')) {
-    mostrarErro('Arquivo não é um PDF válido.');
+    mostrarToast('Arquivo não é um PDF válido.');
     return;
   }
 
   // Verificar tamanho
   if (arquivo.size > MAX_PDF_SIZE) {
-    mostrarErro('Não foi possível processar este PDF no navegador. Tente uma íntegra menor ou divida o arquivo na origem.');
+    mostrarToast('Não foi possível processar este PDF no navegador. Tente uma íntegra menor ou divida o arquivo na origem.');
     return;
   }
 
@@ -390,7 +383,7 @@ async function iniciarSplitEproc(arquivos) {
   const header = new Uint8Array(arrayBuffer, 0, 5);
   const isPdf = header[0] === 37 && header[1] === 80 && header[2] === 68 && header[3] === 70;
   if (!isPdf) {
-    mostrarErro('Arquivo não é um PDF válido.');
+    mostrarToast('Arquivo não é um PDF válido.');
     return;
   }
 
@@ -465,13 +458,13 @@ async function iniciarSplitEproc(arquivos) {
     // Mapear erros conhecidos para mensagens amigáveis
     if (msg.includes('marcadores') || msg.includes('outline') || msg.includes('índice')) {
       setStatus(item, 'erro', 'PDF sem índice de eventos');
-      mostrarErro('Este PDF não possui índice de eventos. Use um PDF baixado pelo "Baixar Íntegra" do Eproc.');
+      mostrarToast('Este PDF não possui índice de eventos. Use um PDF baixado pelo "Baixar Íntegra" do Eproc.');
     } else if (msg.includes('eProc') || msg.includes('marcadores') || msg.includes('evento')) {
       setStatus(item, 'erro', 'PDF sem eventos eProc');
-      mostrarErro('Este PDF não possui índice de eventos. Use um PDF baixado pelo "Baixar Íntegra" do Eproc.');
+      mostrarToast('Este PDF não possui índice de eventos. Use um PDF baixado pelo "Baixar Íntegra" do Eproc.');
     } else {
       setStatus(item, 'erro', 'Erro ao processar');
-      mostrarErro(msg);
+      mostrarToast(msg);
     }
     console.error('[SepararPecas]', err);
   } finally {
