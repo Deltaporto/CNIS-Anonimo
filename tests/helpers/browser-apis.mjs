@@ -140,7 +140,8 @@ export async function loadAppApi() {
     return {
       gerarNomeSaida,
       construirParesSubstituicao,
-      coletarObservacoes
+      coletarObservacoes,
+      obterConfigModo
     };
   `)({
     window: {

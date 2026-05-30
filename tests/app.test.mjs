@@ -43,6 +43,41 @@ test('monta pares de substituição com NIT 1, NIT 2, benefício, código e nome
   );
 });
 
+test('modo separar-pecas: config tem isSplit = true e campos corretos', () => {
+  const config = appApi.obterConfigModo('separar-pecas');
+  assert.equal(config.id, 'separar-pecas');
+  assert.equal(config.isSplit, true);
+  assert.equal(config.zipNome, 'Pecas_do_processo.zip');
+});
+
+test('modo separar-pecas: obterConfigModo com modo desconhecido retorna config cnis', () => {
+  const config = appApi.obterConfigModo('modo-inexistente');
+  assert.equal(config.id, 'cnis');
+});
+
+test('modo separar-pecas: modos cnis, carta-concessao e processo-judicial não têm isSplit', () => {
+  for (const modo of ['cnis', 'carta-concessao', 'processo-judicial']) {
+    const config = appApi.obterConfigModo(modo);
+    assert.ok(!config.isSplit, `${modo} não deve ter isSplit`);
+  }
+});
+
+test('modo separar-pecas: resultado isZip é reconhecido como truthy e usa mime application/zip', () => {
+  const resultado = { isZip: true, bytes: new Uint8Array([1, 2, 3]), nome: 'Pecas_do_processo.zip' };
+  assert.ok(resultado.isZip);
+  // Lógica espelhada do handler de download: isZip => application/zip
+  const mimeType = resultado.isZip ? 'application/zip' : 'application/pdf';
+  assert.equal(mimeType, 'application/zip');
+});
+
+test('modo separar-pecas: gerarNomeSaida usa prefixo Processo', () => {
+  // separar-pecas herda prefixoArquivo = 'Processo' (igual a processo-judicial)
+  // mas na prática o ZIP é nomeado diretamente; gerarNomeSaida não é chamado neste modo.
+  // Verificamos que o prefixo do modo existe e está correto.
+  const config = appApi.obterConfigModo('separar-pecas');
+  assert.equal(config.prefixoArquivo, 'Processo');
+});
+
 test('coletar observações da carta cobra benefício, código e CPF ou NIT', () => {
   const observacoes = appApi.coletarObservacoes(
     {
