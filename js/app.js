@@ -30,6 +30,17 @@ const MODOS_DOCUMENTO = {
     ariaLabel: 'Selecionar arquivos PDF de processos judiciais para anonimizar',
     botaoDownloadUm: 'Baixar novamente',
     botaoDownloadVarios: 'Baixar ZIP novamente'
+  },
+  'separar-pecas': {
+    id: 'separar-pecas',
+    prefixoArquivo: 'Processo',
+    zipNome: 'Pecas_do_processo.zip',
+    uploadTitulo: 'Arraste o PDF da íntegra do processo (Eproc)',
+    uploadSub: 'Baixe pelo "Baixar Íntegra" do Eproc. clique para selecionar · Cada evento será extraído como arquivo de texto.',
+    ariaLabel: 'Selecionar PDF da íntegra do processo para separar em peças',
+    botaoDownloadUm: 'Baixar peças separadas novamente',
+    botaoDownloadVarios: 'Baixar peças separadas novamente',
+    isSplit: true
   }
 };
 
@@ -42,6 +53,7 @@ const btnLimpar = document.getElementById('btn-limpar');
 const btnModoCnis = document.getElementById('btn-modo-cnis');
 const btnModoCarta = document.getElementById('btn-modo-carta');
 const btnModoProcesso = document.getElementById('btn-modo-processo');
+const btnModoSeparar = document.getElementById('btn-modo-separar');
 const uploadTituloEl = document.getElementById('upload-titulo');
 const uploadSubEl = document.getElementById('upload-sub');
 
@@ -75,10 +87,16 @@ function atualizarModoUI() {
     zonaUpload.setAttribute('aria-label', config.ariaLabel);
   }
 
+  // Atualizar atributo multiple do input de arquivo
+  if (inputArquivo) {
+    inputArquivo.multiple = !config.isSplit;
+  }
+
   if (btnModoCnis?.classList) {
     btnModoCnis.classList.toggle('modo-ativo', modoAtual === 'cnis');
     btnModoCarta?.classList.toggle('modo-ativo', modoAtual === 'carta-concessao');
     btnModoProcesso?.classList.toggle('modo-ativo', modoAtual === 'processo-judicial');
+    btnModoSeparar?.classList.toggle('modo-ativo-separar', modoAtual === 'separar-pecas');
   }
 
   if (btnModoCnis && typeof btnModoCnis.setAttribute === 'function') {
@@ -92,6 +110,10 @@ function atualizarModoUI() {
   if (btnModoProcesso && typeof btnModoProcesso.setAttribute === 'function') {
     btnModoProcesso.setAttribute('aria-selected', String(modoAtual === 'processo-judicial'));
     btnModoProcesso.setAttribute('tabindex', modoAtual === 'processo-judicial' ? '0' : '-1');
+  }
+  if (btnModoSeparar && typeof btnModoSeparar.setAttribute === 'function') {
+    btnModoSeparar.setAttribute('aria-selected', String(modoAtual === 'separar-pecas'));
+    btnModoSeparar.setAttribute('tabindex', modoAtual === 'separar-pecas' ? '0' : '-1');
   }
 }
 
@@ -111,16 +133,21 @@ function trocarModo(modo) {
   atualizarModoUI();
 }
 
+function mostrarErro(mensagem) {
+  mostrarToast(mensagem);
+}
+
 atualizarModoUI();
 
 btnModoCnis?.addEventListener('click', () => trocarModo('cnis'));
 btnModoCarta?.addEventListener('click', () => trocarModo('carta-concessao'));
 btnModoProcesso?.addEventListener('click', () => trocarModo('processo-judicial'));
+btnModoSeparar?.addEventListener('click', () => trocarModo('separar-pecas'));
 
 const tablist = document.querySelector('.modo-selector');
 if (tablist) {
   tablist.addEventListener('keydown', (e) => {
-    const tabs = [btnModoCnis, btnModoCarta, btnModoProcesso].filter(Boolean);
+    const tabs = [btnModoCnis, btnModoCarta, btnModoProcesso, btnModoSeparar].filter(Boolean);
     if (!tabs.length) return;
 
     let currentIndex = tabs.findIndex(tab => tab.getAttribute('aria-selected') === 'true');
@@ -144,7 +171,8 @@ if (tablist) {
       const modos = {
         'btn-modo-cnis': 'cnis',
         'btn-modo-carta': 'carta-concessao',
-        'btn-modo-processo': 'processo-judicial'
+        'btn-modo-processo': 'processo-judicial',
+        'btn-modo-separar': 'separar-pecas'
       };
       trocarModo(modos[novoBotao.id]);
       novoBotao.focus();
@@ -210,6 +238,13 @@ window.addEventListener('drop', event => {
 // ── LOTE ──────────────────────────────────────────────────────────────────────
 
 async function iniciarLote(arquivos) {
+  {
+    const configCheck = obterConfigModo(modoAtual);
+    if (configCheck.isSplit) {
+      return iniciarSplitEproc(arquivos);
+    }
+  }
+
   resultados.length = 0;
   modoResultados = modoAtual;
   listaEl.textContent = '';
@@ -273,6 +308,177 @@ async function iniciarLote(arquivos) {
 }
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50 MB
+
+// ── SEPARAR PEÇAS (eProc) ─────────────────────────────────────────────────────
+
+let _splitLogEl = null;
+let _splitResumoEl = null;
+
+function atualizarLogSplit(progresso) {
+  if (!_splitLogEl) return;
+  if (!progresso || !progresso.message) return;
+  const p = document.createElement('p');
+  p.textContent = progresso.message;
+  _splitLogEl.appendChild(p);
+  _splitLogEl.scrollTop = _splitLogEl.scrollHeight;
+}
+
+function renderizarCardsSplit(resultado) {
+  if (!_splitResumoEl) return;
+  _splitResumoEl.textContent = '';
+
+  if (!resultado || !resultado.eventos || resultado.eventos.length === 0) return;
+
+  const temOcr = resultado.ocrCount && resultado.ocrCount > 0;
+
+  if (temOcr) {
+    const aviso = document.createElement('div');
+    aviso.className = 'aviso-ocr';
+    aviso.textContent = 'Não foi possível preparar o leitor de imagens. As peças com texto normal foram extraídas, mas páginas escaneadas podem ficar incompletas.';
+    _splitResumoEl.appendChild(aviso);
+  }
+
+  for (const evento of resultado.eventos) {
+    const card = document.createElement('div');
+    card.className = 'evento-card' + (evento.ocr ? ' evento-card-ocr' : '');
+
+    const titulo = document.createElement('span');
+    titulo.style.flex = '1';
+    titulo.style.fontWeight = '600';
+    titulo.textContent = evento.title;
+
+    const paginas = document.createElement('span');
+    paginas.style.color = '#666';
+    paginas.style.fontSize = '0.85em';
+    paginas.style.whiteSpace = 'nowrap';
+    const pageLabel = evento.pageCount === 1
+      ? `p. ${evento.startPageLabel}`
+      : `pp. ${evento.startPageLabel}–${evento.endPageLabel}`;
+    paginas.textContent = pageLabel + (evento.ocr ? ' (texto reconhecido de imagem)' : '');
+
+    card.appendChild(titulo);
+    card.appendChild(paginas);
+    _splitResumoEl.appendChild(card);
+  }
+}
+
+async function iniciarSplitEproc(arquivos) {
+  // 1. Recusar mais de um arquivo
+  if (arquivos.length !== 1) {
+    mostrarErro('Envie apenas um PDF de íntegra por vez.');
+    return;
+  }
+
+  const arquivo = arquivos[0];
+
+  // 2. Validar extensão
+  if (!arquivo.name.toLowerCase().endsWith('.pdf')) {
+    mostrarErro('Arquivo não é um PDF válido.');
+    return;
+  }
+
+  // Verificar tamanho
+  if (arquivo.size > MAX_PDF_SIZE) {
+    mostrarErro('Não foi possível processar este PDF no navegador. Tente uma íntegra menor ou divida o arquivo na origem.');
+    return;
+  }
+
+  // 3. Ler como ArrayBuffer
+  const arrayBuffer = await arquivo.arrayBuffer();
+
+  // 4. Validar assinatura %PDF
+  const header = new Uint8Array(arrayBuffer, 0, 5);
+  const isPdf = header[0] === 37 && header[1] === 80 && header[2] === 68 && header[3] === 70;
+  if (!isPdf) {
+    mostrarErro('Arquivo não é um PDF válido.');
+    return;
+  }
+
+  // 5. Preparar UI
+  resultados.length = 0;
+  modoResultados = modoAtual;
+  listaEl.textContent = '';
+  listaEl.classList.remove('oculto');
+  acoesEl.classList.add('oculto');
+
+  // Criar item de progresso
+  const item = criarItemLista(arquivo.name);
+  setStatus(item, 'processando', 'Lendo índice…');
+  setProgresso(item, 10);
+
+  // Criar área de log dentro do item
+  const logEl = document.createElement('div');
+  logEl.className = 'split-log';
+  item.appendChild(logEl);
+  _splitLogEl = logEl;
+
+  // Criar área de resumo de eventos
+  const resumoEl = document.createElement('div');
+  resumoEl.className = 'split-resumo';
+  item.appendChild(resumoEl);
+  _splitResumoEl = resumoEl;
+
+  // 6. Chamar splitEprocPdf
+  try {
+    const resultado = await splitEprocPdf(arrayBuffer, (progresso) => {
+      atualizarLogSplit(progresso);
+      if (progresso.percent) setProgresso(item, progresso.percent);
+      if (progresso.type === 'event') {
+        setStatus(item, 'processando', progresso.message);
+      } else if (progresso.type === 'ocr') {
+        setStatus(item, 'processando', 'OCR…');
+      } else if (progresso.type === 'zip') {
+        setStatus(item, 'processando', 'Empacotando…');
+      } else if (progresso.type === 'done') {
+        setStatus(item, 'ok', 'Concluído ✓');
+      }
+    }, arquivo.name);
+
+    setProgresso(item, 100, true);
+    setStatus(item, 'ok', `${resultado.eventos.length} peças extraídas ✓`);
+
+    // 7. Renderizar cards de eventos
+    renderizarCardsSplit(resultado);
+
+    // 8. Baixar ZIP automaticamente
+    const config = obterConfigModo(modoAtual);
+    baixarBlob(resultado.zip, 'application/zip', config.zipNome);
+
+    // 9. Armazenar resultado para rebaixar
+    resultados.push({
+      nome: config.zipNome,
+      bytes: resultado.zip,
+      mimeType: 'application/zip',
+      isZip: true
+    });
+
+    // 10. Configurar botão de rebaixar
+    acoesEl.classList.remove('oculto');
+    btnBaixarZip.textContent = config.botaoDownloadUm;
+    btnBaixarZip.disabled = false;
+
+  } catch (err) {
+    setProgresso(item, 100, false, true);
+
+    const msg = err.message || 'Erro ao processar o PDF.';
+
+    // Mapear erros conhecidos para mensagens amigáveis
+    if (msg.includes('marcadores') || msg.includes('outline') || msg.includes('índice')) {
+      setStatus(item, 'erro', 'PDF sem índice de eventos');
+      mostrarErro('Este PDF não possui índice de eventos. Use um PDF baixado pelo "Baixar Íntegra" do Eproc.');
+    } else if (msg.includes('eProc') || msg.includes('marcadores') || msg.includes('evento')) {
+      setStatus(item, 'erro', 'PDF sem eventos eProc');
+      mostrarErro('Este PDF não possui índice de eventos. Use um PDF baixado pelo "Baixar Íntegra" do Eproc.');
+    } else {
+      setStatus(item, 'erro', 'Erro ao processar');
+      mostrarErro(msg);
+    }
+    console.error('[SepararPecas]', err);
+  } finally {
+    _splitLogEl = null;
+    _splitResumoEl = null;
+  }
+}
 
 async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
   setStatus(item, 'processando', 'Processando…');
@@ -722,6 +928,11 @@ function baixarBlob(bytes, tipo, nome) {
 
 btnBaixarZip.addEventListener('click', async () => {
   const config = obterConfigModo(modoResultados);
+
+  if (resultados.length === 1 && resultados[0].isZip) {
+    baixarBlob(resultados[0].bytes, 'application/zip', resultados[0].nome);
+    return;
+  }
 
   if (resultados.length === 1) {
     baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
