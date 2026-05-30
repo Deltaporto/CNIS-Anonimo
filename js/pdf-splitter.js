@@ -95,6 +95,70 @@ function buildSingleDocumentEvent(filename, totalPages) {
   };
 }
 
+function normalizarTextoPagina(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim();
+}
+
+async function extractAllPageTexts(pdfDoc, totalPages, onProgress = () => {}) {
+  const texts = [];
+
+  for (let i = 0; i < totalPages; i++) {
+    const page = await pdfDoc.getPage(i + 1);
+    texts[i] = await extractPageText(page);
+
+    if (i === 0 || i === totalPages - 1 || (i + 1) % 10 === 0) {
+      onProgress({
+        type: 'scan',
+        message: `Lendo índice e separadores (${i + 1}/${totalPages})...`,
+        percent: Math.round(2 + ((i + 1) / totalPages) * 3)
+      });
+    }
+  }
+
+  return texts;
+}
+
+function stripSeparatorTitleNoise(title) {
+  return normalizarTextoPagina(title)
+    .replace(/^Procurador citado\/intimado:\s*Prazo:\s*Data inicial da contagem do prazo:\s*Data final:\s*/i, '')
+    .replace(/^Usuário\.?:\s*Processo:\s*Sequência Evento:\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseEventSeparatorFromText(text, pageIndex) {
+  const normalized = normalizarTextoPagina(text);
+  if (!normalized.includes('PÁGINA DE SEPARAÇÃO')) return null;
+  if (!/Sequência Evento:/i.test(normalized)) return null;
+  if (/\bTipo documento:\b/i.test(normalized) || /\bDocumento\s+\d+\b/i.test(normalized)) return null;
+
+  const sequenceMatches = [...normalized.matchAll(/\bEvento\s+(\d+)\b/gi)];
+  const lastSequence = sequenceMatches[sequenceMatches.length - 1];
+  if (!lastSequence) return null;
+
+  const titleMatch = normalized.match(/\bSequência Evento:\s*(.+?)\s+\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}/i);
+  const rawTitle = titleMatch ? titleMatch[1] : '';
+  const eventNumber = lastSequence[1];
+  const title = stripSeparatorTitleNoise(rawTitle) || `Evento ${eventNumber}`;
+
+  return {
+    title: `Evento. ${eventNumber} - ${title}`,
+    pageIndex,
+    source: 'separator'
+  };
+}
+
+function buildEventSeparatorsFromPageTexts(pageTexts) {
+  const separators = [];
+
+  for (let i = 0; i < pageTexts.length; i++) {
+    const separator = parseEventSeparatorFromText(pageTexts[i], i);
+    if (separator) separators.push(separator);
+  }
+
+  return separators;
+}
+
 function buildEventRanges(outlineItems, totalPages) {
   // Filtrar itens sem pageIndex
   const valid = outlineItems.filter(item => item.pageIndex !== null && item.pageIndex !== undefined);
@@ -482,15 +546,17 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
   const pdfDoc = await loadingTask.promise;
   const totalPages = pdfDoc.numPages;
+  const pageTextCache = await extractAllPageTexts(pdfDoc, totalPages, onProgress);
 
   // 2. Tentar ler índice do Eproc; fallback para documento único se não houver
   const outline = await pdfDoc.getOutline();
   const allItems = outline ? flattenOutline(outline) : [];
   const eprocItems = allItems.filter(item => isEprocEventTitle(item.title));
+  const separatorItems = buildEventSeparatorsFromPageTexts(pageTextCache);
 
   let eventos;
 
-  if (eprocItems.length > 0) {
+  if (eprocItems.length > 0 || separatorItems.length > 0) {
     // Caminho normal: íntegra do Eproc com índice de eventos
     const itemsWithPage = await Promise.all(
       eprocItems.map(async item => ({
@@ -498,7 +564,7 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
         pageIndex: await resolveOutlinePageIndex(pdfDoc, item)
       }))
     );
-    eventos = buildEventRanges(itemsWithPage, totalPages);
+    eventos = buildEventRanges([...itemsWithPage, ...separatorItems], totalPages);
     if (eventos.length > 0) {
       onProgress({
         type: 'outline',
@@ -549,7 +615,7 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
 
     for (let pi = evento.startPageIndex; pi < evento.endPageIndexExclusive; pi++) {
       const page = await pdfDoc.getPage(pi + 1); // pdfjs usa 1-based
-      const text = await extractPageText(page);
+      const text = pageTextCache[pi] !== undefined ? pageTextCache[pi] : await extractPageText(page);
 
       if (pageNeedsOcr(text)) {
         const loaded = await ensureTesseractLoaded(onProgress);

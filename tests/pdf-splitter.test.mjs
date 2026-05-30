@@ -29,6 +29,8 @@ async function loadPdfSplitterApi() {
       sanitizeFilename,
       inferProcessNumber,
       buildSingleDocumentEvent,
+      parseEventSeparatorFromText,
+      buildEventSeparatorsFromPageTexts,
       buildEventRanges,
       pageNeedsOcr,
       aplicarParesNoTexto,
@@ -274,6 +276,48 @@ test('buildEventRanges: filename gerado corretamente', () => {
   const ranges = api.buildEventRanges(items, 5);
   assert.ok(ranges[0].filename.endsWith('.md'));
   assert.match(ranges[0].filename, /^[a-zA-Z0-9_.\-]+\.md$/);
+});
+
+// ── páginas de separação de evento ───────────────────────────────────────────
+
+test('parseEventSeparatorFromText: detecta evento sem documento', () => {
+  const text = 'PÁGINA DE SEPARAÇÃO (Gerada automaticamente pelo sistema.) Evento: Data: Usuário.: Processo: Sequência Evento: AUTOS INCLUÍDOS NO JUÍZO 100% DIGITAL 12/12/2025 15:31:52 RJ169312 - USUARIO 5002849-72.2025.4.02.5113 2 Evento 2';
+  const result = api.parseEventSeparatorFromText(text, 92);
+  assert.equal(result.pageIndex, 92);
+  assert.equal(result.title, 'Evento. 2 - AUTOS INCLUÍDOS NO JUÍZO 100% DIGITAL');
+});
+
+test('parseEventSeparatorFromText: remove rótulos extras de intimação', () => {
+  const text = 'PÁGINA DE SEPARAÇÃO (Gerada automaticamente pelo sistema.) Evento: Data: Usuário.: Processo: Sequência Evento: Procurador citado/intimado: Prazo: Data inicial da contagem do prazo: Data final: EXPEDIDA/CERTIFICADA A INTIMAÇÃO ELETRÔNICA 08/01/2026 17:09:09 JRJ13179 - USUARIO 5002849-72.2025.4.02.5113 6 NOME 10 dias 23/01/2026 00:00:00 05/02/2026 23:59:59 Evento 6';
+  const result = api.parseEventSeparatorFromText(text, 102);
+  assert.equal(result.title, 'Evento. 6 - EXPEDIDA/CERTIFICADA A INTIMAÇÃO ELETRÔNICA');
+});
+
+test('parseEventSeparatorFromText: ignora separador de documento', () => {
+  const text = 'PÁGINA DE SEPARAÇÃO Tipo documento: Evento: Data: Usuário: Processo: Sequência Evento: SENTENÇA EXTINTO O PROCESSO 08/01/2026 17:09:08 5002849-72.2025.4.02.5113 5 Documento 1';
+  assert.equal(api.parseEventSeparatorFromText(text, 99), null);
+});
+
+test('buildEventRanges: separadores de evento quebram documento anterior', () => {
+  const items = [
+    { title: 'Evento. 1 - Doc. 19 - TERMO DE RENÚNCIA', pageIndex: 91 },
+    { title: 'Evento. 2 - AUTOS INCLUÍDOS NO JUÍZO 100% DIGITAL', pageIndex: 92, source: 'separator' },
+    { title: 'Evento. 3 - JUNTADA DE CERTIDÃO', pageIndex: 93, source: 'separator' },
+    { title: 'Evento. 3 - Doc. 1 - CERTIDÃO', pageIndex: 94 }
+  ];
+  const ranges = api.buildEventRanges(items, 100);
+  assert.equal(ranges.length, 4);
+  assert.equal(ranges[0].title, 'Evento. 1 - Doc. 19 - TERMO DE RENÚNCIA');
+  assert.equal(ranges[0].startPageLabel, 92);
+  assert.equal(ranges[0].endPageLabel, 92);
+  assert.equal(ranges[1].title, 'Evento. 2 - AUTOS INCLUÍDOS NO JUÍZO 100% DIGITAL');
+  assert.equal(ranges[1].startPageLabel, 93);
+  assert.equal(ranges[1].endPageLabel, 93);
+  assert.equal(ranges[2].title, 'Evento. 3 - JUNTADA DE CERTIDÃO');
+  assert.equal(ranges[2].startPageLabel, 94);
+  assert.equal(ranges[2].endPageLabel, 94);
+  assert.equal(ranges[3].title, 'Evento. 3 - Doc. 1 - CERTIDÃO');
+  assert.equal(ranges[3].startPageLabel, 95);
 });
 
 // ── pageNeedsOcr ──────────────────────────────────────────────────────────────
