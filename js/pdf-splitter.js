@@ -128,16 +128,25 @@ async function renderPageToCanvas(page) {
   return canvas;
 }
 
-async function ensureTesseractLoaded() {
-  if (typeof window !== 'undefined' && window.Tesseract) return;
+async function ensureTesseractLoaded(onProgress = () => {}) {
+  if (typeof window !== 'undefined' && window.Tesseract) return true;
 
-  await new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-    script.onload = resolve;
-    script.onerror = () => reject(new Error('Falha ao carregar Tesseract.js'));
-    document.head.appendChild(script);
-  });
+  try {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('Falha ao carregar Tesseract.js'));
+      document.head.appendChild(script);
+    });
+    return true;
+  } catch (err) {
+    onProgress({
+      type: 'warn',
+      message: 'OCR indisponível: não foi possível carregar Tesseract.js (' + err.message + ')'
+    });
+    return false;
+  }
 }
 
 async function initOcrWorker() {
@@ -147,9 +156,14 @@ async function initOcrWorker() {
 }
 
 async function ocrFromCanvas(canvas) {
-  const worker = await initOcrWorker();
-  const result = await worker.recognize(canvas);
-  return result.data.text;
+  try {
+    const worker = await initOcrWorker();
+    const result = await worker.recognize(canvas);
+    return result.data.text;
+  } catch (err) {
+    console.warn('[pdf-splitter] ocrFromCanvas falhou:', err.message);
+    return '';
+  }
 }
 
 function inferProcessNumber(filename) {
@@ -202,7 +216,7 @@ async function buildZip(processNumber, eventos, pagesData) {
 
 // ── Função principal ──────────────────────────────────────────────────────────
 
-async function splitEprocPdf(arrayBuffer, onProgress = () => {}) {
+async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '') {
   // 1. Carregar PDF
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
   const pdfDoc = await loadingTask.promise;
@@ -281,7 +295,7 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}) {
           pageTotal: totalPages
         });
 
-        await ensureTesseractLoaded();
+        await ensureTesseractLoaded(onProgress);
         const canvas = await renderPageToCanvas(page);
         const ocrText = await ocrFromCanvas(canvas);
         pageTexts.push(ocrText);
@@ -314,8 +328,8 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}) {
     percent: 92
   });
 
-  // Inferir número do processo (não temos o filename aqui, usar título do primeiro evento ou padrão)
-  const processNumber = 'Processo';
+  // Inferir número do processo a partir do nome do arquivo
+  const processNumber = inferProcessNumber(filename);
 
   const zip = await buildZip(processNumber, eventos, pagesData);
 
@@ -324,6 +338,11 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}) {
     message: 'Concluído!',
     percent: 100
   });
+
+  // O worker OCR é mantido vivo em _ocrWorker para reuso na mesma sessão do browser,
+  // evitando o custo de reinicialização do Tesseract a cada PDF. O chamador pode
+  // invocar splitEprocPdf múltiplas vezes sem pagar o overhead de inicialização
+  // repetida. O browser libera o worker ao fechar/recarregar a página.
 
   return { zip, eventos, ocrCount, totalPages };
 }
