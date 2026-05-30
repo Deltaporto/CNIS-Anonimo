@@ -127,6 +127,10 @@ test('isEprocEventTitle: CAPA maiúsculo → true', () => {
   assert.equal(api.isEprocEventTitle('CAPA'), true);
 });
 
+test('isEprocEventTitle: CAPA DO PROCESSO → true', () => {
+  assert.equal(api.isEprocEventTitle('CAPA DO PROCESSO'), true);
+});
+
 test('isEprocEventTitle: capa minúsculo → true', () => {
   assert.equal(api.isEprocEventTitle('capa'), true);
 });

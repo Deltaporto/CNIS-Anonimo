@@ -22,7 +22,7 @@ function flattenOutline(items) {
 
 function isEprocEventTitle(title) {
   if (!title) return false;
-  if (/^capa$/i.test(title.trim())) return true;
+  if (/^capa/i.test(title.trim())) return true;
   return title.startsWith('Evento.');
 }
 
