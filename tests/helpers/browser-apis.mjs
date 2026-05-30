@@ -5,7 +5,23 @@ import pako from 'pako';
 const pdfjsBase = await import('pdfjs-dist/legacy/build/pdf.mjs');
 
 const ROOT_URL = new URL('../../', import.meta.url);
-const PROJECT_ROOT_URL = new URL('../../../../../', import.meta.url);
+async function resolveProjectRootUrl() {
+  const candidates = [
+    ROOT_URL,
+    new URL('../../../../../', import.meta.url)
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      await fs.access(new URL('teste/', candidate));
+      return candidate;
+    } catch {}
+  }
+
+  return ROOT_URL;
+}
+
+const PROJECT_ROOT_URL = await resolveProjectRootUrl();
 const CNIS_FIXTURES_URL = new URL('teste/', PROJECT_ROOT_URL);
 const CARTA_CONCESSAO_FIXTURES_URL = new URL('teste-carta-de-concessao/', CNIS_FIXTURES_URL);
 const STANDARD_FONT_DATA_URL = new URL('node_modules/pdfjs-dist/standard_fonts/', PROJECT_ROOT_URL).href;
