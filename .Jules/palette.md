@@ -17,6 +17,7 @@
 ## 2024-05-24 - Semantic Headings and Text Truncation Tooltips
 **Learning:** The application lacked semantic headings (`<h1>`, `<h2>`), which severely impacts screen reader navigation. Furthermore, dynamically generated values in grid columns use CSS text truncation (`text-overflow: ellipsis`), which hides full data from all users.
 **Action:** Always map structural elements that act as visual headings to native heading tags (`<h1>`-`<h6>`) to establish a proper document outline. When using `text-overflow: ellipsis` on dynamic data, always bind the element's `title` attribute to the full text to ensure accessibility via hover tooltips.
+
 ## 2024-05-24 - Restore native list accessibility to generic generic DOM containers
 **Learning:** When using generic `<div>` tags to render dynamic lists, the screen reader loses all context about the list structure and the total number of items, causing a degraded experience.
 **Action:** Always add `role="list"` to the parent container element and `role="listitem"` to every generated child element. This simple semantic addition restores the expected behavior for assistive technologies without requiring structural HTML changes.
@@ -24,9 +25,11 @@
 ## 2024-05-24 - Incorrect ARIA attributes on tab buttons
 **Learning:** Elements using `role="tab"` should use the `aria-selected` attribute to indicate their active state, not `aria-pressed` (which is reserved for toggle buttons).
 **Action:** Remove `aria-pressed` from `role="tab"` elements and strictly use `aria-selected` for tab components to prevent incorrect semantics being announced by screen readers.
+
 ## 2024-05-24 - Dynamic Action Labels for Batch Operations
 **Learning:** Using static batch action labels (e.g., "Download all (ZIP)") when only a single item is processed creates cognitive friction. Users expect the UI to reflect the actual outcome (a single file).
 **Action:** Dynamically update batch action buttons to reflect singular outcomes when the result set contains only one item.
+
 ## 2025-02-14 - Improve contrast ratio for Aguardando status pill
 **Learning:** Light gray text (`#64748b`) on light gray backgrounds (`#f1f5f9`) frequently fails WCAG AA contrast guidelines for small text.
 **Action:** Use darker grays (e.g., `#475569`) to ensure accessible contrast ratios (> 4.5:1) for status indicators and badges.
@@ -38,3 +41,11 @@
 ## 2025-02-14 - Improve accessibility of tabular data rendered with generic elements
 **Learning:** The application renders dynamic grid-based tables (for summarizing redactions) using generic `<div>` and `<span>` elements. Screen readers treat these as flat text, making it extremely difficult to associate "Campo" with its corresponding "Original" and "Substituído" values.
 **Action:** Add explicit ARIA table roles (`role="table"`, `role="row"`, `role="columnheader"`, `role="cell"`) to generic elements that visually function as data grids, restoring proper tabular navigation for assistive technologies.
+
+## 2026-05-31 - Avoid aria-live on interactive controls
+**Learning:** Applying `aria-live` directly to interactive controls like a `<button>` is an accessibility anti-pattern that can cause confusing or double-announcing behavior in screen readers, and actively harms accessibility.
+**Action:** Do not use `aria-live` on interactive controls. It should be used on live regions (like status message containers) to announce dynamic content changes.
+
+## 2026-05-31 - Disabled button UX improvement
+**Learning:** A disabled action button without context can leave users confused about why they cannot proceed.
+**Action:** Add a helpful `title` tooltip to disabled buttons explaining the blocking condition, and use `cursor: not-allowed` in CSS to provide immediate visual feedback that the element is unclickable.
