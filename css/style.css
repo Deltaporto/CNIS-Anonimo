@@ -391,7 +391,7 @@ main {
   outline-offset: 2px;
 }
 .btn:active { transform: scale(.98); }
-.btn:disabled { opacity: .35; cursor: default; }
+.btn:disabled { opacity: .35; cursor: not-allowed; }
 .btn-primario  {
   background: var(--navy);
   color: #fff;
