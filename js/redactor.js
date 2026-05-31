@@ -115,10 +115,21 @@ function _globalizar(pattern, flagsExtras) {
   return new RegExp(pattern.source, flags);
 }
 
+const _paresSeen = new WeakMap();
+
 function _adicionarParUnico(pares, original, substituto) {
   if (!original || !substituto) return;
   if (original.length !== substituto.length) return;
-  if (pares.some(p => p.original === original)) return;
+
+  // ⚡ Bolt: Fast O(1) lookup using WeakMap to prevent O(N^2) scaling without mutating the array
+  let seen = _paresSeen.get(pares);
+  if (!seen) {
+    seen = new Set(pares.map(p => p.original));
+    _paresSeen.set(pares, seen);
+  }
+
+  if (seen.has(original)) return;
+  seen.add(original);
   pares.push({ original, substituto });
 }
 
