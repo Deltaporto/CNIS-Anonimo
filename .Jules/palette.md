@@ -49,3 +49,7 @@
 ## 2026-05-31 - Disabled button UX improvement
 **Learning:** A disabled action button without context can leave users confused about why they cannot proceed.
 **Action:** Add a helpful `title` tooltip to disabled buttons explaining the blocking condition, and use `cursor: not-allowed` in CSS to provide immediate visual feedback that the element is unclickable.
+
+## 2026-06-01 - Accessible Keyboard Shortcuts
+**Learning:** Visual keyboard shortcuts (like `<kbd>Esc</kbd>`) appended to button text are read aloud by screen readers (e.g., 'Limpar e recomeçar Esc'), which creates a confusing auditory experience.
+**Action:** When adding visual keyboard shortcuts, always apply `aria-hidden="true"` to the `<kbd>` element to hide the text from screen readers, and add the standard `aria-keyshortcuts` attribute to the parent interactive element to correctly and natively expose the binding to assistive technologies.

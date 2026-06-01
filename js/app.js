@@ -750,6 +750,12 @@ btnLimpar.addEventListener('click', () => {
   zonaUpload.focus();
 });
 
+window.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !acoesEl.classList.contains('oculto')) {
+    btnLimpar.click();
+  }
+});
+
 // ── TOAST ──────────────────────────────────────────────────────────────────────
 function mostrarToast(mensagem) {
   let toastContainer = document.getElementById('toast-container');
