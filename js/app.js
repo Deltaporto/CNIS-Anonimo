@@ -35,9 +35,9 @@ const MODOS_DOCUMENTO = {
     id: 'extrair-pecas',
     prefixoArquivo: 'Processo',
     zipNome: 'Pecas_do_processo.zip',
-    uploadTitulo: 'Arraste a íntegra do processo (Eproc)',
-    uploadSub: 'Preferencial: no Eproc, abra a árvore do processo, marque todos, use Versão p/ impressão e selecione o separador Ambos (Evento e Documento). clique para selecionar',
-    ariaLabel: 'Selecionar PDF da íntegra do processo para extrair as peças em texto',
+    uploadTitulo: 'Arraste a íntegra do processo (Eproc) — extração em teste',
+    uploadSub: 'Modelo de extração em teste. Preferencial: no Eproc, abra a árvore do processo, marque todos, use Versão p/ impressão e selecione o separador Ambos (Evento e Documento). clique para selecionar',
+    ariaLabel: 'Selecionar PDF da íntegra do processo para testar a extração das peças em texto',
     botaoDownloadUm: 'Baixar peças extraídas novamente',
     botaoDownloadVarios: 'Baixar peças extraídas novamente',
     isSplit: true
