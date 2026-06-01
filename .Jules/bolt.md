@@ -16,3 +16,6 @@
 ## 2024-05-31 - Optimize array duplication check safely
 **Learning:** Attaching hidden properties (like `Object.defineProperty(arr, '_seen', ...)`) to Array instances to implement O(1) lookups is a dangerous anti-pattern that can lead to out-of-sync state if the array is modified externally or cleared.
 **Action:** Use a module-scoped `WeakMap` keyed by the array instance to cache the `Set`. This achieves the same O(1) time complexity while keeping the array object clean and ensuring the cache is properly garbage-collected when the array goes out of scope.
+## 2024-06-01 - String Concatenation vs Array.join
+**Learning:** Pre-allocating an Array and using `.join("")` in a tight loop is surprisingly ~2-3x slower than simple string concatenation (`+=`) in modern V8. Although the codebase notes it as a "Performance optimization: Avoid intermediate byte array allocation", string concatenation avoids object allocation entirely and is faster.
+**Action:** Use standard string concatenation for building strings character-by-character in hot paths rather than array joining.
