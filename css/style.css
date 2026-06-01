@@ -164,21 +164,6 @@ main {
   color: #2e7d32;
 }
 
-.modo-badge-teste {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: #fff3e0;
-  color: #b45309;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1.2;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  vertical-align: middle;
-}
-
 body[data-modo="extrair-pecas"] .zona-upload {
   border-color: #4caf50;
 }
