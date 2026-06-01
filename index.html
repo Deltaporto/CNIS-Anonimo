@@ -90,6 +90,35 @@
       </label>
     </fieldset>
 
+    <fieldset class="saida-extrair ocr-extrair" aria-label="Reconhecimento de páginas sem texto">
+      <legend>Páginas sem texto</legend>
+      <label class="saida-opcao saida-opcao-ativa" for="ocr-ligado">
+        <input type="radio" id="ocr-ligado" name="ocr-modo" value="ligado" checked />
+        <span>
+          <strong>Usar OCR</strong>
+          <small>Mais completo para páginas escaneadas, mas pode demorar mais</small>
+        </span>
+      </label>
+      <label class="saida-opcao" for="ocr-desligado">
+        <input type="radio" id="ocr-desligado" name="ocr-modo" value="desligado" />
+        <span>
+          <strong>Sem OCR</strong>
+          <small>Mais rápido; páginas sem texto podem sair apenas como aviso ou ser omitidas</small>
+        </span>
+      </label>
+
+      <div id="opcoes-sem-ocr" class="opcoes-sem-ocr" aria-label="O que fazer sem OCR">
+        <label for="sem-ocr-manter">
+          <input type="radio" id="sem-ocr-manter" name="sem-ocr-paginas" value="manter-aviso" checked />
+          <span>Manter aviso no Markdown</span>
+        </label>
+        <label for="sem-ocr-omitir">
+          <input type="radio" id="sem-ocr-omitir" name="sem-ocr-paginas" value="omitir" />
+          <span>Omitir páginas sem texto</span>
+        </label>
+      </div>
+    </fieldset>
+
     <details class="como-funciona">
       <summary>Como funciona?</summary>
       <div class="como-funciona-corpo">
@@ -99,7 +128,7 @@
           <li><strong>Markdown anonimizado</strong> — é o padrão. O número do processo é preservado, e dados sensíveis detectáveis são substituídos antes de montar os arquivos de texto</li>
           <li><strong>Download Completo</strong> — use só como alternativa. Em processos grandes, o Eproc pode dividir em partes ou entregar um ZIP; se isso acontecer, extraia o ZIP e processe cada PDF PARTE na ordem</li>
           <li><strong>Qualquer outro PDF</strong> — quando não houver índice de eventos, o texto completo é extraído como documento único</li>
-          <li><strong>Páginas escaneadas ou com imagens</strong> — o texto é reconhecido automaticamente (OCR). Pode demorar alguns segundos por página; o navegador baixa o leitor de imagens na primeira vez que for necessário</li>
+          <li><strong>Páginas escaneadas ou com imagens</strong> — com OCR ligado, o texto é reconhecido automaticamente. Com OCR desligado, a extração é mais rápida e as páginas sem texto podem ficar marcadas no Markdown ou ser omitidas</li>
           <li><strong>O que você recebe</strong> — arquivo ZIP com textos pesquisáveis e copiáveis, prontos para usar em minutas, resumos ou pesquisa</li>
         </ul>
         <p class="info-privacidade">O PDF fica no seu computador. Nenhum dado é enviado para servidores.</p>

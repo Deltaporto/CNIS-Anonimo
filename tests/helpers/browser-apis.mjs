@@ -160,6 +160,7 @@ export async function loadAppApi() {
       construirParesSubstituicao,
       coletarObservacoes,
       obterSplitAnonimizarMarkdown,
+      obterSplitOcrOptions,
       obterConfigModo
     };
   `)({

@@ -249,6 +249,40 @@ body[data-modo="extrair-pecas"] .upload-sub strong {
   line-height: 1.35;
 }
 
+.ocr-extrair {
+  margin-bottom: 10px;
+}
+
+.opcoes-sem-ocr {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #fed7aa;
+  border-radius: var(--radius-sm);
+  background: #fff7ed;
+  color: #7c2d12;
+  font-size: 12px;
+  transition: opacity .18s;
+}
+
+.opcoes-sem-ocr label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  cursor: pointer;
+}
+
+.opcoes-sem-ocr input {
+  accent-color: #c2410c;
+}
+
+body[data-ocr-modo="ligado"] .opcoes-sem-ocr {
+  opacity: .56;
+}
+
 .como-funciona summary {
   cursor: pointer;
   color: #2e7d32;

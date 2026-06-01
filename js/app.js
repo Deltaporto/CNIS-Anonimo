@@ -58,6 +58,8 @@ const uploadTituloEl = document.getElementById('upload-titulo');
 const uploadSubEl = document.getElementById('upload-sub');
 const infoExtrairEl = document.getElementById('info-extrair');
 const saidaMdRadios = document.querySelectorAll('input[name="saida-md"]');
+const ocrModoRadios = document.querySelectorAll('input[name="ocr-modo"]');
+const semOcrPaginasRadios = document.querySelectorAll('input[name="sem-ocr-paginas"]');
 
 let resultados = [];
 let modoAtual = 'cnis';
@@ -72,7 +74,16 @@ function obterSplitAnonimizarMarkdown() {
   return !selecionado || selecionado.value !== 'fiel';
 }
 
-function atualizarSaidaMdUI() {
+function obterSplitOcrOptions() {
+  const ocrSelecionado = document.querySelector('input[name="ocr-modo"]:checked');
+  const semOcrSelecionado = document.querySelector('input[name="sem-ocr-paginas"]:checked');
+  return {
+    enableOcr: !ocrSelecionado || ocrSelecionado.value !== 'desligado',
+    missingTextMode: semOcrSelecionado?.value === 'omitir' ? 'omit' : 'placeholder'
+  };
+}
+
+function atualizarOpcoesExtrairUI() {
   const anonimizado = obterSplitAnonimizarMarkdown();
   for (const radio of saidaMdRadios || []) {
     const label = radio.closest ? radio.closest('.saida-opcao') : null;
@@ -83,12 +94,26 @@ function atualizarSaidaMdUI() {
   if (document.body?.dataset) {
     document.body.dataset.saidaMd = anonimizado ? 'anonimizado' : 'fiel';
   }
+
+  const ocrOptions = obterSplitOcrOptions();
+  for (const radio of ocrModoRadios || []) {
+    const label = radio.closest ? radio.closest('.saida-opcao') : null;
+    if (label?.classList) {
+      label.classList.toggle('saida-opcao-ativa', radio.checked);
+    }
+  }
+  for (const radio of semOcrPaginasRadios || []) {
+    radio.disabled = ocrOptions.enableOcr;
+  }
+  if (document.body?.dataset) {
+    document.body.dataset.ocrModo = ocrOptions.enableOcr ? 'ligado' : 'desligado';
+  }
 }
 
 function atualizarModoUI() {
   const config = obterConfigModo(modoAtual);
   if (document.body?.dataset) document.body.dataset.modo = modoAtual;
-  atualizarSaidaMdUI();
+  atualizarOpcoesExtrairUI();
 
   if (uploadTituloEl) uploadTituloEl.textContent = config.uploadTitulo;
   if (uploadSubEl) {
@@ -166,7 +191,13 @@ btnModoCarta?.addEventListener('click', () => trocarModo('carta-concessao'));
 btnModoProcesso?.addEventListener('click', () => trocarModo('processo-judicial'));
 btnModoExtrair?.addEventListener('click', () => trocarModo('extrair-pecas'));
 for (const radio of saidaMdRadios || []) {
-  radio.addEventListener('change', atualizarSaidaMdUI);
+  radio.addEventListener('change', atualizarOpcoesExtrairUI);
+}
+for (const radio of ocrModoRadios || []) {
+  radio.addEventListener('change', atualizarOpcoesExtrairUI);
+}
+for (const radio of semOcrPaginasRadios || []) {
+  radio.addEventListener('change', atualizarOpcoesExtrairUI);
 }
 
 const tablist = document.querySelector('.modo-selector');
@@ -394,6 +425,20 @@ function renderizarCardsSplit(resultado) {
     _splitResumoEl.appendChild(avisoFalha);
   }
 
+  if (resultado.ocrSkippedCount > 0) {
+    const avisoSemOcr = document.createElement('p');
+    avisoSemOcr.className = 'aviso-ocr';
+    avisoSemOcr.textContent = `${resultado.ocrSkippedCount} página(s) sem texto não passaram por OCR. Revise os avisos no Markdown.`;
+    _splitResumoEl.appendChild(avisoSemOcr);
+  }
+
+  if (resultado.omittedPageCount > 0) {
+    const avisoOmitidas = document.createElement('p');
+    avisoOmitidas.className = 'aviso-ocr';
+    avisoOmitidas.textContent = `${resultado.omittedPageCount} página(s) sem texto foram omitidas do Markdown porque o OCR estava desligado.`;
+    _splitResumoEl.appendChild(avisoOmitidas);
+  }
+
   for (const evento of resultado.eventos) {
     const card = document.createElement('div');
     card.className = 'evento-card' + (evento.ocr ? ' evento-card-ocr' : '');
@@ -474,6 +519,7 @@ async function iniciarSplitEproc(arquivos) {
   // 6. Chamar splitEprocPdf
   try {
     const anonimizarMarkdown = obterSplitAnonimizarMarkdown();
+    const ocrOptions = obterSplitOcrOptions();
     if (anonimizarMarkdown && typeof inicializarRedactorPadrao === 'function') {
       setStatus(item, 'processando', 'Carregando anonimizador');
       setDetalheProcessamento(item, 'Preparando dicionário local de nomes');
@@ -497,7 +543,11 @@ async function iniciarSplitEproc(arquivos) {
       } else if (progresso.type === 'done') {
         setStatus(item, 'ok', 'Concluído ✓');
       }
-    }, arquivo.name, { anonymizeMarkdown: anonimizarMarkdown });
+    }, arquivo.name, {
+      anonymizeMarkdown: anonimizarMarkdown,
+      enableOcr: ocrOptions.enableOcr,
+      missingTextMode: ocrOptions.missingTextMode
+    });
 
     setProgresso(item, 100, true);
     setStatus(item, 'ok', `${formatarPecasExtraidas(resultado.eventos.length)} ✓`);

@@ -79,6 +79,13 @@ test('modo extrair-pecas: Markdown anonimizado é padrão quando não há rádio
   assert.equal(appApi.obterSplitAnonimizarMarkdown(), true);
 });
 
+test('modo extrair-pecas: OCR ligado e aviso para páginas sem texto são padrão', () => {
+  assert.deepEqual(appApi.obterSplitOcrOptions(), {
+    enableOcr: true,
+    missingTextMode: 'placeholder'
+  });
+});
+
 test('modo extrair-pecas: nome do ZIP deixa claro se Markdown está anonimizado ou fiel', () => {
   const resultado = { processNumber: '5002849-72.2025.4.02.5113' };
   assert.equal(

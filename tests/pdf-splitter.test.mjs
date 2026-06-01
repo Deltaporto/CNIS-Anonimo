@@ -37,7 +37,8 @@ async function loadPdfSplitterApi() {
       anonimizarMarkdownExtraido,
       buildRedactionReport,
       buildMarkdownForEvent,
-      buildIndexMarkdown
+      buildIndexMarkdown,
+      normalizeMissingTextMode
     };
   `)({
     pdfjsLib: mockPdfjsLib,
@@ -547,6 +548,36 @@ test('buildIndexMarkdown: marca eventos com OCR', () => {
   }];
   const result = api.buildIndexMarkdown('Processo', eventos);
   assert.ok(result.includes('*(OCR)*'));
+});
+
+test('normalizeMissingTextMode: só omit ativa omissão de páginas sem texto', () => {
+  assert.equal(api.normalizeMissingTextMode('omit'), 'omit');
+  assert.equal(api.normalizeMissingTextMode('placeholder'), 'placeholder');
+  assert.equal(api.normalizeMissingTextMode(undefined), 'placeholder');
+});
+
+test('buildMarkdownForEvent: mantém aviso para página sem texto quando não há OCR', () => {
+  const evento = {
+    title: 'Evento 1',
+    startPageLabel: 10,
+    endPageLabel: 11
+  };
+  const result = api.buildMarkdownForEvent(evento, ['Texto extraído', '']);
+
+  assert.ok(result.includes('Texto extraído'));
+  assert.ok(result.includes('[Texto não extraído da página 11.]'));
+});
+
+test('buildMarkdownForEvent: omite páginas sem texto quando marcado como null', () => {
+  const evento = {
+    title: 'Evento 1',
+    startPageLabel: 10,
+    endPageLabel: 11
+  };
+  const result = api.buildMarkdownForEvent(evento, ['Texto extraído', null]);
+
+  assert.ok(result.includes('Texto extraído'));
+  assert.ok(!result.includes('Texto não extraído da página 11'));
 });
 
 // ── fallback documento único ──────────────────────────────────────────────────

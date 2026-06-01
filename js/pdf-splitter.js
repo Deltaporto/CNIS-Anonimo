@@ -366,6 +366,10 @@ function buildPageTextFallback(evento, index) {
   return `[Texto não extraído da página ${evento.startPageLabel + index}.]`;
 }
 
+function normalizeMissingTextMode(value) {
+  return value === 'omit' ? 'omit' : 'placeholder';
+}
+
 function getMarkdownRedactor() {
   const mapper = typeof mapearSubstitutos === 'function' ? mapearSubstitutos : null;
   const counter = typeof contarAchados === 'function' ? contarAchados : null;
@@ -418,8 +422,11 @@ function buildRedactionReport(processNumber, eventos, summary) {
     `- Modo: Markdown anonimizado`,
     `- Processo: ${processNumber && processNumber !== 'Processo' ? processNumber : 'não identificado'}`,
     `- Peças extraídas: ${eventos.length}`,
+    `- OCR: ${summary.ocrEnabled === false ? 'desligado' : 'ligado'}`,
     `- Páginas com OCR: ${summary.ocrCount || 0}`,
     `- Páginas sem texto extraído: ${summary.ocrFailCount || 0}`,
+    `- Páginas sem OCR por opção do usuário: ${summary.ocrSkippedCount || 0}`,
+    `- Páginas omitidas do Markdown: ${summary.omittedPageCount || 0}`,
     `- Substituições textuais mapeadas: ${summary.replacementCount || 0}`,
     `- Resíduos sensíveis detectáveis após anonimização: ${summary.residualSensitiveCount || 0}`,
     '',
@@ -469,13 +476,13 @@ function anonimizarMarkdownExtraido(pagesData, eventos, options = {}) {
   }
 
   const originalText = pagesData
-    .flatMap(({ pageTexts }) => pageTexts)
+    .flatMap(({ pageTexts }) => pageTexts.filter(text => text !== null))
     .join('\n');
   const pares = redactor.mapearSubstitutos(originalText);
   const achadosAntes = redactor.contarAchados(originalText);
 
   for (const item of pagesData) {
-    item.pageTexts = item.pageTexts.map(text => aplicarParesNoTexto(text, pares));
+    item.pageTexts = item.pageTexts.map(text => text === null ? null : aplicarParesNoTexto(text, pares));
   }
 
   for (const evento of eventos) {
@@ -485,7 +492,7 @@ function anonimizarMarkdownExtraido(pagesData, eventos, options = {}) {
   buildUniqueEventFilenames(eventos);
 
   const redactedText = pagesData
-    .flatMap(({ pageTexts }) => pageTexts)
+    .flatMap(({ pageTexts }) => pageTexts.filter(text => text !== null))
     .join('\n');
   const achadosDepois = redactor.contarAchados(redactedText);
 
@@ -501,9 +508,15 @@ function anonimizarMarkdownExtraido(pagesData, eventos, options = {}) {
 
 function buildMarkdownForEvent(evento, pageTexts) {
   const header = `# ${evento.title}\n\n<!-- páginas ${evento.startPageLabel}-${evento.endPageLabel} do PDF original -->\n\n`;
-  const body = pageTexts
-    .map((text, index) => text && text.trim() ? text : buildPageTextFallback(evento, index))
-    .join('\n\n---\n\n');
+  const blocks = pageTexts
+    .map((text, index) => {
+      if (text === null) return null;
+      return text && text.trim() ? text : buildPageTextFallback(evento, index);
+    })
+    .filter(text => text !== null);
+  const body = blocks.length
+    ? blocks.join('\n\n---\n\n')
+    : '[Todas as páginas sem texto extraível foram omitidas.]';
   return header + body + '\n\n---\n';
 }
 
@@ -607,6 +620,10 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
   const pagesData = [];
   let ocrCount = 0;
   let ocrFailCount = 0;
+  let ocrSkippedCount = 0;
+  let omittedPageCount = 0;
+  const enableOcr = options.enableOcr !== false;
+  const missingTextMode = normalizeMissingTextMode(options.missingTextMode);
   const totalEventPages = eventos.reduce((sum, ev) => sum + ev.pageCount, 0);
   let processedPages = 0;
 
@@ -630,6 +647,24 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
       const text = pageTextCache[pi] !== undefined ? pageTextCache[pi] : await extractPageText(page);
 
       if (pageNeedsOcr(text)) {
+        if (!enableOcr) {
+          onProgress({
+            type: 'warning',
+            message: `Página ${pi + 1} sem texto extraível; OCR desligado`,
+            percent: Math.round(5 + (processedPages / totalEventPages) * 85)
+          });
+          if (missingTextMode === 'omit') {
+            pageTexts.push(null);
+            omittedPageCount++;
+          } else {
+            pageTexts.push('');
+          }
+          ocrFlags.push(false);
+          ocrSkippedCount++;
+          processedPages++;
+          continue;
+        }
+
         const loaded = await ensureTesseractLoaded(onProgress);
 
         if (loaded) {
@@ -707,6 +742,9 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
   });
   redactionSummary.ocrCount = ocrCount;
   redactionSummary.ocrFailCount = ocrFailCount;
+  redactionSummary.ocrSkippedCount = ocrSkippedCount;
+  redactionSummary.omittedPageCount = omittedPageCount;
+  redactionSummary.ocrEnabled = enableOcr;
 
   const zip = await buildZip(processNumber, eventos, pagesData, redactionSummary);
 
@@ -721,5 +759,5 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
   // invocar splitEprocPdf múltiplas vezes sem pagar o overhead de inicialização
   // repetida. O browser libera o worker ao fechar/recarregar a página.
 
-  return { zip, eventos, ocrCount, ocrFailCount, totalPages, processNumber, redactionSummary };
+  return { zip, eventos, ocrCount, ocrFailCount, ocrSkippedCount, omittedPageCount, totalPages, processNumber, redactionSummary };
 }
