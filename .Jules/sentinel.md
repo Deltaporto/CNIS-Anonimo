@@ -10,3 +10,7 @@
 **Vulnerability:** Weak random number generator for fake data.
 **Learning:** `crypto.getRandomValues(new Uint32Array(1))[0] % max` introduced modulo bias where smaller numbers would occur slightly more often than larger numbers, because `4294967296` is not divisible by the provided `max` value.
 **Prevention:** Implement rejection sampling by ignoring any random value generated that's above the highest possible unbiased multiple of `max`.
+## 2025-02-18 - [Arbitrary Code Execution via PDF.js in PDF Splitter]
+**Vulnerability:** Arbitrary JavaScript execution (CVE-2024-4367) when processing untrusted PDFs during the PDF splitting process in `js/pdf-splitter.js`.
+**Learning:** `pdfjsLib.getDocument()` was being called without `isEvalSupported: false` in `js/pdf-splitter.js`, which could lead to arbitrary code execution when processing malicious PDFs, even though it was correctly handled in `js/pdf-processor.js`.
+**Prevention:** Always consistently apply `isEvalSupported: false` to all `pdfjsLib.getDocument()` calls across the entire codebase to ensure safe processing of untrusted files.
