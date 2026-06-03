@@ -568,7 +568,7 @@ async function buildZip(processNumber, eventos, pagesData, redactionSummary = nu
 
 async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', options = {}) {
   // 1. Carregar PDF
-  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, isEvalSupported: false });
   const pdfDoc = await loadingTask.promise;
   const totalPages = pdfDoc.numPages;
   const pageTextCache = await extractAllPageTexts(pdfDoc, totalPages, onProgress);

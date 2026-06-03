@@ -20,7 +20,8 @@ const pdfProcessorApi = await loadPdfProcessorApi(redactorApi);
 async function extrairTextoPdf(bytes) {
   const pdf = await pdfjsBase.getDocument({
     data: bytes instanceof Uint8Array ? new Uint8Array(bytes) : new Uint8Array(bytes),
-    standardFontDataUrl: STANDARD_FONT_DATA_URL
+    standardFontDataUrl: STANDARD_FONT_DATA_URL,
+    isEvalSupported: false
   }).promise;
   const partes = [];
 
