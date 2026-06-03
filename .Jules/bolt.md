@@ -16,3 +16,6 @@
 ## 2024-05-31 - Optimize array duplication check safely
 **Learning:** Attaching hidden properties (like `Object.defineProperty(arr, '_seen', ...)`) to Array instances to implement O(1) lookups is a dangerous anti-pattern that can lead to out-of-sync state if the array is modified externally or cleared.
 **Action:** Use a module-scoped `WeakMap` keyed by the array instance to cache the `Set`. This achieves the same O(1) time complexity while keeping the array object clean and ensuring the cache is properly garbage-collected when the array goes out of scope.
+## 2024-06-03 - V8 native string scanning via RegExp lastIndex
+**Learning:** In large multi-megabyte text payloads, iterating character-by-character in JavaScript (e.g. `if (str[i] === '(')`) is vastly slower than using native C++ routines exposed by V8. By using a pre-compiled regular expression (`/[\\()]/g`) and manipulating `lastIndex` with `exec()` to jump between matches, we observed a significant ~2x speedup (28ms down to 13ms) on large payloads with sparse matches.
+**Action:** When scanning large strings for specific sparse delimiters, always prefer `indexOf`, `lastIndex` with Regex, or similar native string scanning methods over manual JS character iteration loops.
