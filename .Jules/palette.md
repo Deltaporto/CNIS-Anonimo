@@ -53,3 +53,7 @@
 ## 2026-06-01 - Accessible Keyboard Shortcuts
 **Learning:** Visual keyboard shortcuts (like `<kbd>Esc</kbd>`) appended to button text are read aloud by screen readers (e.g., 'Limpar e recomeçar Esc'), which creates a confusing auditory experience.
 **Action:** When adding visual keyboard shortcuts, always apply `aria-hidden="true"` to the `<kbd>` element to hide the text from screen readers, and add the standard `aria-keyshortcuts` attribute to the parent interactive element to correctly and natively expose the binding to assistive technologies.
+
+## 2026-06-04 - Elevate focus rings for custom inputs
+**Learning:** When native radio buttons or checkboxes are hidden or visually integrated into a larger custom label/card container, the native focus ring is either lost or misaligned. Keyboard users lose visual tracking of where their focus is.
+**Action:** Use the CSS `:has(:focus-visible)` pseudo-class on the parent container (e.g., `.custom-card:has(input:focus-visible)`) to elevate the focus ring to the entire custom component, providing a large, clear focus indicator that matches existing patterns.

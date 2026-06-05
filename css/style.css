@@ -229,6 +229,11 @@ body[data-modo="extrair-pecas"] .upload-sub strong {
   box-shadow: 0 2px 12px rgba(46, 125, 50, .10);
 }
 
+.saida-opcao:has(input:focus-visible) {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
 .saida-opcao input {
   margin-top: 3px;
   accent-color: #2e7d32;
@@ -273,6 +278,12 @@ body[data-modo="extrair-pecas"] .upload-sub strong {
   gap: 6px;
   min-height: 24px;
   cursor: pointer;
+  border-radius: 4px;
+}
+
+.opcoes-sem-ocr label:has(input:focus-visible) {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
 }
 
 .opcoes-sem-ocr input {
@@ -293,6 +304,12 @@ body[data-ocr-modo="ligado"] .opcoes-sem-ocr {
   display: flex;
   align-items: center;
   gap: 0.35em;
+  border-radius: 4px;
+}
+
+.como-funciona summary:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
 }
 
 .como-funciona summary::before {
