@@ -439,9 +439,13 @@ function renderizarCardsSplit(resultado) {
     _splitResumoEl.appendChild(avisoOmitidas);
   }
 
+  const listaEventos = document.createElement('div');
+  listaEventos.setAttribute('role', 'list');
+
   for (const evento of resultado.eventos) {
     const card = document.createElement('div');
     card.className = 'evento-card' + (evento.ocr ? ' evento-card-ocr' : '');
+    card.setAttribute('role', 'listitem');
 
     const titulo = document.createElement('span');
     titulo.className = 'evento-titulo';
@@ -456,8 +460,10 @@ function renderizarCardsSplit(resultado) {
 
     card.appendChild(titulo);
     card.appendChild(paginas);
-    _splitResumoEl.appendChild(card);
+    listaEventos.appendChild(card);
   }
+
+  _splitResumoEl.appendChild(listaEventos);
 }
 
 async function iniciarSplitEproc(arquivos) {
@@ -1009,10 +1015,18 @@ function mostrarAchados(item, achados = {}) {
     processoLinha.style.gridTemplateColumns = '1fr';
     processoLinha.setAttribute('role', 'listitem');
 
+    const labelEl = document.createElement('span');
+    labelEl.className = 'sub-label';
+    labelEl.style.marginRight = '8px';
+    labelEl.style.display = 'inline-block';
+    labelEl.textContent = 'Processo preservado: ';
+
     const processoEl = document.createElement('span');
     processoEl.className = 'sub-original';
-    processoEl.textContent = 'Processo preservado: ' + achados.numerosProcesso.join(', ');
+    processoEl.textContent = achados.numerosProcesso.join(', ');
+    processoEl.title = processoEl.textContent;
 
+    processoLinha.appendChild(labelEl);
     processoLinha.appendChild(processoEl);
     resumo.appendChild(processoLinha);
   }
