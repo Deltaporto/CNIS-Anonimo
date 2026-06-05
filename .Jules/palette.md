@@ -57,3 +57,10 @@
 ## 2026-06-04 - Elevate focus rings for custom inputs
 **Learning:** When native radio buttons or checkboxes are hidden or visually integrated into a larger custom label/card container, the native focus ring is either lost or misaligned. Keyboard users lose visual tracking of where their focus is.
 **Action:** Use the CSS `:has(:focus-visible)` pseudo-class on the parent container (e.g., `.custom-card:has(input:focus-visible)`) to elevate the focus ring to the entire custom component, providing a large, clear focus indicator that matches existing patterns.
+## 2025-02-14 - Improve accessibility of tabular data rendered with generic elements
+**Learning:** When dynamically generating a list using generic elements (e.g., `<div>`), apply `role="list"` to a dedicated parent container and `role="listitem"` to each child. The `role="list"` container must *only* contain `listitem` children; never apply it to wrappers containing mixed content like paragraphs.
+**Action:** Always wrap `.evento-card` items in a dedicated `<div>` with `role="list"`, rather than applying the role to the mixed-content parent container.
+
+## 2025-02-14 - Accessible Truncation Tooltips
+**Learning:** Applying CSS text truncation (`text-overflow: ellipsis`) to dynamic text hides full data. While adding a `title` attribute for a hover tooltip solves this for mouse users, applying it to a concatenated string (label + value) causes screen readers to redundantly announce the entire string twice.
+**Action:** Structurally separate the label from the value into distinct spans. Apply the `title` attribute *only* to the truncated value element to provide the tooltip without creating a redundant screen reader announcement anti-pattern.
