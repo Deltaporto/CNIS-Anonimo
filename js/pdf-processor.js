@@ -437,7 +437,9 @@ function aplicarEspecificacoesEmArraysTJ(texto, specs) {
         const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
 
         if (!sobrepoe) {
-          caracteres.splice(pos, original.length, ...substituto.split(''));
+          for (let k = 0; k < original.length; k++) {
+            caracteres[pos + k] = substituto[k];
+          }
           rangesAplicados.push({ inicio: pos, fim });
           hits[spec.id] = (hits[spec.id] || 0) + 1;
         }
@@ -524,7 +526,9 @@ function aplicarEspecificacoesEmLiteraisTjFragmentados(texto, specs) {
         const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
 
         if (!sobrepoe) {
-          caracteres.splice(pos, original.length, ...substituto.split(''));
+          for (let k = 0; k < original.length; k++) {
+            caracteres[pos + k] = substituto[k];
+          }
           rangesAplicados.push({ inicio: pos, fim });
           hits[spec.id] = (hits[spec.id] || 0) + 1;
         }
@@ -614,7 +618,9 @@ function aplicarEspecificacoesEmHexArraysTJ(texto, specsHex) {
         const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
 
         if (!sobrepoe) {
-          caracteres.splice(pos, originalUpper.length, ...substitutoUpper.split(''));
+          for (let k = 0; k < originalUpper.length; k++) {
+            caracteres[pos + k] = substitutoUpper[k];
+          }
           rangesAplicados.push({ inicio: pos, fim });
           hits[spec.id] = (hits[spec.id] || 0) + 1;
         }
@@ -697,7 +703,9 @@ function aplicarEspecificacoesEmHexTjFragmentado(texto, specsHex) {
         const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
 
         if (!sobrepoe) {
-          caracteres.splice(pos, originalUpper.length, ...substitutoUpper.split(''));
+          for (let k = 0; k < originalUpper.length; k++) {
+            caracteres[pos + k] = substitutoUpper[k];
+          }
           rangesAplicados.push({ inicio: pos, fim });
           hits[spec.id] = (hits[spec.id] || 0) + 1;
         }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as PDFLib from 'pdf-lib';
-const pdfjsBaseModule = await import('pdfjs-dist/legacy/build/pdf.mjs');
+const pdfjsBaseModule = await import('pdfjs-dist/legacy/build/pdf.js');
 const pdfjsBase = pdfjsBaseModule.default ?? pdfjsBaseModule;
 
 import {
