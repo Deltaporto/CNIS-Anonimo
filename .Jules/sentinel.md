@@ -14,3 +14,11 @@
 **Vulnerability:** Arbitrary JavaScript execution (CVE-2024-4367) when processing untrusted PDFs during the PDF splitting process in `js/pdf-splitter.js`.
 **Learning:** `pdfjsLib.getDocument()` was being called without `isEvalSupported: false` in `js/pdf-splitter.js`, which could lead to arbitrary code execution when processing malicious PDFs, even though it was correctly handled in `js/pdf-processor.js`.
 **Prevention:** Always consistently apply `isEvalSupported: false` to all `pdfjsLib.getDocument()` calls across the entire codebase to ensure safe processing of untrusted files.
+## 2025-02-18 - Missing Subresource Integrity (SRI) on dynamically injected script
+**Vulnerability:** The application dynamically loads Tesseract.js from a CDN without SRI or crossorigin attributes (`script.src = '...';`).
+**Learning:** Even when dynamically injecting scripts via `document.createElement('script')`, it is critical to verify the integrity of the fetched resource to prevent malicious code execution if the CDN is compromised.
+**Prevention:** Always add `integrity` and `crossOrigin='anonymous'` attributes to dynamically injected scripts loading external resources.
+## 2025-02-18 - Pin exact version when using Subresource Integrity (SRI)
+**Vulnerability:** Calculating and applying an SRI hash to a mutable CDN URL (like `tesseract.js@5` which points to the latest 5.x.x version) introduces a time-bomb. When the package is updated, the hash will fail and the resource will be permanently blocked, breaking application functionality.
+**Learning:** Subresource Integrity (SRI) relies on the exact contents of the file. If a CDN URL allows version floating (e.g., via major/minor tags instead of exact patch versions), the file contents can change, breaking the application.
+**Prevention:** Always pin CDN URLs to exact, immutable versions (e.g., `@5.1.1` instead of `@5`) before calculating and applying SRI hashes.
