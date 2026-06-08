@@ -341,6 +341,7 @@ async function iniciarLote(arquivos) {
   const config = obterConfigModo(modoResultados);
   acoesEl.classList.remove('oculto');
   btnBaixarZip.disabled = true;
+  btnBaixarZip.setAttribute('aria-busy', 'true');
   btnBaixarZip.title = 'Aguarde o processamento de todos os arquivos para baixar';
 
   try {
@@ -359,6 +360,7 @@ async function iniciarLote(arquivos) {
       ? config.botaoDownloadUm
       : config.botaoDownloadVarios;
     btnBaixarZip.disabled = false;
+    btnBaixarZip.removeAttribute('aria-busy');
     btnBaixarZip.removeAttribute('title');
   }
 }
