@@ -6,6 +6,9 @@ let _ocrWorker = null;
 let _tesseractLoadPromise = null;
 let _tesseractLoadFailed = false;
 
+const OCR_RENDER_TARGET_SCALE = 1.35;
+const OCR_RENDER_MAX_PIXELS = 1_800_000;
+
 // ── Funções internas ──────────────────────────────────────────────────────────
 
 function flattenOutline(items) {
@@ -239,8 +242,19 @@ function pageNeedsOcr(text) {
   return substantive.length < 50;
 }
 
+function calculateOcrRenderScale(page) {
+  const baseViewport = page.getViewport({ scale: 1 });
+  const basePixels = baseViewport.width * baseViewport.height;
+  if (!Number.isFinite(basePixels) || basePixels <= 0) {
+    return OCR_RENDER_TARGET_SCALE;
+  }
+
+  const maxScale = Math.sqrt(OCR_RENDER_MAX_PIXELS / basePixels);
+  return Math.max(1, Math.min(OCR_RENDER_TARGET_SCALE, maxScale));
+}
+
 async function renderPageToCanvas(page) {
-  const viewport = page.getViewport({ scale: 2.0 });
+  const viewport = page.getViewport({ scale: calculateOcrRenderScale(page) });
   const canvas = document.createElement('canvas');
   canvas.width = viewport.width;
   canvas.height = viewport.height;

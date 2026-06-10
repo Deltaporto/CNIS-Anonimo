@@ -38,7 +38,8 @@ async function loadPdfSplitterApi() {
       buildRedactionReport,
       buildMarkdownForEvent,
       buildIndexMarkdown,
-      normalizeMissingTextMode
+      normalizeMissingTextMode,
+      calculateOcrRenderScale
     };
   `)({
     pdfjsLib: mockPdfjsLib,
@@ -353,6 +354,29 @@ test('pageNeedsOcr: página de separação não precisa de OCR', () => {
 test('pageNeedsOcr: texto longo → false', () => {
   const text = 'Este é um texto bem longo com bastante conteúdo para não precisar de OCR.';
   assert.equal(api.pageNeedsOcr(text), false);
+});
+
+// ── calculateOcrRenderScale ──────────────────────────────────────────────────
+
+test('calculateOcrRenderScale: usa escala reduzida para OCR no browser', () => {
+  const page = {
+    getViewport({ scale }) {
+      return { width: 612 * scale, height: 792 * scale };
+    }
+  };
+
+  assert.equal(api.calculateOcrRenderScale(page), 1.35);
+});
+
+test('calculateOcrRenderScale: limita pixels em páginas muito grandes', () => {
+  const page = {
+    getViewport({ scale }) {
+      return { width: 2400 * scale, height: 3200 * scale };
+    }
+  };
+
+  assert.ok(api.calculateOcrRenderScale(page) < 1.35);
+  assert.ok(api.calculateOcrRenderScale(page) >= 1);
 });
 
 // ── inferProcessNumber ────────────────────────────────────────────────────────
