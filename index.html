@@ -89,18 +89,18 @@
 
     <fieldset class="saida-extrair ocr-extrair" aria-label="Reconhecimento de páginas sem texto">
       <legend>Páginas sem texto</legend>
-      <label class="saida-opcao saida-opcao-ativa" for="ocr-ligado">
-        <input type="radio" id="ocr-ligado" name="ocr-modo" value="ligado" checked />
+      <label class="saida-opcao" for="ocr-ligado">
+        <input type="radio" id="ocr-ligado" name="ocr-modo" value="ligado" />
         <span>
           <strong>Usar OCR</strong>
-          <small>Mais completo para páginas escaneadas, mas pode demorar mais</small>
+          <small>Reconhece páginas escaneadas, mas pode demorar bastante em processos grandes</small>
         </span>
       </label>
-      <label class="saida-opcao" for="ocr-desligado">
-        <input type="radio" id="ocr-desligado" name="ocr-modo" value="desligado" />
+      <label class="saida-opcao saida-opcao-ativa" for="ocr-desligado">
+        <input type="radio" id="ocr-desligado" name="ocr-modo" value="desligado" checked />
         <span>
           <strong>Sem OCR</strong>
-          <small>Mais rápido; páginas escaneadas sem texto pesquisável podem aparecer como aviso ou ser omitidas</small>
+          <small>Padrão rápido; páginas escaneadas sem texto pesquisável podem aparecer como aviso ou ser omitidas</small>
         </span>
       </label>
 

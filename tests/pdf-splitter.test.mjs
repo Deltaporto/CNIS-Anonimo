@@ -365,7 +365,7 @@ test('calculateOcrRenderScale: usa escala reduzida para OCR no browser', () => {
     }
   };
 
-  assert.equal(api.calculateOcrRenderScale(page), 1.35);
+  assert.equal(api.calculateOcrRenderScale(page), 1.1);
 });
 
 test('calculateOcrRenderScale: limita pixels em páginas muito grandes', () => {
@@ -375,7 +375,7 @@ test('calculateOcrRenderScale: limita pixels em páginas muito grandes', () => {
     }
   };
 
-  assert.ok(api.calculateOcrRenderScale(page) < 1.35);
+  assert.ok(api.calculateOcrRenderScale(page) < 1.1);
   assert.ok(api.calculateOcrRenderScale(page) >= 1);
 });
 

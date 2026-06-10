@@ -79,9 +79,9 @@ test('modo extrair-pecas: Markdown anonimizado é padrão quando não há rádio
   assert.equal(appApi.obterSplitAnonimizarMarkdown(), true);
 });
 
-test('modo extrair-pecas: OCR ligado e aviso para páginas sem texto são padrão', () => {
+test('modo extrair-pecas: OCR desligado e aviso para páginas sem texto são padrão', () => {
   assert.deepEqual(appApi.obterSplitOcrOptions(), {
-    enableOcr: true,
+    enableOcr: false,
     missingTextMode: 'placeholder'
   });
 });

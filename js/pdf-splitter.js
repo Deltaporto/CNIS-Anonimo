@@ -6,8 +6,8 @@ let _ocrWorker = null;
 let _tesseractLoadPromise = null;
 let _tesseractLoadFailed = false;
 
-const OCR_RENDER_TARGET_SCALE = 1.35;
-const OCR_RENDER_MAX_PIXELS = 1_800_000;
+const OCR_RENDER_TARGET_SCALE = 1.1;
+const OCR_RENDER_MAX_PIXELS = 1_000_000;
 
 // ── Funções internas ──────────────────────────────────────────────────────────
 
@@ -322,7 +322,7 @@ async function initOcrWorker() {
 async function ocrFromCanvas(canvas) {
   try {
     const worker = await initOcrWorker();
-    const result = await worker.recognize(canvas);
+    const result = await worker.recognize(canvas, {}, { text: true });
     return result.data.text;
   } catch (err) {
     console.warn('[pdf-splitter] ocrFromCanvas falhou:', err.message);
