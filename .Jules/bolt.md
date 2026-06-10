@@ -25,3 +25,6 @@
 ## 2024-06-10 - O(N) Array modification optimization
 **Learning:** In tight loops repeatedly modifying the contents of a pre-allocated array of characters, using `caracteres.splice(pos, original.length, ...substituto.split(''))` is extremely slow. It forces JavaScript engines to create an intermediate array via `split`, apply spread operator overhead, and internally shift elements. Replacing it with a direct character assignment loop (`caracteres[pos + k] = substituto[k]`) is ~3x faster.
 **Action:** When replacing subsequences of equal length inside an array representation of a string, always use a `for` loop with index-based assignment instead of `Array.prototype.splice` with spread operators.
+## 2024-06-10 - Cache array mappings outside of filter operations
+**Learning:** In V8, filtering arrays using callbacks that invoke functions computing values identical for every execution (e.g., calling `_coletarRangesProtegidos(texto)` inside a `.filter` based on the unmodified `texto`) creates severe O(N*M) bottlenecks since the engine does not auto-memoize external calls.
+**Action:** When calculating string indices or executing heavy RegExp `matchAll` operations where the target text does not change within the filter context, always pre-calculate and store the result in a local variable before initiating the `.filter()` loop.
