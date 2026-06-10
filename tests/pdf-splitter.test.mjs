@@ -39,7 +39,8 @@ async function loadPdfSplitterApi() {
       buildMarkdownForEvent,
       buildIndexMarkdown,
       normalizeMissingTextMode,
-      calculateOcrRenderScale
+      calculateOcrRenderScale,
+      getOcrWorkerCount
     };
   `)({
     pdfjsLib: mockPdfjsLib,
@@ -365,7 +366,7 @@ test('calculateOcrRenderScale: usa escala reduzida para OCR no browser', () => {
     }
   };
 
-  assert.equal(api.calculateOcrRenderScale(page), 1.1);
+  assert.equal(api.calculateOcrRenderScale(page), 0.95);
 });
 
 test('calculateOcrRenderScale: limita pixels em páginas muito grandes', () => {
@@ -375,8 +376,17 @@ test('calculateOcrRenderScale: limita pixels em páginas muito grandes', () => {
     }
   };
 
-  assert.ok(api.calculateOcrRenderScale(page) < 1.1);
-  assert.ok(api.calculateOcrRenderScale(page) >= 1);
+  assert.ok(api.calculateOcrRenderScale(page) < 0.95);
+  assert.ok(api.calculateOcrRenderScale(page) >= 0.7);
+});
+
+test('getOcrWorkerCount: usa um worker para poucos OCRs', () => {
+  assert.equal(api.getOcrWorkerCount(7), 1);
+});
+
+test('getOcrWorkerCount: usa no máximo dois workers para muitos OCRs', () => {
+  assert.ok(api.getOcrWorkerCount(8) >= 1);
+  assert.ok(api.getOcrWorkerCount(8) <= 2);
 });
 
 // ── inferProcessNumber ────────────────────────────────────────────────────────

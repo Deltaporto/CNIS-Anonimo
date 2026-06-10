@@ -3,11 +3,16 @@
 // ── Variáveis de módulo ───────────────────────────────────────────────────────
 
 let _ocrWorker = null;
+let _ocrEngine = null;
+let _ocrEnginePromise = null;
 let _tesseractLoadPromise = null;
 let _tesseractLoadFailed = false;
 
-const OCR_RENDER_TARGET_SCALE = 1.1;
+const OCR_RENDER_TARGET_SCALE = 0.95;
+const OCR_RENDER_MIN_SCALE = 0.7;
 const OCR_RENDER_MAX_PIXELS = 1_000_000;
+const OCR_PARALLEL_PAGE_THRESHOLD = 8;
+const OCR_MAX_WORKERS = 2;
 
 // ── Funções internas ──────────────────────────────────────────────────────────
 
@@ -250,7 +255,31 @@ function calculateOcrRenderScale(page) {
   }
 
   const maxScale = Math.sqrt(OCR_RENDER_MAX_PIXELS / basePixels);
-  return Math.max(1, Math.min(OCR_RENDER_TARGET_SCALE, maxScale));
+  return Math.max(OCR_RENDER_MIN_SCALE, Math.min(OCR_RENDER_TARGET_SCALE, maxScale));
+}
+
+function getOcrWorkerCount(totalOcrPages) {
+  if (totalOcrPages < OCR_PARALLEL_PAGE_THRESHOLD) return 1;
+  const cores = typeof navigator !== 'undefined' && Number.isFinite(navigator.hardwareConcurrency)
+    ? navigator.hardwareConcurrency
+    : OCR_MAX_WORKERS;
+  return Math.max(1, Math.min(OCR_MAX_WORKERS, cores - 1));
+}
+
+async function mapWithConcurrency(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  const workerCount = Math.max(1, Math.min(concurrency, items.length));
+  let nextIndex = 0;
+
+  async function run() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex++;
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, run));
+  return results;
 }
 
 async function renderPageToCanvas(page) {
@@ -308,16 +337,15 @@ async function createConfiguredOcrWorker(tesseract) {
   });
   if (typeof worker.setParameters === 'function') {
     await worker.setParameters({
+      tessedit_pageseg_mode: '11',
       preserve_interword_spaces: '1',
-      user_defined_dpi: '80'
+      user_defined_dpi: '70'
     });
   }
   return worker;
 }
 
-async function initOcrWorker() {
-  if (_ocrWorker) return _ocrWorker;
-
+async function initOcrWorker(workerCount = 1) {
   const tesseract = typeof Tesseract !== 'undefined'
     ? Tesseract
     : (typeof window !== 'undefined' ? window.Tesseract : null);
@@ -326,14 +354,59 @@ async function initOcrWorker() {
     throw new Error('Tesseract.js não está carregado');
   }
 
-  _ocrWorker = await createConfiguredOcrWorker(tesseract);
-  return _ocrWorker;
+  const normalizedWorkerCount = Math.max(1, Math.min(OCR_MAX_WORKERS, workerCount));
+  if (_ocrEngine && _ocrEngine.workerCount >= normalizedWorkerCount) return _ocrEngine;
+
+  if (_ocrEngine?.terminate) {
+    await _ocrEngine.terminate();
+    _ocrEngine = null;
+    _ocrWorker = null;
+  }
+
+  if (!_ocrEnginePromise) {
+    _ocrEnginePromise = (async () => {
+      if (normalizedWorkerCount > 1 && typeof tesseract.createScheduler === 'function') {
+        const scheduler = tesseract.createScheduler();
+        const workers = await Promise.all(
+          Array.from({ length: normalizedWorkerCount }, () => createConfiguredOcrWorker(tesseract))
+        );
+        for (const worker of workers) scheduler.addWorker(worker);
+        return {
+          workerCount: normalizedWorkerCount,
+          recognize(canvas) {
+            return scheduler.addJob('recognize', canvas, {}, { text: true });
+          },
+          terminate() {
+            return scheduler.terminate();
+          }
+        };
+      }
+
+      _ocrWorker = await createConfiguredOcrWorker(tesseract);
+      return {
+        workerCount: 1,
+        recognize(canvas) {
+          return _ocrWorker.recognize(canvas, {}, { text: true });
+        },
+        terminate() {
+          return _ocrWorker.terminate();
+        }
+      };
+    })();
+  }
+
+  try {
+    _ocrEngine = await _ocrEnginePromise;
+    return _ocrEngine;
+  } finally {
+    _ocrEnginePromise = null;
+  }
 }
 
-async function ocrFromCanvas(canvas) {
+async function ocrFromCanvas(canvas, workerCount = 1) {
   try {
-    const worker = await initOcrWorker();
-    const result = await worker.recognize(canvas, {}, { text: true });
+    const engine = await initOcrWorker(workerCount);
+    const result = await engine.recognize(canvas);
     return result.data.text;
   } catch (err) {
     console.warn('[pdf-splitter] ocrFromCanvas falhou:', err.message);
@@ -655,6 +728,7 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
   const totalOcrPages = enableOcr
     ? pageTextCache.reduce((sum, text) => sum + (pageNeedsOcr(text) ? 1 : 0), 0)
     : 0;
+  const ocrWorkerCount = getOcrWorkerCount(totalOcrPages);
   const ocrLoaded = totalOcrPages > 0 && enableOcr
     ? await ensureTesseractLoaded(onProgress)
     : false;
@@ -672,14 +746,18 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
       eventTotal: eventos.length
     });
 
-    const pageTexts = [];
-    const ocrFlags = [];
-
+    const pageIndices = [];
     for (let pi = evento.startPageIndex; pi < evento.endPageIndexExclusive; pi++) {
+      pageIndices.push(pi);
+    }
+
+    const pageResults = await mapWithConcurrency(pageIndices, ocrWorkerCount, async (pi) => {
       let page = null;
       const text = pageTextCache[pi] !== undefined
         ? pageTextCache[pi]
         : await extractPageText(page = await pdfDoc.getPage(pi + 1)); // pdfjs usa 1-based
+      let pageText = text;
+      let ocr = false;
 
       if (pageNeedsOcr(text)) {
         if (!enableOcr) {
@@ -689,21 +767,22 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
             percent: Math.round(5 + (processedPages / totalEventPages) * 85)
           });
           if (missingTextMode === 'omit') {
-            pageTexts.push(null);
+            pageText = null;
             omittedPageCount++;
           } else {
-            pageTexts.push('');
+            pageText = '';
           }
-          ocrFlags.push(false);
           ocrSkippedCount++;
           processedPages++;
-          continue;
+          return { pageText, ocr };
         }
 
         if (ocrLoaded) {
           onProgress({
             type: 'ocr',
-            message: `OCR na página ${pi + 1}...`,
+            message: ocrWorkerCount > 1
+              ? `OCR na página ${pi + 1} (${ocrWorkerCount} workers)...`
+              : `OCR na página ${pi + 1}...`,
             percent: Math.round(5 + (processedPages / totalEventPages) * 85),
             pageIndex: pi,
             pageTotal: totalPages
@@ -711,17 +790,16 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
 
           if (!page) page = await pdfDoc.getPage(pi + 1);
           const canvas = await renderPageToCanvas(page);
-          const ocrText = await ocrFromCanvas(canvas);
+          const ocrText = await ocrFromCanvas(canvas, ocrWorkerCount);
           // Liberar memória do canvas
           canvas.width = 0;
           canvas.height = 0;
           if (ocrText.trim()) {
-            pageTexts.push(ocrText);
-            ocrFlags.push(true);
+            pageText = ocrText;
+            ocr = true;
             ocrCount++;
           } else {
-            pageTexts.push('');
-            ocrFlags.push(false);
+            pageText = '';
             ocrFailCount++;
           }
         } else {
@@ -730,8 +808,7 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
             message: `Não foi possível preparar o leitor de imagens (página ${pi + 1} ignorada)`,
             percent: Math.round(5 + (processedPages / totalEventPages) * 85)
           });
-          pageTexts.push('');
-          ocrFlags.push(false);
+          pageText = '';
           ocrFailCount++;
         }
       } else {
@@ -742,12 +819,15 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
           pageIndex: pi,
           pageTotal: totalPages
         });
-        pageTexts.push(text);
-        ocrFlags.push(false);
+        pageText = text;
       }
 
       processedPages++;
-    }
+      return { pageText, ocr };
+    });
+
+    const pageTexts = pageResults.map(result => result.pageText);
+    const ocrFlags = pageResults.map(result => result.ocr);
 
     // Marcar evento como OCR se qualquer página usou OCR
     evento.ocr = ocrFlags.some(Boolean);
