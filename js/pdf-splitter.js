@@ -302,6 +302,19 @@ async function ensureTesseractLoaded(onProgress = () => {}) {
   }
 }
 
+async function createConfiguredOcrWorker(tesseract) {
+  const worker = await tesseract.createWorker('por', 1, {
+    logger: () => {}
+  });
+  if (typeof worker.setParameters === 'function') {
+    await worker.setParameters({
+      preserve_interword_spaces: '1',
+      user_defined_dpi: '80'
+    });
+  }
+  return worker;
+}
+
 async function initOcrWorker() {
   if (_ocrWorker) return _ocrWorker;
 
@@ -313,9 +326,7 @@ async function initOcrWorker() {
     throw new Error('Tesseract.js não está carregado');
   }
 
-  _ocrWorker = await tesseract.createWorker('por', 1, {
-    logger: () => {}
-  });
+  _ocrWorker = await createConfiguredOcrWorker(tesseract);
   return _ocrWorker;
 }
 
@@ -641,6 +652,12 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
   const enableOcr = options.enableOcr !== false;
   const missingTextMode = normalizeMissingTextMode(options.missingTextMode);
   const totalEventPages = eventos.reduce((sum, ev) => sum + ev.pageCount, 0);
+  const totalOcrPages = enableOcr
+    ? pageTextCache.reduce((sum, text) => sum + (pageNeedsOcr(text) ? 1 : 0), 0)
+    : 0;
+  const ocrLoaded = totalOcrPages > 0 && enableOcr
+    ? await ensureTesseractLoaded(onProgress)
+    : false;
   let processedPages = 0;
 
   // 8. Processar cada evento
@@ -659,8 +676,10 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
     const ocrFlags = [];
 
     for (let pi = evento.startPageIndex; pi < evento.endPageIndexExclusive; pi++) {
-      const page = await pdfDoc.getPage(pi + 1); // pdfjs usa 1-based
-      const text = pageTextCache[pi] !== undefined ? pageTextCache[pi] : await extractPageText(page);
+      let page = null;
+      const text = pageTextCache[pi] !== undefined
+        ? pageTextCache[pi]
+        : await extractPageText(page = await pdfDoc.getPage(pi + 1)); // pdfjs usa 1-based
 
       if (pageNeedsOcr(text)) {
         if (!enableOcr) {
@@ -681,9 +700,7 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
           continue;
         }
 
-        const loaded = await ensureTesseractLoaded(onProgress);
-
-        if (loaded) {
+        if (ocrLoaded) {
           onProgress({
             type: 'ocr',
             message: `OCR na página ${pi + 1}...`,
@@ -692,6 +709,7 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
             pageTotal: totalPages
           });
 
+          if (!page) page = await pdfDoc.getPage(pi + 1);
           const canvas = await renderPageToCanvas(page);
           const ocrText = await ocrFromCanvas(canvas);
           // Liberar memória do canvas
