@@ -11,3 +11,8 @@ package-lock.json
 
 # Git worktrees locais
 .worktrees/
+.claude/
+
+# Rascunhos locais de planejamento
+PLANO_SEPARAR_PECAS.md
+roadmap.md
