@@ -587,14 +587,15 @@ function mapearSubstitutos(texto) {
   return pares;
 }
 function contarAchados(texto) {
-  const numerosProcesso = [...new Set([...texto.matchAll(_globalizar(NUMERO_DE_PROCESSO_PATTERN))].map(m => m[0]))];
+  const rangesProtegidos = _coletarRangesProtegidos(texto);
+  const numerosProcesso = [...new Set(rangesProtegidos.map(r => r.valor))];
   const cpfs = [...texto.matchAll(_globalizar(CPF_PATTERN))].filter(m => validarCPF(m[0])).length;
   const nits = [...new Set([
     ...[...texto.matchAll(_globalizar(NIT_ROTULADO_PATTERN, 'i'))].map(m => m[2].replace(/\D/g, '')),
     ...[...texto.matchAll(_globalizar(NIT_PATTERN))].map(m => m[0].replace(/\D/g, ''))
   ].filter(Boolean))].length;
   const identificadores = [...texto.matchAll(_globalizar(IDENTIFICADOR_LONGO_PATTERN))]
-    .filter(m => !_sobrepoeRangeProtegido(m, _coletarRangesProtegidos(texto)) && !/^0+$/.test(m[0]))
+    .filter(m => !_sobrepoeRangeProtegido(m, rangesProtegidos) && !/^0+$/.test(m[0]))
     .length;
   const oabs = [...texto.matchAll(_globalizar(OAB_PATTERN, 'i'))].length +
     [...texto.matchAll(_globalizar(OAB_ZERO_PATTERN, 'i'))].length +
