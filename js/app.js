@@ -1066,6 +1066,7 @@ btnBaixarZip.addEventListener('click', async () => {
   const textoOriginal = btnBaixarZip.textContent;
   try {
     btnBaixarZip.disabled = true;
+    btnBaixarZip.title = 'Aguarde a geração do arquivo para baixar';
     btnBaixarZip.setAttribute('aria-busy', 'true');
     btnBaixarZip.textContent = 'Gerando ZIP...';
     const zip = new JSZip();
@@ -1074,6 +1075,7 @@ btnBaixarZip.addEventListener('click', async () => {
     baixarBlob(zipBytes, 'application/zip', config.zipNome);
   } finally {
     btnBaixarZip.disabled = false;
+    btnBaixarZip.removeAttribute('title');
     btnBaixarZip.removeAttribute('aria-busy');
     btnBaixarZip.textContent = textoOriginal;
   }
