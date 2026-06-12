@@ -25,3 +25,6 @@
 ## 2024-06-10 - O(N) Array modification optimization
 **Learning:** In tight loops repeatedly modifying the contents of a pre-allocated array of characters, using `caracteres.splice(pos, original.length, ...substituto.split(''))` is extremely slow. It forces JavaScript engines to create an intermediate array via `split`, apply spread operator overhead, and internally shift elements. Replacing it with a direct character assignment loop (`caracteres[pos + k] = substituto[k]`) is ~3x faster.
 **Action:** When replacing subsequences of equal length inside an array representation of a string, always use a `for` loop with index-based assignment instead of `Array.prototype.splice` with spread operators.
+## 2024-05-30 - Optimize O(N*M) calculation in filter loop
+**Learning:** In `contarAchados`, `_coletarRangesProtegidos(texto)` was recalculating the same ranges for every regex match found inside a `filter()` loop, creating an O(N*M) bottleneck.
+**Action:** Cache the result of `_coletarRangesProtegidos(texto)` outside the `.filter()` loop when filtering matches to avoid severe performance degradation.
