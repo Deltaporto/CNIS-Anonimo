@@ -58,7 +58,7 @@
     <button type="button" class="modo-btn" id="btn-modo-carta" role="tab" aria-selected="false" tabindex="-1">
       Carta de concessão
     </button>
-    <button type="button" class="modo-btn" id="btn-modo-extrair" role="tab" aria-selected="false" tabindex="-1" aria-controls="zona-upload">
+    <button type="button" class="modo-btn" id="btn-modo-extrair" role="tab" aria-selected="false" tabindex="-1">
       Processo Judicial
     </button>
   </div>
@@ -69,7 +69,7 @@
       Recurso de extração em validação: confira o ZIP gerado antes de usar o conteúdo em minutas, resumos ou pesquisa.
     </p>
 
-    <fieldset class="saida-extrair" aria-label="Formato de saída das peças extraídas">
+    <fieldset class="saida-extrair">
       <legend>Saída do ZIP</legend>
       <label class="saida-opcao saida-opcao-ativa" for="saida-md-anonimizado">
         <input type="radio" id="saida-md-anonimizado" name="saida-md" value="anonimizado" checked />
@@ -87,7 +87,7 @@
       </label>
     </fieldset>
 
-    <fieldset class="saida-extrair ocr-extrair" aria-label="Reconhecimento de páginas sem texto">
+    <fieldset class="saida-extrair ocr-extrair">
       <legend>Páginas sem texto</legend>
       <label class="saida-opcao saida-opcao-ativa" for="ocr-ligado">
         <input type="radio" id="ocr-ligado" name="ocr-modo" value="ligado" checked />
@@ -104,7 +104,7 @@
         </span>
       </label>
 
-      <div id="opcoes-sem-ocr" class="opcoes-sem-ocr" aria-label="O que fazer sem OCR">
+      <div id="opcoes-sem-ocr" class="opcoes-sem-ocr" role="radiogroup" aria-label="O que fazer sem OCR">
         <label for="sem-ocr-manter">
           <input type="radio" id="sem-ocr-manter" name="sem-ocr-paginas" value="manter-aviso" checked />
           <span>Manter aviso no Markdown</span>
