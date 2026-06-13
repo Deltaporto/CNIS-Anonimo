@@ -64,3 +64,6 @@
 ## 2025-02-14 - Accessible Truncation Tooltips
 **Learning:** Applying CSS text truncation (`text-overflow: ellipsis`) to dynamic text hides full data. While adding a `title` attribute for a hover tooltip solves this for mouse users, applying it to a concatenated string (label + value) causes screen readers to redundantly announce the entire string twice.
 **Action:** Structurally separate the label from the value into distinct spans. Apply the `title` attribute *only* to the truncated value element to provide the tooltip without creating a redundant screen reader announcement anti-pattern.
+## 2025-02-14 - Fix ARIA semantics for Fieldsets and Tabs
+**Learning:** Adding `aria-label` to a `<fieldset>` that already contains a `<legend>` results in redundant screen reader announcements. Additionally, using `aria-controls` on a tab (`role="tab"`) that points to a non-tabpanel element (like a file upload dropzone) breaks expected tab navigation patterns. Also, grouping standalone radio inputs requires explicitly setting `role="radiogroup"`.
+**Action:** Always rely on native semantic HTML `<legend>` for fieldsets, avoid using `aria-controls` if the target is not structurally a `tabpanel`, and remember to add `role="radiogroup"` on div wrappers enclosing radio buttons.
