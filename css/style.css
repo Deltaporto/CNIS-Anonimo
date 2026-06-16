@@ -294,6 +294,11 @@ body[data-ocr-modo="ligado"] .opcoes-sem-ocr {
   opacity: .56;
 }
 
+body[data-ocr-modo="ligado"] .opcoes-sem-ocr label,
+body[data-ocr-modo="ligado"] .opcoes-sem-ocr input {
+  cursor: not-allowed;
+}
+
 .como-funciona summary {
   cursor: pointer;
   color: #2e7d32;
@@ -305,6 +310,11 @@ body[data-ocr-modo="ligado"] .opcoes-sem-ocr {
   align-items: center;
   gap: 0.35em;
   border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.como-funciona summary:hover {
+  color: #1b5e20;
 }
 
 .como-funciona summary:focus-visible {
