@@ -281,6 +281,10 @@ body[data-modo="extrair-pecas"] .upload-sub strong {
   border-radius: 4px;
 }
 
+.opcoes-sem-ocr label:has(input:disabled) {
+  cursor: not-allowed;
+}
+
 .opcoes-sem-ocr label:has(input:focus-visible) {
   outline: 3px solid var(--blue);
   outline-offset: 2px;
