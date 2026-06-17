@@ -104,6 +104,14 @@ function atualizarOpcoesExtrairUI() {
   }
   for (const radio of semOcrPaginasRadios || []) {
     radio.disabled = ocrOptions.enableOcr;
+    const label = radio.closest ? radio.closest('label') : null;
+    if (label) {
+      if (radio.disabled) {
+        label.title = 'Desligue o OCR para configurar esta opção';
+      } else {
+        label.removeAttribute('title');
+      }
+    }
   }
   if (document.body?.dataset) {
     document.body.dataset.ocrModo = ocrOptions.enableOcr ? 'ligado' : 'desligado';
