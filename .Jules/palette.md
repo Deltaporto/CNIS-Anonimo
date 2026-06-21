@@ -67,3 +67,6 @@
 ## 2025-02-14 - Fix ARIA semantics for Fieldsets and Tabs
 **Learning:** Adding `aria-label` to a `<fieldset>` that already contains a `<legend>` results in redundant screen reader announcements. Additionally, using `aria-controls` on a tab (`role="tab"`) that points to a non-tabpanel element (like a file upload dropzone) breaks expected tab navigation patterns. Also, grouping standalone radio inputs requires explicitly setting `role="radiogroup"`.
 **Action:** Always rely on native semantic HTML `<legend>` for fieldsets, avoid using `aria-controls` if the target is not structurally a `tabpanel`, and remember to add `role="radiogroup"` on div wrappers enclosing radio buttons.
+## 2026-06-21 - Visual Styling for Keyboard Shortcuts
+**Learning:** Unstyled `<kbd>` tags inside buttons blend in with normal text, making keyboard shortcut hints visually ambiguous and difficult to parse quickly.
+**Action:** Establish a visual design system pattern for `<kbd>` tags by applying explicit styling (e.g., borders, bottom-heavy weight, monospace fonts) to simulate a keycap, and apply `inline-flex` and `gap` to parent buttons for proper alignment and spacing.
