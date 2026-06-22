@@ -28,3 +28,6 @@
 ## 2024-06-13 - O(N*M) calculation within filter loop
 **Learning:** In `js/redactor.js`, recalculating a static property (like `_coletarRangesProtegidos(texto)`) for every match inside a `.filter()` iteration causes a severe $O(N \times M)$ performance bottleneck. Our benchmark showed a ~1000x speedup (from 10.7 seconds down to 11 milliseconds) on large inputs simply by hoisting this single calculation outside of the `filter` loop.
 **Action:** When filtering matches based on a result that depends only on the original input string, calculate and cache the result in a variable *before* the `.filter()` loop, rather than recalculating it inside the callback for every matched item.
+## 2024-05-18 - Optimize range overlap checks
+**Learning:** Replaced Array.prototype.some() with a standard for loop in _sobrepoeRangeProtegido (redactor.js) avoids callback allocation overhead in a hot path during redaction string scanning, improving performance on large PDFs.
+**Action:** Replace higher-order array methods with standard loops in tight execution loops and include an inline comment explaining the engine-specific rationale.
