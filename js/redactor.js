@@ -148,7 +148,12 @@ function _coletarRangesProtegidos(texto) {
 function _sobrepoeRangeProtegido(match, ranges) {
   const inicio = match.index;
   const fim = match.index + match[0].length;
-  return ranges.some(range => inicio < range.fim && fim > range.inicio);
+  // ⚡ Bolt: Fast-path loop. Replaces .some() with a standard for loop to
+  // avoid callback allocation overhead in a hot path.
+  for (let i = 0; i < ranges.length; i++) {
+    if (inicio < ranges[i].fim && fim > ranges[i].inicio) return true;
+  }
+  return false;
 }
 
 function _semAcentos(valor) {
