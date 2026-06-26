@@ -1091,7 +1091,25 @@ btnBaixarZip.addEventListener('click', async () => {
   }
 });
 
+let limparTimeout;
 btnLimpar.addEventListener('click', () => {
+  if (!btnLimpar.dataset.confirm) {
+    btnLimpar.dataset.confirm = 'true';
+    btnLimpar.dataset.original = btnLimpar.innerHTML;
+    btnLimpar.innerHTML = 'Tem certeza? <kbd aria-hidden="true">Esc</kbd>';
+    btnLimpar.title = 'Clique novamente ou pressione Esc para confirmar';
+    limparTimeout = setTimeout(() => {
+      delete btnLimpar.dataset.confirm;
+      btnLimpar.innerHTML = btnLimpar.dataset.original;
+      btnLimpar.removeAttribute('title');
+    }, 3000);
+    return;
+  }
+  clearTimeout(limparTimeout);
+  delete btnLimpar.dataset.confirm;
+  btnLimpar.innerHTML = btnLimpar.dataset.original;
+  btnLimpar.removeAttribute('title');
+
   limparEstado();
   atualizarModoUI();
   zonaUpload.focus();

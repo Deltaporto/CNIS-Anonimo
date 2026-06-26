@@ -70,3 +70,7 @@
 ## 2026-06-21 - Visual Styling for Keyboard Shortcuts
 **Learning:** Unstyled `<kbd>` tags inside buttons blend in with normal text, making keyboard shortcut hints visually ambiguous and difficult to parse quickly.
 **Action:** Establish a visual design system pattern for `<kbd>` tags by applying explicit styling (e.g., borders, bottom-heavy weight, monospace fonts) to simulate a keycap, and apply `inline-flex` and `gap` to parent buttons for proper alignment and spacing.
+
+## 2024-06-24 - Inline Confirmation for Destructive Actions
+**Learning:** Binding global keyboard shortcuts (like `Esc`) to destructive actions (like clearing all processed files) can lead to severe accidental data loss, as users frequently press `Esc` to close dialogs or blur focus.
+**Action:** Implement a two-step inline confirmation (e.g., "Tem certeza?") that resets after a timeout, requiring the user to explicitly trigger the action twice (via click or shortcut) to confirm the destructive operation without blocking the UI with native dialogs.
