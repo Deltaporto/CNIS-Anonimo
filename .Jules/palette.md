@@ -74,3 +74,7 @@
 ## 2024-06-24 - Inline Confirmation for Destructive Actions
 **Learning:** Binding global keyboard shortcuts (like `Esc`) to destructive actions (like clearing all processed files) can lead to severe accidental data loss, as users frequently press `Esc` to close dialogs or blur focus.
 **Action:** Implement a two-step inline confirmation (e.g., "Tem certeza?") that resets after a timeout, requiring the user to explicitly trigger the action twice (via click or shortcut) to confirm the destructive operation without blocking the UI with native dialogs.
+
+## 2025-02-14 - Improve accessibility of dynamic upload zones
+**Learning:** Applying an `aria-label` to a container with rich child text elements (like an upload zone with a title and subtitle) completely overrides the child content for screen readers, preventing them from accessing dynamic updates to those children.
+**Action:** Remove the `aria-label` and instead use `aria-labelledby` and `aria-describedby` pointing to the child elements' IDs. This ensures the screen reader always reads the most up-to-date, dynamically rendered child content without needing to manually sync the parent's `aria-label`.
