@@ -148,7 +148,26 @@ function _coletarRangesProtegidos(texto) {
 function _sobrepoeRangeProtegido(match, ranges) {
   const inicio = match.index;
   const fim = match.index + match[0].length;
-  return ranges.some(range => inicio < range.fim && fim > range.inicio);
+
+  // ⚡ Bolt: Replace O(N) .some() scan with O(log N) binary search.
+  // The ranges array is guaranteed to be sorted and non-overlapping
+  // as it is generated sequentially via matchAll in _coletarRangesProtegidos.
+  let left = 0;
+  let right = ranges.length - 1;
+
+  while (left <= right) {
+    const mid = (left + right) >> 1;
+    const range = ranges[mid];
+
+    if (inicio < range.fim && fim > range.inicio) {
+      return true;
+    } else if (fim <= range.inicio) {
+      right = mid - 1;
+    } else {
+      left = mid + 1;
+    }
+  }
+  return false;
 }
 
 function _semAcentos(valor) {
