@@ -74,3 +74,7 @@
 ## 2024-06-24 - Inline Confirmation for Destructive Actions
 **Learning:** Binding global keyboard shortcuts (like `Esc`) to destructive actions (like clearing all processed files) can lead to severe accidental data loss, as users frequently press `Esc` to close dialogs or blur focus.
 **Action:** Implement a two-step inline confirmation (e.g., "Tem certeza?") that resets after a timeout, requiring the user to explicitly trigger the action twice (via click or shortcut) to confirm the destructive operation without blocking the UI with native dialogs.
+
+## 2026-06-21 - Accessible Dynamic Action Updates for Buttons
+**Learning:** Re-applying a static `aria-label` manually via JavaScript when a state changes drops the implicit relationship between the button container and its dynamic rich text children. Screen readers announce the static generic string instead of the precise context shown on screen.
+**Action:** Remove static `aria-label` settings on interactive containers with complex text structures. Instead, structurally link the parent container directly to its dynamic text nodes using `aria-labelledby` and `aria-describedby` pointing to the respective element IDs.

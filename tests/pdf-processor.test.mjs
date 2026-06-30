@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import pako from 'pako';
+import * as pako from 'pako';
 
 import { loadPdfProcessorApi } from './helpers/browser-apis.mjs';
 

@@ -7,7 +7,6 @@ const MODOS_DOCUMENTO = {
     zipNome: 'CNIS_anonimizados.zip',
     uploadTitulo: 'Arraste os extratos CNIS aqui',
     uploadSub: 'ou clique para selecionar · um ou vários arquivos · download automático ao concluir',
-    ariaLabel: 'Selecionar arquivos PDF do CNIS para anonimizar',
     botaoDownloadUm: 'Baixar novamente',
     botaoDownloadVarios: 'Baixar ZIP novamente'
   },
@@ -17,7 +16,6 @@ const MODOS_DOCUMENTO = {
     zipNome: 'Cartas_de_concessao_anonimizadas.zip',
     uploadTitulo: 'Arraste as cartas de concessão aqui',
     uploadSub: 'ou clique para selecionar · PDFs de carta de concessão ou memória de cálculo · download automático ao concluir',
-    ariaLabel: 'Selecionar arquivos PDF de carta de concessão para anonimizar',
     botaoDownloadUm: 'Baixar novamente',
     botaoDownloadVarios: 'Baixar ZIP novamente'
   },
@@ -27,7 +25,6 @@ const MODOS_DOCUMENTO = {
     zipNome: 'Processos_anonimizados.zip',
     uploadTitulo: 'Arraste as peças processuais aqui',
     uploadSub: 'ou clique para selecionar · petições, sentenças, acórdãos · download automático ao concluir',
-    ariaLabel: 'Selecionar arquivos PDF de processos judiciais para anonimizar',
     botaoDownloadUm: 'Baixar novamente',
     botaoDownloadVarios: 'Baixar ZIP novamente'
   },
@@ -37,7 +34,6 @@ const MODOS_DOCUMENTO = {
     zipNome: 'Pecas_do_processo.zip',
     uploadTitulo: 'Arraste a íntegra do processo (Eproc)',
     uploadSub: 'Preferencial: no Eproc, abra a árvore do processo, marque todos, use Versão p/ impressão e selecione o separador Ambos (Evento e Documento). clique para selecionar',
-    ariaLabel: 'Selecionar PDF da íntegra do processo para extrair as peças em texto',
     botaoDownloadUm: 'Baixar peças extraídas novamente',
     botaoDownloadVarios: 'Baixar peças extraídas novamente',
     isSplit: true
@@ -136,9 +132,6 @@ function atualizarModoUI() {
     } else {
       uploadSubEl.textContent = config.uploadSub;
     }
-  }
-  if (zonaUpload && typeof zonaUpload.setAttribute === 'function') {
-    zonaUpload.setAttribute('aria-label', config.ariaLabel);
   }
 
   // Atualizar atributo multiple do input de arquivo
