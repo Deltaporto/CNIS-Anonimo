@@ -78,3 +78,6 @@
 ## 2026-06-21 - Accessible Dynamic Action Updates for Buttons
 **Learning:** Re-applying a static `aria-label` manually via JavaScript when a state changes drops the implicit relationship between the button container and its dynamic rich text children. Screen readers announce the static generic string instead of the precise context shown on screen.
 **Action:** Remove static `aria-label` settings on interactive containers with complex text structures. Instead, structurally link the parent container directly to its dynamic text nodes using `aria-labelledby` and `aria-describedby` pointing to the respective element IDs.
+## 2026-07-02 - aria-live spam on progress indicators
+**Learning:** Adding `aria-live="polite"` to an element that updates continuously with progress percentages (e.g., "10%", "20%") causes assistive technologies to incessantly announce the updates, overwhelming the user and masking more important status messages.
+**Action:** Remove `aria-live` from dynamic text elements representing granular progress percentages, relying instead on the existing `role="progressbar"` and its `aria-valuenow` attribute for controlled, native progress announcements by screen readers.

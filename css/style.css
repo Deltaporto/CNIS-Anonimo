@@ -463,6 +463,7 @@ body[data-ocr-modo="ligado"] .opcoes-sem-ocr {
 .zona-upload svg { opacity: .35; margin-bottom: 16px; transition: opacity .2s, transform .2s; }
 .zona-upload svg, .zona-upload p { pointer-events: none; }
 .zona-upload:hover svg { opacity: .6; transform: translateY(-3px); }
+.zona-upload.drag-over svg { opacity: .8; transform: translateY(-6px) scale(1.05); color: var(--blue); }
 .upload-titulo {
   font-family: 'Inter', sans-serif;
   font-size: 18px;
