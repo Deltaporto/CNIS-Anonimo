@@ -266,19 +266,24 @@ inputArquivo.addEventListener('change', event => {
 
 window.addEventListener('dragover', event => {
   event.preventDefault();
-  zonaUpload.classList.add('drag-over');
+  if (!zonaUpload.classList.contains('drag-over')) {
+    zonaUpload.classList.add('drag-over');
+    uploadTituloEl.textContent = 'Solte os arquivos aqui!';
+  }
 });
 
 window.addEventListener('dragleave', event => {
   event.preventDefault();
   if (event.relatedTarget === null) {
     zonaUpload.classList.remove('drag-over');
+    atualizarModoUI();
   }
 });
 
 window.addEventListener('drop', event => {
   event.preventDefault();
   zonaUpload.classList.remove('drag-over');
+    atualizarModoUI();
 
   const arquivos = Array.from(event.dataTransfer.files);
   const pdfs = arquivos.filter(file => file.type === 'application/pdf' || file.name.endsWith('.pdf'));
@@ -817,7 +822,7 @@ function criarItemLista(nomeArquivo) {
 
   const progressoDetalhe = document.createElement('div');
   progressoDetalhe.className = 'arquivo-progresso-detalhe';
-  progressoDetalhe.setAttribute('aria-live', 'polite');
+
   progressoDetalhe.textContent = 'Na fila de processamento';
 
   const subs = document.createElement('div');
