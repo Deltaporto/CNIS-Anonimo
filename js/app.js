@@ -1085,22 +1085,36 @@ btnBaixarZip.addEventListener('click', async () => {
 });
 
 let limparTimeout;
+let btnLimparOriginalNodes = null;
+
 btnLimpar.addEventListener('click', () => {
   if (!btnLimpar.dataset.confirm) {
     btnLimpar.dataset.confirm = 'true';
-    btnLimpar.dataset.original = btnLimpar.innerHTML;
-    btnLimpar.innerHTML = 'Tem certeza? <kbd aria-hidden="true">Esc</kbd>';
+
+    // Save original DOM nodes dynamically
+    if (!btnLimparOriginalNodes) {
+      btnLimparOriginalNodes = Array.from(btnLimpar.childNodes);
+    }
+
+    btnLimpar.textContent = 'Tem certeza? ';
+    const kbd = document.createElement('kbd');
+    kbd.setAttribute('aria-hidden', 'true');
+    kbd.textContent = 'Esc';
+    btnLimpar.appendChild(kbd);
+
     btnLimpar.title = 'Clique novamente ou pressione Esc para confirmar';
     limparTimeout = setTimeout(() => {
       delete btnLimpar.dataset.confirm;
-      btnLimpar.innerHTML = btnLimpar.dataset.original;
+
+      btnLimpar.replaceChildren(...btnLimparOriginalNodes);
       btnLimpar.removeAttribute('title');
     }, 3000);
     return;
   }
   clearTimeout(limparTimeout);
   delete btnLimpar.dataset.confirm;
-  btnLimpar.innerHTML = btnLimpar.dataset.original;
+
+  btnLimpar.replaceChildren(...btnLimparOriginalNodes);
   btnLimpar.removeAttribute('title');
 
   limparEstado();
