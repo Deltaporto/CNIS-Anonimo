@@ -22,3 +22,7 @@
 **Vulnerability:** Calculating and applying an SRI hash to a mutable CDN URL (like `tesseract.js@5` which points to the latest 5.x.x version) introduces a time-bomb. When the package is updated, the hash will fail and the resource will be permanently blocked, breaking application functionality.
 **Learning:** Subresource Integrity (SRI) relies on the exact contents of the file. If a CDN URL allows version floating (e.g., via major/minor tags instead of exact patch versions), the file contents can change, breaking the application.
 **Prevention:** Always pin CDN URLs to exact, immutable versions (e.g., `@5.1.1` instead of `@5`) before calculating and applying SRI hashes.
+## 2025-02-18 - Fail securely in UI error handling
+**Vulnerability:** The application was passing the raw `err.message` exception property directly into a user-facing toast notification component (`mostrarToast`).
+**Learning:** Even in purely client-side applications without a backend, leaking raw error messages to the user interface is an insecure pattern. It can inadvertently expose internal application state, implementation details, or stack traces if an unexpected edge-case exception is triggered.
+**Prevention:** Always follow the "fail securely" principle. Log the raw error (`err`) to the developer console for debugging (`console.error`), but provide only a safe, generic, user-friendly message to the end-user via the UI component.
