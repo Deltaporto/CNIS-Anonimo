@@ -1,5 +1,8 @@
 // Lógica de lote: processa múltiplos PDFs e baixa como ZIP automaticamente
 
+const ICON_DOWNLOAD = '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>';
+const ICON_SPINNER = '<svg aria-hidden="true" class="spinner" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+
 const MODOS_DOCUMENTO = {
   cnis: {
     id: 'cnis',
@@ -352,19 +355,17 @@ async function iniciarLote(arquivos) {
 
   try {
     if (resultados.length === 1) {
-      btnBaixarZip.textContent = config.botaoDownloadUm;
+      btnBaixarZip.innerHTML = ICON_DOWNLOAD + '<span>' + config.botaoDownloadUm + '</span>';
       baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
     } else {
-      btnBaixarZip.textContent = 'Gerando ZIP...';
+      btnBaixarZip.innerHTML = ICON_SPINNER + '<span>Gerando ZIP...</span>';
       const zip = new JSZip();
       for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
       const zipBytes = await zip.generateAsync({ type: 'uint8array' });
       baixarBlob(zipBytes, 'application/zip', config.zipNome);
     }
   } finally {
-    btnBaixarZip.textContent = resultados.length === 1
-      ? config.botaoDownloadUm
-      : config.botaoDownloadVarios;
+    btnBaixarZip.innerHTML = ICON_DOWNLOAD + '<span>' + (resultados.length === 1 ? config.botaoDownloadUm : config.botaoDownloadVarios) + '</span>';
     btnBaixarZip.disabled = false;
     btnBaixarZip.removeAttribute('aria-busy');
     btnBaixarZip.removeAttribute('title');
@@ -584,7 +585,7 @@ async function iniciarSplitEproc(arquivos) {
 
     // 10. Configurar botão de rebaixar
     acoesEl.classList.remove('oculto');
-    btnBaixarZip.textContent = config.botaoDownloadUm;
+    btnBaixarZip.innerHTML = ICON_DOWNLOAD + '<span>' + config.botaoDownloadUm + '</span>';
     btnBaixarZip.disabled = false;
 
   } catch (err) {
@@ -1071,12 +1072,12 @@ btnBaixarZip.addEventListener('click', async () => {
     return;
   }
 
-  const textoOriginal = btnBaixarZip.textContent;
+  const htmlOriginal = btnBaixarZip.innerHTML;
   try {
     btnBaixarZip.disabled = true;
     btnBaixarZip.title = 'Aguarde a geração do arquivo para baixar';
     btnBaixarZip.setAttribute('aria-busy', 'true');
-    btnBaixarZip.textContent = 'Gerando ZIP...';
+    btnBaixarZip.innerHTML = ICON_SPINNER + '<span>Gerando ZIP...</span>';
     const zip = new JSZip();
     for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
     const zipBytes = await zip.generateAsync({ type: 'uint8array' });
@@ -1085,7 +1086,7 @@ btnBaixarZip.addEventListener('click', async () => {
     btnBaixarZip.disabled = false;
     btnBaixarZip.removeAttribute('title');
     btnBaixarZip.removeAttribute('aria-busy');
-    btnBaixarZip.textContent = textoOriginal;
+    btnBaixarZip.innerHTML = htmlOriginal;
   }
 });
 

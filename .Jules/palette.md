@@ -81,3 +81,6 @@
 ## 2026-07-02 - aria-live spam on progress indicators
 **Learning:** Adding `aria-live="polite"` to an element that updates continuously with progress percentages (e.g., "10%", "20%") causes assistive technologies to incessantly announce the updates, overwhelming the user and masking more important status messages.
 **Action:** Remove `aria-live` from dynamic text elements representing granular progress percentages, relying instead on the existing `role="progressbar"` and its `aria-valuenow` attribute for controlled, native progress announcements by screen readers.
+## 2026-07-06 - Dynamic Action Labels for Buttons and Accessibility
+**Learning:** When injecting SVG icons alongside text dynamically in a button via innerHTML (e.g., for loading spinners or states), adding `aria-hidden="true"` to the SVG is essential to prevent screen readers from redundantly announcing the graphic, keeping the semantic meaning tied to existing ARIA attributes like `aria-busy`.
+**Action:** Always use `aria-hidden="true"` on decorative or loading state SVG icons injected dynamically into action buttons.
