@@ -294,9 +294,11 @@ async function ensureTesseractLoaded(onProgress = () => {}) {
     return typeof window !== 'undefined' && !!window.Tesseract;
   } catch (err) {
     _tesseractLoadFailed = true;
+    // Sentinel: fail securely, log raw error to console and show safe UI message
+    console.error('[pdf-splitter] Falha ao carregar Tesseract.js:', err);
     onProgress({
       type: 'warn',
-      message: 'OCR indisponível: não foi possível carregar Tesseract.js (' + err.message + ')'
+      message: 'OCR indisponível: não foi possível inicializar o motor de reconhecimento.'
     });
     return false;
   }
