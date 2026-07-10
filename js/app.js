@@ -596,7 +596,8 @@ async function iniciarSplitEproc(arquivos) {
     if (msg.includes('memória') || msg.includes('memory') || msg.includes('out of memory')) {
       mostrarToast('Não foi possível processar este PDF no navegador. Tente uma íntegra menor ou divida o arquivo na origem.');
     } else {
-      mostrarToast(msg);
+      // 🛡️ Sentinel: Fail securely - don't expose raw error messages to the UI
+      mostrarToast('Erro ao processar o PDF. O arquivo pode estar corrompido ou ser inválido.');
     }
     console.error('[ExtrairPecas]', err);
   } finally {
