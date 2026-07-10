@@ -294,9 +294,10 @@ async function ensureTesseractLoaded(onProgress = () => {}) {
     return typeof window !== 'undefined' && !!window.Tesseract;
   } catch (err) {
     _tesseractLoadFailed = true;
+    // 🛡️ Sentinel: Fail securely - don't expose raw error messages to the UI
     onProgress({
       type: 'warn',
-      message: 'OCR indisponível: não foi possível carregar Tesseract.js (' + err.message + ')'
+      message: 'OCR indisponível: não foi possível carregar Tesseract.js'
     });
     return false;
   }
