@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import { webcrypto } from 'node:crypto';
 import * as PDFLib from 'pdf-lib';
 import * as pako from 'pako';
-const pdfjsBase = await import('pdfjs-dist/legacy/build/pdf.js');
+const pdfjsBase = await import('pdfjs-dist/legacy/build/pdf.mjs');
 
 const ROOT_URL = new URL('../../', import.meta.url);
 async function resolveProjectRootUrl() {
