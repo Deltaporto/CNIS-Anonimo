@@ -18,6 +18,17 @@ for (let i = 48; i <= 57; i++) HEX_CHAR_TO_INT[i] = i - 48; // 0-9
 for (let i = 65; i <= 70; i++) HEX_CHAR_TO_INT[i] = i - 55; // A-F
 for (let i = 97; i <= 102; i++) HEX_CHAR_TO_INT[i] = i - 87; // a-f
 
+// ⚡ Bolt: Fast path for overlapping checks without allocating array callbacks in tight loops
+function _verificaSobreposicao(pos, fim, rangesAplicados) {
+  for (let i = 0; i < rangesAplicados.length; i++) {
+    const range = rangesAplicados[i];
+    if (pos < range.fim && fim > range.inicio) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function bytesToLatin1String(bytes) {
   let str = '';
   const chunk = 8192;
@@ -434,7 +445,7 @@ function aplicarEspecificacoesEmArraysTJ(texto, specs) {
       let pos = textoVisivel.indexOf(original);
       while (pos !== -1) {
         const fim = pos + original.length;
-        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+        const sobrepoe = _verificaSobreposicao(pos, fim, rangesAplicados);
 
         if (!sobrepoe) {
           for (let k = 0; k < original.length; k++) {
@@ -458,9 +469,7 @@ function aplicarEspecificacoesEmArraysTJ(texto, specs) {
   for (const segmento of segmentos) {
     partes.push(texto.slice(ultimo, segmento.offset));
 
-    const mudouSegmento = rangesAplicados.some(range =>
-      range.inicio < segmento.endTexto && range.fim > segmento.startTexto
-    );
+    const mudouSegmento = _verificaSobreposicao(segmento.startTexto, segmento.endTexto, rangesAplicados);
 
     if (mudouSegmento) {
       const novoValor = textoRedatado.slice(segmento.startTexto, segmento.endTexto);
@@ -523,7 +532,7 @@ function aplicarEspecificacoesEmLiteraisTjFragmentados(texto, specs) {
       let pos = textoVisivel.indexOf(original);
       while (pos !== -1) {
         const fim = pos + original.length;
-        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+        const sobrepoe = _verificaSobreposicao(pos, fim, rangesAplicados);
 
         if (!sobrepoe) {
           for (let k = 0; k < original.length; k++) {
@@ -547,9 +556,7 @@ function aplicarEspecificacoesEmLiteraisTjFragmentados(texto, specs) {
   for (const segmento of segmentos) {
     partes.push(texto.slice(ultimo, segmento.offset));
 
-    const mudouSegmento = rangesAplicados.some(range =>
-      range.inicio < segmento.endTexto && range.fim > segmento.startTexto
-    );
+    const mudouSegmento = _verificaSobreposicao(segmento.startTexto, segmento.endTexto, rangesAplicados);
 
     if (mudouSegmento) {
       const novoValor = textoRedatado.slice(segmento.startTexto, segmento.endTexto);
@@ -615,7 +622,7 @@ function aplicarEspecificacoesEmHexArraysTJ(texto, specsHex) {
 
       while (pos !== -1) {
         const fim = pos + originalUpper.length;
-        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+        const sobrepoe = _verificaSobreposicao(pos, fim, rangesAplicados);
 
         if (!sobrepoe) {
           for (let k = 0; k < originalUpper.length; k++) {
@@ -639,9 +646,7 @@ function aplicarEspecificacoesEmHexArraysTJ(texto, specsHex) {
   for (const segmento of segmentos) {
     partes.push(texto.slice(ultimo, segmento.offset));
 
-    const mudouSegmento = rangesAplicados.some(range =>
-      range.inicio < segmento.endHex && range.fim > segmento.startHex
-    );
+    const mudouSegmento = _verificaSobreposicao(segmento.startHex, segmento.endHex, rangesAplicados);
 
     if (mudouSegmento) {
       const novoValor = hexRedatado.slice(segmento.startHex, segmento.endHex);
@@ -700,7 +705,7 @@ function aplicarEspecificacoesEmHexTjFragmentado(texto, specsHex) {
 
       while (pos !== -1) {
         const fim = pos + originalUpper.length;
-        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+        const sobrepoe = _verificaSobreposicao(pos, fim, rangesAplicados);
 
         if (!sobrepoe) {
           for (let k = 0; k < originalUpper.length; k++) {
@@ -724,9 +729,7 @@ function aplicarEspecificacoesEmHexTjFragmentado(texto, specsHex) {
   for (const segmento of segmentos) {
     partes.push(texto.slice(ultimo, segmento.offset));
 
-    const mudouSegmento = rangesAplicados.some(range =>
-      range.inicio < segmento.endHex && range.fim > segmento.startHex
-    );
+    const mudouSegmento = _verificaSobreposicao(segmento.startHex, segmento.endHex, rangesAplicados);
 
     if (mudouSegmento) {
       const novoValor = hexRedatado.slice(segmento.startHex, segmento.endHex);
