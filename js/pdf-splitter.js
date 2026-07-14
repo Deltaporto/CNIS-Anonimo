@@ -296,7 +296,7 @@ async function ensureTesseractLoaded(onProgress = () => {}) {
     _tesseractLoadFailed = true;
     onProgress({
       type: 'warn',
-      message: 'OCR indisponível: não foi possível carregar Tesseract.js (' + err.message + ')'
+      message: 'OCR indisponível: não foi possível carregar o módulo de reconhecimento de texto.'
     });
     return false;
   }
