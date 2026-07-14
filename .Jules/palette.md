@@ -84,3 +84,7 @@
 ## 2026-07-06 - Dynamic Action Labels for Buttons and Accessibility
 **Learning:** When injecting SVG icons alongside text dynamically in a button via innerHTML (e.g., for loading spinners or states), adding `aria-hidden="true"` to the SVG is essential to prevent screen readers from redundantly announcing the graphic, keeping the semantic meaning tied to existing ARIA attributes like `aria-busy`.
 **Action:** Always use `aria-hidden="true"` on decorative or loading state SVG icons injected dynamically into action buttons.
+
+## 2026-06-25 - Tactile Feedback for Custom Interactive Elements
+**Learning:** Users expect large custom interactive elements (like custom radio cards, tab buttons, and drag-and-drop zones) to provide physical feedback when pressed. Without an `:active` state, these elements feel unresponsive and less trustworthy compared to native buttons.
+**Action:** Always apply an `:active` state with a subtle `transform: scale(...)` to large clickable UI components to provide immediate, satisfying tactile feedback that simulates a physical button press.
