@@ -151,6 +151,10 @@ main {
   outline-offset: 2px;
 }
 
+.modo-btn:active {
+  transform: scale(.98);
+}
+
 .modo-btn.modo-ativo {
   border-color: var(--navy-light);
   background: linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
@@ -232,6 +236,10 @@ body[data-modo="extrair-pecas"] .upload-sub strong {
 .saida-opcao:has(input:focus-visible) {
   outline: 3px solid var(--blue);
   outline-offset: 2px;
+}
+
+.saida-opcao:active {
+  transform: scale(.99);
 }
 
 .saida-opcao input {
@@ -459,6 +467,9 @@ body[data-ocr-modo="ligado"] .opcoes-sem-ocr {
   outline-offset: 2px;
   border-color: var(--navy-light);
   background: #f0f5ff;
+}
+.zona-upload:active {
+  transform: scale(.99);
 }
 .zona-upload svg { opacity: .35; margin-bottom: 16px; transition: opacity .2s, transform .2s; }
 .zona-upload svg, .zona-upload p { pointer-events: none; }
