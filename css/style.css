@@ -146,6 +146,10 @@ main {
   box-shadow: var(--shadow-lg);
 }
 
+.modo-btn:active {
+  transform: scale(.98);
+}
+
 .modo-btn:focus-visible {
   outline: 3px solid var(--blue);
   outline-offset: 2px;
@@ -219,7 +223,7 @@ body[data-modo="extrair-pecas"] .upload-sub strong {
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow);
   cursor: pointer;
-  transition: border-color .18s, background .18s, box-shadow .18s;
+  transition: border-color .18s, background .18s, box-shadow .18s, transform .18s;
 }
 
 .saida-opcao:hover,
@@ -227,6 +231,10 @@ body[data-modo="extrair-pecas"] .upload-sub strong {
   border-color: #4caf50;
   background: #f1fbf3;
   box-shadow: 0 2px 12px rgba(46, 125, 50, .10);
+}
+
+.saida-opcao:active {
+  transform: scale(.98);
 }
 
 .saida-opcao:has(input:focus-visible) {
@@ -453,6 +461,9 @@ body[data-ocr-modo="ligado"] .opcoes-sem-ocr {
   color: var(--navy);
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
+}
+.zona-upload:active {
+  transform: scale(.98);
 }
 .zona-upload:focus-visible {
   outline: 3px solid var(--blue);
