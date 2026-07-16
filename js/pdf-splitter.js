@@ -296,8 +296,9 @@ async function ensureTesseractLoaded(onProgress = () => {}) {
     _tesseractLoadFailed = true;
     onProgress({
       type: 'warn',
-      message: 'OCR indisponível: não foi possível carregar Tesseract.js (' + err.message + ')'
+      message: 'OCR indisponível: não foi possível carregar módulo de reconhecimento de imagem.'
     });
+    console.warn('[pdf-splitter] erro ao carregar Tesseract:', err);
     return false;
   }
 }
