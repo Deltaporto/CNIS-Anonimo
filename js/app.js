@@ -24,6 +24,7 @@ const MODOS_DOCUMENTO = {
   },
   'processo-judicial': {
     id: 'processo-judicial',
+    maxPdfSizeMb: 70,
     prefixoArquivo: 'Processo',
     zipNome: 'Processos_anonimizados.zip',
     uploadTitulo: 'Arraste as peças processuais aqui',
@@ -33,6 +34,7 @@ const MODOS_DOCUMENTO = {
   },
   'extrair-pecas': {
     id: 'extrair-pecas',
+    maxPdfSizeMb: 70,
     prefixoArquivo: 'Processo',
     zipNome: 'Pecas_do_processo.zip',
     uploadTitulo: 'Arraste a íntegra do processo (Eproc)',
@@ -372,7 +374,18 @@ async function iniciarLote(arquivos) {
   }
 }
 
-const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50 MB
+const DEFAULT_MAX_PDF_SIZE_MB = 50;
+
+function obterLimitePdfMb(modo = modoAtual) {
+  const limiteConfigurado = Number(obterConfigModo(modo).maxPdfSizeMb);
+  return Number.isFinite(limiteConfigurado) && limiteConfigurado > 0
+    ? limiteConfigurado
+    : DEFAULT_MAX_PDF_SIZE_MB;
+}
+
+function obterLimitePdfBytes(modo = modoAtual) {
+  return obterLimitePdfMb(modo) * 1024 * 1024;
+}
 
 // ── SEPARAR PEÇAS (eProc) ─────────────────────────────────────────────────────
 
@@ -491,8 +504,9 @@ async function iniciarSplitEproc(arquivos) {
   }
 
   // Verificar tamanho
-  if (arquivo.size > MAX_PDF_SIZE) {
-    mostrarToast('Não foi possível processar este PDF no navegador. Tente uma íntegra menor ou divida o arquivo na origem.');
+  const limitePdfMb = obterLimitePdfMb(modoAtual);
+  if (arquivo.size > obterLimitePdfBytes(modoAtual)) {
+    mostrarToast(`Não foi possível processar este PDF no navegador (limite de ${limitePdfMb} MB). Tente uma íntegra menor ou divida o arquivo na origem.`);
     return;
   }
 
@@ -608,9 +622,10 @@ async function iniciarSplitEproc(arquivos) {
 async function processarArquivo(file, item, indice, totalArquivos, modoLote) {
   setStatus(item, 'processando', 'Processando…');
 
-  if (file.size > MAX_PDF_SIZE) {
+  const limitePdfMb = obterLimitePdfMb(modoLote);
+  if (file.size > obterLimitePdfBytes(modoLote)) {
     setProgresso(item, 100, false, true);
-    setStatus(item, 'erro', 'Arquivo muito grande (máx. 50 MB)');
+    setStatus(item, 'erro', `Arquivo muito grande (máx. ${limitePdfMb} MB)`);
     return null;
   }
 
