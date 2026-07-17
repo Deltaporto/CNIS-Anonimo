@@ -792,3 +792,5 @@ footer {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+.modo-btn:active, .zona-upload:active, .saida-opcao:active { transform: scale(.98); }
