@@ -146,6 +146,8 @@ main {
   box-shadow: var(--shadow-lg);
 }
 
+.modo-btn:active { transform: scale(.98); }
+
 .modo-btn:focus-visible {
   outline: 3px solid var(--blue);
   outline-offset: 2px;
@@ -219,8 +221,10 @@ body[data-modo="extrair-pecas"] .upload-sub strong {
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow);
   cursor: pointer;
-  transition: border-color .18s, background .18s, box-shadow .18s;
+  transition: border-color .18s, background .18s, box-shadow .18s, transform .18s;
 }
+
+.saida-opcao:active { transform: scale(.98); }
 
 .saida-opcao:hover,
 .saida-opcao-ativa {
