@@ -959,6 +959,7 @@ function mostrarSubs(item, originais, ficticios, modo) {
     span.textContent = txt;
     span.setAttribute('role', 'columnheader');
     if (i === 1) span.className = 'col-original';
+    if (i === 2) span.setAttribute('aria-hidden', 'true');
     if (i === 3) span.className = 'col-novo';
     header.appendChild(span);
   });
@@ -992,7 +993,12 @@ function mostrarSubs(item, originais, ficticios, modo) {
     novo.className = 'sub-novo';
     const textoNovo = fake ? fake.toUpperCase() : '—';
     novo.textContent = textoNovo;
-    if (fake) novo.title = textoNovo;
+    if (fake) {
+      novo.title = textoNovo;
+    } else {
+      novo.setAttribute('aria-label', 'Valor original preservado');
+      novo.title = 'Valor original preservado';
+    }
     novo.setAttribute('role', 'cell');
 
     linha.append(lbl, originalEl, seta, novo);
