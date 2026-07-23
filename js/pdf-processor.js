@@ -82,6 +82,14 @@ function adicionarValorUnico(lista, valor, chaveFn = v => v) {
   if (!lista.some(item => chaveFn(item) === chave)) lista.push(valor);
 }
 
+// avoids callback allocation overhead in a hot path
+function _checkOverlap(inicio, fim, ranges) {
+  for (let i = 0; i < ranges.length; i++) {
+    if (inicio < ranges[i].fim && fim > ranges[i].inicio) return true;
+  }
+  return false;
+}
+
 function extrairCpfDoTexto(texto) {
   const matchFormatado = texto.match(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/);
   if (matchFormatado) return matchFormatado[0];
@@ -434,7 +442,7 @@ function aplicarEspecificacoesEmArraysTJ(texto, specs) {
       let pos = textoVisivel.indexOf(original);
       while (pos !== -1) {
         const fim = pos + original.length;
-        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+        const sobrepoe = _checkOverlap(pos, fim, rangesAplicados);
 
         if (!sobrepoe) {
           for (let k = 0; k < original.length; k++) {
@@ -458,9 +466,7 @@ function aplicarEspecificacoesEmArraysTJ(texto, specs) {
   for (const segmento of segmentos) {
     partes.push(texto.slice(ultimo, segmento.offset));
 
-    const mudouSegmento = rangesAplicados.some(range =>
-      range.inicio < segmento.endTexto && range.fim > segmento.startTexto
-    );
+    const mudouSegmento = _checkOverlap(segmento.startTexto, segmento.endTexto, rangesAplicados);
 
     if (mudouSegmento) {
       const novoValor = textoRedatado.slice(segmento.startTexto, segmento.endTexto);
@@ -523,7 +529,7 @@ function aplicarEspecificacoesEmLiteraisTjFragmentados(texto, specs) {
       let pos = textoVisivel.indexOf(original);
       while (pos !== -1) {
         const fim = pos + original.length;
-        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+        const sobrepoe = _checkOverlap(pos, fim, rangesAplicados);
 
         if (!sobrepoe) {
           for (let k = 0; k < original.length; k++) {
@@ -547,9 +553,7 @@ function aplicarEspecificacoesEmLiteraisTjFragmentados(texto, specs) {
   for (const segmento of segmentos) {
     partes.push(texto.slice(ultimo, segmento.offset));
 
-    const mudouSegmento = rangesAplicados.some(range =>
-      range.inicio < segmento.endTexto && range.fim > segmento.startTexto
-    );
+    const mudouSegmento = _checkOverlap(segmento.startTexto, segmento.endTexto, rangesAplicados);
 
     if (mudouSegmento) {
       const novoValor = textoRedatado.slice(segmento.startTexto, segmento.endTexto);
@@ -615,7 +619,7 @@ function aplicarEspecificacoesEmHexArraysTJ(texto, specsHex) {
 
       while (pos !== -1) {
         const fim = pos + originalUpper.length;
-        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+        const sobrepoe = _checkOverlap(pos, fim, rangesAplicados);
 
         if (!sobrepoe) {
           for (let k = 0; k < originalUpper.length; k++) {
@@ -639,9 +643,7 @@ function aplicarEspecificacoesEmHexArraysTJ(texto, specsHex) {
   for (const segmento of segmentos) {
     partes.push(texto.slice(ultimo, segmento.offset));
 
-    const mudouSegmento = rangesAplicados.some(range =>
-      range.inicio < segmento.endHex && range.fim > segmento.startHex
-    );
+    const mudouSegmento = _checkOverlap(segmento.startHex, segmento.endHex, rangesAplicados);
 
     if (mudouSegmento) {
       const novoValor = hexRedatado.slice(segmento.startHex, segmento.endHex);
@@ -700,7 +702,7 @@ function aplicarEspecificacoesEmHexTjFragmentado(texto, specsHex) {
 
       while (pos !== -1) {
         const fim = pos + originalUpper.length;
-        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+        const sobrepoe = _checkOverlap(pos, fim, rangesAplicados);
 
         if (!sobrepoe) {
           for (let k = 0; k < originalUpper.length; k++) {
@@ -724,9 +726,7 @@ function aplicarEspecificacoesEmHexTjFragmentado(texto, specsHex) {
   for (const segmento of segmentos) {
     partes.push(texto.slice(ultimo, segmento.offset));
 
-    const mudouSegmento = rangesAplicados.some(range =>
-      range.inicio < segmento.endHex && range.fim > segmento.startHex
-    );
+    const mudouSegmento = _checkOverlap(segmento.startHex, segmento.endHex, rangesAplicados);
 
     if (mudouSegmento) {
       const novoValor = hexRedatado.slice(segmento.startHex, segmento.endHex);
