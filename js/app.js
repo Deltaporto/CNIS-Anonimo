@@ -605,12 +605,12 @@ async function iniciarSplitEproc(arquivos) {
   } catch (err) {
     setProgresso(item, 100, false, true);
 
-    const msg = err.message || 'Erro ao processar o PDF.';
+    const msg = err.message || '';
     setStatus(item, 'erro', 'Erro ao processar');
     if (msg.includes('memória') || msg.includes('memory') || msg.includes('out of memory')) {
       mostrarToast('Não foi possível processar este PDF no navegador. Tente uma íntegra menor ou divida o arquivo na origem.');
     } else {
-      mostrarToast(msg);
+      mostrarToast('Erro ao processar o arquivo. Verifique se o PDF é válido e tente novamente.');
     }
     console.error('[ExtrairPecas]', err);
   } finally {
