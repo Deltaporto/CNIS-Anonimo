@@ -818,8 +818,6 @@ function criarItemLista(nomeArquivo) {
 
   const status = document.createElement('span');
   status.className = 'arquivo-status status-aguardando';
-  status.setAttribute('role', 'status');
-  status.setAttribute('aria-live', 'polite');
   status.textContent = 'Aguardando';
 
   cab.append(icone, nome, status);
