@@ -320,6 +320,10 @@ body[data-ocr-modo="ligado"] .opcoes-sem-ocr {
   outline-offset: 2px;
 }
 
+.como-funciona summary:active {
+  transform: scale(.98);
+}
+
 .como-funciona summary::before {
   content: "ℹ";
 }
