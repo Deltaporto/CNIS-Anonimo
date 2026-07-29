@@ -111,7 +111,11 @@ function redigirNomeComPrefixo(original) {
 }
 function _globalizar(pattern, flagsExtras) {
   const base = pattern.flags + 'g' + (flagsExtras || '');
-  const flags = [...new Set(base.split(''))].join('');
+  let flags = '';
+  // Avoids array and Set allocation overhead in hot path
+  for (let i = 0; i < base.length; i++) {
+    if (flags.indexOf(base[i]) === -1) flags += base[i];
+  }
   return new RegExp(pattern.source, flags);
 }
 
