@@ -28,3 +28,6 @@
 ## 2024-06-13 - O(N*M) calculation within filter loop
 **Learning:** In `js/redactor.js`, recalculating a static property (like `_coletarRangesProtegidos(texto)`) for every match inside a `.filter()` iteration causes a severe $O(N \times M)$ performance bottleneck. Our benchmark showed a ~1000x speedup (from 10.7 seconds down to 11 milliseconds) on large inputs simply by hoisting this single calculation outside of the `filter` loop.
 **Action:** When filtering matches based on a result that depends only on the original input string, calculate and cache the result in a variable *before* the `.filter()` loop, rather than recalculating it inside the callback for every matched item.
+## 2024-06-25 - V8 native loop vs Array.prototype.some()
+**Learning:** In hot execution paths running thousands of times (like interval overlap checks during string replacement), `Array.prototype.some()` incurs measurable callback function allocation and invocation overhead in V8. Replacing it with a standard `for` loop yields significant speedups for linear scans.
+**Action:** When performing O(N) overlap checks in tight loops, explicitly use standard `for` loops rather than higher-order array methods like `.some()` or `.filter()`, and document the intent to avoid regression.
