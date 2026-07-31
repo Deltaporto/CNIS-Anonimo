@@ -434,7 +434,16 @@ function aplicarEspecificacoesEmArraysTJ(texto, specs) {
       let pos = textoVisivel.indexOf(original);
       while (pos !== -1) {
         const fim = pos + original.length;
-        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+
+        let sobrepoe = false;
+        // avoids callback allocation overhead in a hot path
+        for (let i = 0; i < rangesAplicados.length; i++) {
+          const range = rangesAplicados[i];
+          if (pos < range.fim && fim > range.inicio) {
+            sobrepoe = true;
+            break;
+          }
+        }
 
         if (!sobrepoe) {
           for (let k = 0; k < original.length; k++) {
@@ -458,9 +467,15 @@ function aplicarEspecificacoesEmArraysTJ(texto, specs) {
   for (const segmento of segmentos) {
     partes.push(texto.slice(ultimo, segmento.offset));
 
-    const mudouSegmento = rangesAplicados.some(range =>
-      range.inicio < segmento.endTexto && range.fim > segmento.startTexto
-    );
+    let mudouSegmento = false;
+    // avoids callback allocation overhead in a hot path
+    for (let i = 0; i < rangesAplicados.length; i++) {
+      const range = rangesAplicados[i];
+      if (range.inicio < segmento.endTexto && range.fim > segmento.startTexto) {
+        mudouSegmento = true;
+        break;
+      }
+    }
 
     if (mudouSegmento) {
       const novoValor = textoRedatado.slice(segmento.startTexto, segmento.endTexto);
@@ -523,7 +538,16 @@ function aplicarEspecificacoesEmLiteraisTjFragmentados(texto, specs) {
       let pos = textoVisivel.indexOf(original);
       while (pos !== -1) {
         const fim = pos + original.length;
-        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+
+        let sobrepoe = false;
+        // avoids callback allocation overhead in a hot path
+        for (let i = 0; i < rangesAplicados.length; i++) {
+          const range = rangesAplicados[i];
+          if (pos < range.fim && fim > range.inicio) {
+            sobrepoe = true;
+            break;
+          }
+        }
 
         if (!sobrepoe) {
           for (let k = 0; k < original.length; k++) {
@@ -547,9 +571,15 @@ function aplicarEspecificacoesEmLiteraisTjFragmentados(texto, specs) {
   for (const segmento of segmentos) {
     partes.push(texto.slice(ultimo, segmento.offset));
 
-    const mudouSegmento = rangesAplicados.some(range =>
-      range.inicio < segmento.endTexto && range.fim > segmento.startTexto
-    );
+    let mudouSegmento = false;
+    // avoids callback allocation overhead in a hot path
+    for (let i = 0; i < rangesAplicados.length; i++) {
+      const range = rangesAplicados[i];
+      if (range.inicio < segmento.endTexto && range.fim > segmento.startTexto) {
+        mudouSegmento = true;
+        break;
+      }
+    }
 
     if (mudouSegmento) {
       const novoValor = textoRedatado.slice(segmento.startTexto, segmento.endTexto);
@@ -615,7 +645,16 @@ function aplicarEspecificacoesEmHexArraysTJ(texto, specsHex) {
 
       while (pos !== -1) {
         const fim = pos + originalUpper.length;
-        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+
+        let sobrepoe = false;
+        // avoids callback allocation overhead in a hot path
+        for (let i = 0; i < rangesAplicados.length; i++) {
+          const range = rangesAplicados[i];
+          if (pos < range.fim && fim > range.inicio) {
+            sobrepoe = true;
+            break;
+          }
+        }
 
         if (!sobrepoe) {
           for (let k = 0; k < originalUpper.length; k++) {
@@ -639,9 +678,15 @@ function aplicarEspecificacoesEmHexArraysTJ(texto, specsHex) {
   for (const segmento of segmentos) {
     partes.push(texto.slice(ultimo, segmento.offset));
 
-    const mudouSegmento = rangesAplicados.some(range =>
-      range.inicio < segmento.endHex && range.fim > segmento.startHex
-    );
+    let mudouSegmento = false;
+    // avoids callback allocation overhead in a hot path
+    for (let i = 0; i < rangesAplicados.length; i++) {
+      const range = rangesAplicados[i];
+      if (range.inicio < segmento.endHex && range.fim > segmento.startHex) {
+        mudouSegmento = true;
+        break;
+      }
+    }
 
     if (mudouSegmento) {
       const novoValor = hexRedatado.slice(segmento.startHex, segmento.endHex);
@@ -700,7 +745,16 @@ function aplicarEspecificacoesEmHexTjFragmentado(texto, specsHex) {
 
       while (pos !== -1) {
         const fim = pos + originalUpper.length;
-        const sobrepoe = rangesAplicados.some(range => pos < range.fim && fim > range.inicio);
+
+        let sobrepoe = false;
+        // avoids callback allocation overhead in a hot path
+        for (let i = 0; i < rangesAplicados.length; i++) {
+          const range = rangesAplicados[i];
+          if (pos < range.fim && fim > range.inicio) {
+            sobrepoe = true;
+            break;
+          }
+        }
 
         if (!sobrepoe) {
           for (let k = 0; k < originalUpper.length; k++) {
@@ -724,9 +778,15 @@ function aplicarEspecificacoesEmHexTjFragmentado(texto, specsHex) {
   for (const segmento of segmentos) {
     partes.push(texto.slice(ultimo, segmento.offset));
 
-    const mudouSegmento = rangesAplicados.some(range =>
-      range.inicio < segmento.endHex && range.fim > segmento.startHex
-    );
+    let mudouSegmento = false;
+    // avoids callback allocation overhead in a hot path
+    for (let i = 0; i < rangesAplicados.length; i++) {
+      const range = rangesAplicados[i];
+      if (range.inicio < segmento.endHex && range.fim > segmento.startHex) {
+        mudouSegmento = true;
+        break;
+      }
+    }
 
     if (mudouSegmento) {
       const novoValor = hexRedatado.slice(segmento.startHex, segmento.endHex);
