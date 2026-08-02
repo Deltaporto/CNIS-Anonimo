@@ -86,6 +86,19 @@ test('modo extrair-pecas: pluraliza quantidade de peças extraídas', () => {
   assert.equal(appApi.formatarPecasExtraidas(2), '2 peças extraídas');
 });
 
+test('contador de processamento: formata duração curta e longa', () => {
+  assert.equal(appApi.formatarDuracao(0), '00:00');
+  assert.equal(appApi.formatarDuracao(undefined), '00:00');
+  assert.equal(appApi.formatarDuracao(65_000), '01:05');
+  assert.equal(appApi.formatarDuracao(3_661_000), '1h 01min');
+});
+
+test('estimativa de processamento: só aparece com dados suficientes', () => {
+  assert.equal(appApi.estimarDuracaoTotal(3_000, 50), null);
+  assert.equal(appApi.estimarDuracaoTotal(5_000, 10), null);
+  assert.equal(appApi.estimarDuracaoTotal(10_000, 25), 40_000);
+});
+
 test('modo extrair-pecas: Markdown anonimizado é padrão quando não há rádio selecionado', () => {
   assert.equal(appApi.obterSplitAnonimizarMarkdown(), true);
 });

@@ -156,6 +156,8 @@ export async function loadAppApi() {
     return {
       gerarNomeSaida,
       formatarPecasExtraidas,
+      formatarDuracao,
+      estimarDuracaoTotal,
       gerarNomeZipSplit,
       construirParesSubstituicao,
       coletarObservacoes,

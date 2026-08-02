@@ -592,6 +592,33 @@ body[data-ocr-modo="ligado"] .opcoes-sem-ocr {
   padding-top: 0;
 }
 
+.arquivo-tempo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  padding: 3px 16px 8px;
+  background: linear-gradient(180deg, #fbfcfd, #fff);
+  color: var(--ink-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.arquivo-tempo-decorrido {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+.arquivo-tempo-estimativa {
+  color: var(--ink-muted);
+}
+.arquivo-tempo-estimativa::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--border);
+}
+
 /* ── TABELA DE SUBSTITUIÇÕES ── */
 .subs-tabela {
   padding: 12px 16px 14px;

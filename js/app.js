@@ -65,6 +65,9 @@ const semOcrPaginasRadios = document.querySelectorAll('input[name="sem-ocr-pagin
 let resultados = [];
 let modoAtual = 'cnis';
 let modoResultados = 'cnis';
+const cronometrosProcessamento = new WeakMap();
+const TEMPO_MINIMO_ESTIMATIVA_MS = 4000;
+const PROGRESSO_MINIMO_ESTIMATIVA = 20;
 
 function obterConfigModo(modo = 'cnis') {
   return MODOS_DOCUMENTO[modo] || MODOS_DOCUMENTO.cnis;
@@ -177,6 +180,8 @@ function atualizarModoUI() {
 function limparEstado() {
   resultados.length = 0;
   modoResultados = modoAtual;
+  const itens = listaEl.querySelectorAll ? listaEl.querySelectorAll('.arquivo-item') : [];
+  for (const item of itens) finalizarCronometroProcessamento(item, 'cancelado');
   listaEl.textContent = '';
   listaEl.classList.add('oculto');
   acoesEl.classList.add('oculto');
@@ -880,18 +885,140 @@ function criarItemLista(nomeArquivo) {
 
   progressoDetalhe.textContent = 'Na fila de processamento';
 
+  const tempo = document.createElement('div');
+  tempo.className = 'arquivo-tempo';
+  tempo.hidden = true;
+  tempo.setAttribute('role', 'timer');
+  tempo.setAttribute('aria-live', 'off');
+
+  const tempoDecorrido = document.createElement('span');
+  tempoDecorrido.className = 'arquivo-tempo-decorrido';
+
+  const tempoEstimativa = document.createElement('span');
+  tempoEstimativa.className = 'arquivo-tempo-estimativa';
+
+  tempo.append(tempoDecorrido, tempoEstimativa);
+
   const subs = document.createElement('div');
   subs.className = 'arquivo-subs';
 
-  item.append(cab, progressoWrap, progressoDetalhe, subs);
+  item.append(cab, progressoWrap, progressoDetalhe, tempo, subs);
   listaEl.appendChild(item);
   return item;
+}
+
+function formatarDuracao(duracaoMs) {
+  const duracao = Number(duracaoMs);
+  const segundos = Number.isFinite(duracao)
+    ? Math.max(0, Math.round(duracao / 1000))
+    : 0;
+  const minutos = Math.floor(segundos / 60);
+  const segundosRestantes = segundos % 60;
+  if (minutos < 60) {
+    return `${String(minutos).padStart(2, '0')}:${String(segundosRestantes).padStart(2, '0')}`;
+  }
+
+  const horas = Math.floor(minutos / 60);
+  return `${horas}h ${String(minutos % 60).padStart(2, '0')}min`;
+}
+
+function estimarDuracaoTotal(elapsedMs, progresso) {
+  const elapsed = Number(elapsedMs);
+  const pct = Number(progresso);
+  if (!Number.isFinite(elapsed) || !Number.isFinite(pct)
+    || elapsed < TEMPO_MINIMO_ESTIMATIVA_MS || pct < PROGRESSO_MINIMO_ESTIMATIVA) {
+    return null;
+  }
+
+  return Math.round(elapsed * (100 / Math.min(99, pct)));
+}
+
+function renderizarTempoProcessamento(item, agora = Date.now()) {
+  const estado = cronometrosProcessamento.get(item);
+  if (!estado) return;
+
+  const tempoEl = item.querySelector('.arquivo-tempo');
+  const decorridoEl = item.querySelector('.arquivo-tempo-decorrido');
+  const estimativaEl = item.querySelector('.arquivo-tempo-estimativa');
+  if (!tempoEl || !decorridoEl || !estimativaEl) return;
+
+  const decorrido = Math.max(0, agora - estado.iniciadoEm);
+  decorridoEl.textContent = `Tempo ${formatarDuracao(decorrido)}`;
+
+  if (estado.finalizado) {
+    if (estado.motivo === 'concluido') {
+      estimativaEl.textContent = `Concluído em ${formatarDuracao(decorrido)}`;
+    } else if (estado.motivo === 'aviso') {
+      estimativaEl.textContent = `Concluído com aviso em ${formatarDuracao(decorrido)}`;
+    } else {
+      estimativaEl.textContent = 'Processamento interrompido';
+    }
+  } else if (estado.totalEstimadoMs) {
+    const restante = Math.max(0, estado.totalEstimadoMs - decorrido);
+    estimativaEl.textContent = restante > 1000
+      ? `Estimativa: ~${formatarDuracao(restante)} restantes`
+      : 'Finalizando…';
+  } else {
+    estimativaEl.textContent = 'Estimativa: calculando…';
+  }
+
+  tempoEl.hidden = false;
+  tempoEl.setAttribute('aria-label', `${decorridoEl.textContent}. ${estimativaEl.textContent}`);
+}
+
+function iniciarCronometroProcessamento(item) {
+  if (cronometrosProcessamento.has(item)) return;
+
+  const estado = {
+    iniciadoEm: Date.now(),
+    maiorProgresso: 0,
+    totalEstimadoMs: null,
+    finalizado: false,
+    motivo: null,
+    intervalo: null
+  };
+  cronometrosProcessamento.set(item, estado);
+  renderizarTempoProcessamento(item, estado.iniciadoEm);
+  estado.intervalo = setInterval(() => renderizarTempoProcessamento(item), 1000);
+}
+
+function atualizarCronometroProcessamento(item, progresso) {
+  const estado = cronometrosProcessamento.get(item);
+  if (!estado || estado.finalizado) return;
+
+  const pct = Number(progresso);
+  if (Number.isFinite(pct)) {
+    estado.maiorProgresso = Math.max(estado.maiorProgresso, Math.min(99, pct));
+    const estimativa = estimarDuracaoTotal(Date.now() - estado.iniciadoEm, estado.maiorProgresso);
+    if (estimativa) {
+      estado.totalEstimadoMs = estado.totalEstimadoMs
+        ? Math.round(estado.totalEstimadoMs * 0.7 + estimativa * 0.3)
+        : estimativa;
+    }
+  }
+  renderizarTempoProcessamento(item);
+}
+
+function finalizarCronometroProcessamento(item, motivo = 'concluido') {
+  const estado = cronometrosProcessamento.get(item);
+  if (!estado || estado.finalizado) return;
+
+  estado.finalizado = true;
+  estado.motivo = motivo;
+  if (estado.intervalo) clearInterval(estado.intervalo);
+  estado.intervalo = null;
+  renderizarTempoProcessamento(item);
 }
 
 function setStatus(item, tipo, texto) {
   const el = item.querySelector('.arquivo-status');
   el.className = 'arquivo-status status-' + tipo;
   el.textContent = texto;
+  if (tipo === 'processando') iniciarCronometroProcessamento(item);
+  if (tipo === 'ok' || tipo === 'erro' || tipo === 'aviso') {
+    const motivo = tipo === 'ok' ? 'concluido' : tipo;
+    finalizarCronometroProcessamento(item, motivo);
+  }
 }
 
 function setProgresso(item, pct, completo = false, erro = false) {
@@ -902,6 +1029,7 @@ function setProgresso(item, pct, completo = false, erro = false) {
   barra.style.width = pct + '%';
   if (completo) barra.classList.add('completo');
   if (erro) barra.classList.add('erro');
+  atualizarCronometroProcessamento(item, pct);
 }
 
 function setDetalheProcessamento(item, texto) {
