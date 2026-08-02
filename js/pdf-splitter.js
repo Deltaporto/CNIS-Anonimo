@@ -16,6 +16,8 @@ const OCR_PARALLEL_PAGE_THRESHOLD = 8;
 // oito. Lotes pequenos continuam usando um só worker.
 const OCR_MAX_WORKERS = 6;
 const PDF_SCAN_CONCURRENCY = 4;
+const PDF_STANDARD_FONT_DATA_URL =
+  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/';
 
 // ── Funções internas ──────────────────────────────────────────────────────────
 
@@ -720,7 +722,11 @@ async function buildZip(processNumber, eventos, pagesData, redactionSummary = nu
 
 async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', options = {}) {
   // 1. Carregar PDF
-  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, isEvalSupported: false });
+  const loadingTask = pdfjsLib.getDocument({
+    data: arrayBuffer,
+    isEvalSupported: false,
+    standardFontDataUrl: PDF_STANDARD_FONT_DATA_URL
+  });
   const pdfDoc = await loadingTask.promise;
   const totalPages = pdfDoc.numPages;
   const enableOcr = options.enableOcr !== false;

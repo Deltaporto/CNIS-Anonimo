@@ -66,8 +66,8 @@ let resultados = [];
 let modoAtual = 'cnis';
 let modoResultados = 'cnis';
 const cronometrosProcessamento = new WeakMap();
-const TEMPO_MINIMO_ESTIMATIVA_MS = 4000;
-const PROGRESSO_MINIMO_ESTIMATIVA = 20;
+const TEMPO_MINIMO_ESTIMATIVA_MS = 30_000;
+const PROGRESSO_MINIMO_ESTIMATIVA = 12;
 
 function obterConfigModo(modo = 'cnis') {
   return MODOS_DOCUMENTO[modo] || MODOS_DOCUMENTO.cnis;

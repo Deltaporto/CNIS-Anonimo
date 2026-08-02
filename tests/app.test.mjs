@@ -94,9 +94,9 @@ test('contador de processamento: formata duração curta e longa', () => {
 });
 
 test('estimativa de processamento: só aparece com dados suficientes', () => {
-  assert.equal(appApi.estimarDuracaoTotal(3_000, 50), null);
-  assert.equal(appApi.estimarDuracaoTotal(5_000, 10), null);
-  assert.equal(appApi.estimarDuracaoTotal(10_000, 25), 40_000);
+  assert.equal(appApi.estimarDuracaoTotal(29_000, 25), null);
+  assert.equal(appApi.estimarDuracaoTotal(30_000, 10), null);
+  assert.equal(appApi.estimarDuracaoTotal(30_000, 12), 250_000);
 });
 
 test('modo extrair-pecas: Markdown anonimizado é padrão quando não há rádio selecionado', () => {
