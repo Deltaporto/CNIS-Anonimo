@@ -595,7 +595,7 @@ body[data-ocr-modo="ligado"] .opcoes-sem-ocr {
 .arquivo-tempo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   min-height: 24px;
   padding: 3px 16px 8px;
   background: linear-gradient(180deg, #fbfcfd, #fff);
@@ -603,6 +603,48 @@ body[data-ocr-modo="ligado"] .opcoes-sem-ocr {
   font-family: 'Inter', sans-serif;
   font-size: 11px;
   line-height: 1.35;
+}
+.arquivo-tempo-indicador {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 0 0 0 rgba(29, 78, 216, .18);
+  animation: arquivo-tempo-respirar 2.4s ease-in-out infinite;
+}
+.arquivo-tempo[data-estado='concluido'] .arquivo-tempo-indicador {
+  background: #16a34a;
+  box-shadow: none;
+  animation: none;
+}
+.arquivo-tempo[data-estado='aviso'] .arquivo-tempo-indicador {
+  background: #d97706;
+  box-shadow: none;
+  animation: none;
+}
+.arquivo-tempo[data-estado='erro'] .arquivo-tempo-indicador,
+.arquivo-tempo[data-estado='cancelado'] .arquivo-tempo-indicador {
+  background: #dc2626;
+  box-shadow: none;
+  animation: none;
+}
+@keyframes arquivo-tempo-respirar {
+  0%, 100% {
+    opacity: .65;
+    transform: scale(.9);
+    box-shadow: 0 0 0 0 rgba(29, 78, 216, .18);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 4px rgba(29, 78, 216, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arquivo-tempo-indicador {
+    animation: none;
+  }
 }
 .arquivo-tempo-decorrido {
   color: var(--ink-soft);

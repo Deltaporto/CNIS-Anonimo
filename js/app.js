@@ -891,13 +891,17 @@ function criarItemLista(nomeArquivo) {
   tempo.setAttribute('role', 'timer');
   tempo.setAttribute('aria-live', 'off');
 
+  const tempoIndicador = document.createElement('span');
+  tempoIndicador.className = 'arquivo-tempo-indicador';
+  tempoIndicador.setAttribute('aria-hidden', 'true');
+
   const tempoDecorrido = document.createElement('span');
   tempoDecorrido.className = 'arquivo-tempo-decorrido';
 
   const tempoEstimativa = document.createElement('span');
   tempoEstimativa.className = 'arquivo-tempo-estimativa';
 
-  tempo.append(tempoDecorrido, tempoEstimativa);
+  tempo.append(tempoIndicador, tempoDecorrido, tempoEstimativa);
 
   const subs = document.createElement('div');
   subs.className = 'arquivo-subs';
@@ -962,6 +966,7 @@ function renderizarTempoProcessamento(item, agora = Date.now()) {
     estimativaEl.textContent = 'Estimativa: calculando…';
   }
 
+  tempoEl.dataset.estado = estado.finalizado ? estado.motivo : 'processando';
   tempoEl.hidden = false;
   tempoEl.setAttribute('aria-label', `${decorridoEl.textContent}. ${estimativaEl.textContent}`);
 }
