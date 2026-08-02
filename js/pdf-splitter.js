@@ -15,6 +15,7 @@ const OCR_PARALLEL_PAGE_THRESHOLD = 8;
 // Seis workers aproveitam máquinas modernas sem a contenção observada com
 // oito. Lotes pequenos continuam usando um só worker.
 const OCR_MAX_WORKERS = 6;
+const PDF_SCAN_CONCURRENCY = 4;
 
 // ── Funções internas ──────────────────────────────────────────────────────────
 
@@ -109,31 +110,40 @@ function normalizarTextoPagina(text) {
   return String(text || '').replace(/\s+/g, ' ').trim();
 }
 
-async function extractAllPageTexts(pdfDoc, totalPages, onProgress = () => {}) {
-  const texts = [];
-  const needsOcr = [];
-  const separators = [];
+async function extractAllPageTexts(pdfDoc, totalPages, onProgress = () => {}, onPageAnalyzed = null) {
+  if (totalPages <= 0) return { texts: [], needsOcr: [], separators: [] };
 
-  for (let i = 0; i < totalPages; i++) {
-    const page = await pdfDoc.getPage(i + 1);
-    const text = await extractPageText(page);
-    const normalized = normalizarTextoPagina(text);
-    texts[i] = text;
-    needsOcr[i] = pageNeedsOcrNormalized(normalized);
+  let completedPages = 0;
+  const pageAnalyses = await mapWithConcurrency(
+    Array.from({ length: totalPages }, (_, pageIndex) => pageIndex),
+    PDF_SCAN_CONCURRENCY,
+    async pageIndex => {
+      const page = await pdfDoc.getPage(pageIndex + 1);
+      const text = await extractPageText(page);
+      const normalized = normalizarTextoPagina(text);
+      const needsOcr = pageNeedsOcrNormalized(normalized);
+      const separator = parseEventSeparatorFromNormalizedText(normalized, pageIndex);
 
-    const separator = parseEventSeparatorFromNormalizedText(normalized, i);
-    if (separator) separators.push(separator);
+      onPageAnalyzed?.({ pageIndex, needsOcr });
 
-    if (i === 0 || i === totalPages - 1 || (i + 1) % 10 === 0) {
-      onProgress({
-        type: 'scan',
-        message: `Lendo índice e separadores (${i + 1}/${totalPages})...`,
-        percent: Math.round(2 + ((i + 1) / totalPages) * 3)
-      });
+      completedPages++;
+      if (completedPages === 1 || completedPages === totalPages || completedPages % 10 === 0) {
+        onProgress({
+          type: 'scan',
+          message: `Lendo índice e separadores (${completedPages}/${totalPages})...`,
+          percent: Math.round(2 + (completedPages / totalPages) * 3)
+        });
+      }
+
+      return { text, needsOcr, separator };
     }
-  }
+  );
 
-  return { texts, needsOcr, separators };
+  return {
+    texts: pageAnalyses.map(analysis => analysis.text),
+    needsOcr: pageAnalyses.map(analysis => analysis.needsOcr),
+    separators: pageAnalyses.map(analysis => analysis.separator).filter(Boolean)
+  };
 }
 
 function stripSeparatorTitleNoise(title) {
@@ -511,11 +521,20 @@ function getMarkdownRedactor() {
 
 function aplicarParesNoTexto(text, pares) {
   if (!text || !pares || pares.length === 0) return text;
-  const ordered = [...pares].sort((a, b) => b.original.length - a.original.length);
+  return aplicarParesOrdenadosNoTexto(text, ordenarParesSubstituicao(pares));
+}
+
+function ordenarParesSubstituicao(pares) {
+  return [...pares].sort((a, b) => b.original.length - a.original.length);
+}
+
+function aplicarParesOrdenadosNoTexto(text, paresOrdenados) {
+  if (!text || !paresOrdenados || paresOrdenados.length === 0) return text;
   let result = text;
-  for (const { original, substituto } of ordered) {
+  for (const { original, substituto } of paresOrdenados) {
     if (!original || substituto === undefined) continue;
-    result = result.split(original).join(substituto);
+    const partes = result.split(original);
+    if (partes.length > 1) result = partes.join(substituto);
   }
   return result;
 }
@@ -611,14 +630,15 @@ function anonimizarMarkdownExtraido(pagesData, eventos, options = {}) {
     .flatMap(({ pageTexts }) => pageTexts.filter(text => text !== null))
     .join('\n');
   const pares = redactor.mapearSubstitutos(originalText);
+  const paresOrdenados = ordenarParesSubstituicao(pares);
   const achadosAntes = redactor.contarAchados(originalText);
 
   for (const item of pagesData) {
-    item.pageTexts = item.pageTexts.map(text => text === null ? null : aplicarParesNoTexto(text, pares));
+    item.pageTexts = item.pageTexts.map(text => text === null ? null : aplicarParesOrdenadosNoTexto(text, paresOrdenados));
   }
 
   for (const evento of eventos) {
-    const redactedTitle = aplicarParesNoTexto(evento.title, pares).replace(/\s{2,}/g, ' ').trim();
+    const redactedTitle = aplicarParesOrdenadosNoTexto(evento.title, paresOrdenados).replace(/\s{2,}/g, ' ').trim();
     if (redactedTitle) evento.title = redactedTitle;
   }
   buildUniqueEventFilenames(eventos);
@@ -703,11 +723,27 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, isEvalSupported: false });
   const pdfDoc = await loadingTask.promise;
   const totalPages = pdfDoc.numPages;
-  const pageScan = await extractAllPageTexts(pdfDoc, totalPages, onProgress);
-  const pageTextCache = pageScan.texts;
+  const enableOcr = options.enableOcr !== false;
+  let tesseractLoadPromise = null;
+  const startTesseractLoad = () => {
+    if (!tesseractLoadPromise) tesseractLoadPromise = ensureTesseractLoaded(onProgress);
+    return tesseractLoadPromise;
+  };
 
-  // 2. Tentar ler índice do Eproc; fallback para documento único se não houver
-  const outline = await pdfDoc.getOutline();
+  try {
+    const outlinePromise = pdfDoc.getOutline();
+    const pageScan = await extractAllPageTexts(
+      pdfDoc,
+      totalPages,
+      onProgress,
+      ({ needsOcr }) => {
+        if (enableOcr && needsOcr) startTesseractLoad();
+      }
+    );
+    const pageTextCache = pageScan.texts;
+
+    // 2. Tentar ler índice do Eproc; fallback para documento único se não houver
+    const outline = await outlinePromise;
   const allItems = outline ? flattenOutline(outline) : [];
   const eprocItems = allItems.filter(item => isEprocEventTitle(item.title));
   const separatorItems = pageScan.separators;
@@ -755,14 +791,13 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
   let ocrFailCount = 0;
   let ocrSkippedCount = 0;
   let omittedPageCount = 0;
-  const enableOcr = options.enableOcr !== false;
   const missingTextMode = normalizeMissingTextMode(options.missingTextMode);
   const eventPageIndices = getEventPageIndices(eventos);
   const ocrPageIndices = eventPageIndices.filter(pageIndex => pageScan.needsOcr[pageIndex]);
   const totalOcrPages = enableOcr ? ocrPageIndices.length : 0;
   const ocrWorkerCount = getOcrWorkerCount(totalOcrPages);
   const ocrLoaded = totalOcrPages > 0 && enableOcr
-    ? await ensureTesseractLoaded(onProgress)
+    ? await (tesseractLoadPromise || startTesseractLoad())
     : false;
   const pageResults = pageTextCache.map(pageText => ({ pageText, ocr: false }));
 
@@ -885,5 +920,14 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
   // invocar splitEprocPdf múltiplas vezes sem pagar o overhead de inicialização
   // repetida. O browser libera o worker ao fechar/recarregar a página.
 
-  return { zip, eventos, ocrCount, ocrFailCount, ocrSkippedCount, omittedPageCount, totalPages, processNumber, redactionSummary };
+    return { zip, eventos, ocrCount, ocrFailCount, ocrSkippedCount, omittedPageCount, totalPages, processNumber, redactionSummary };
+  } finally {
+    if (typeof pdfDoc.destroy === 'function') {
+      try {
+        await pdfDoc.destroy();
+      } catch {
+        // A liberação incompleta não deve invalidar um ZIP já gerado.
+      }
+    }
+  }
 }

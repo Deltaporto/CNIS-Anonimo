@@ -457,6 +457,7 @@ test('splitEprocPdf: ocupa o pool OCR com páginas de eventos distintos', async 
       return { promise: Promise.resolve() };
     }
   }));
+  let destroyedDocuments = 0;
   const pdfjsLib = {
     getDocument() {
       return {
@@ -469,7 +470,8 @@ test('splitEprocPdf: ocupa o pool OCR com páginas de eventos distintos', async 
               dest: [pageIndex]
             })));
           },
-          getPageIndex(destination) { return Promise.resolve(destination); }
+          getPageIndex(destination) { return Promise.resolve(destination); },
+          async destroy() { destroyedDocuments++; }
         })
       };
     }
@@ -489,6 +491,7 @@ test('splitEprocPdf: ocupa o pool OCR com páginas de eventos distintos', async 
   assert.equal(result.ocrCount, totalPages);
   assert.equal(result.ocrFailCount, 0);
   assert.equal(result.eventos.length, totalPages);
+  assert.equal(destroyedDocuments, 1);
   assert.deepEqual(result.eventos.map(evento => evento.startPageIndex), [0, 1, 2, 3, 4, 5, 6, 7]);
   for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
     assert.match(
@@ -506,6 +509,7 @@ test('splitEprocPdf: ocupa o pool OCR com páginas de eventos distintos', async 
   assert.equal(skippedResult.ocrSkippedCount, totalPages);
   assert.equal(skippedResult.omittedPageCount, totalPages);
   assert.ok(skippedResult.eventos.every(evento => evento.ocr === false));
+  assert.equal(destroyedDocuments, 2);
 });
 
 // ── inferProcessNumber ────────────────────────────────────────────────────────
