@@ -387,9 +387,9 @@ test('getOcrWorkerCount: usa um worker para poucos OCRs', () => {
   assert.equal(api.getOcrWorkerCount(7), 1);
 });
 
-test('getOcrWorkerCount: usa no máximo quatro workers para muitos OCRs', () => {
+test('getOcrWorkerCount: usa no máximo seis workers para muitos OCRs', () => {
   assert.ok(api.getOcrWorkerCount(8) >= 1);
-  assert.ok(api.getOcrWorkerCount(8) <= 4);
+  assert.ok(api.getOcrWorkerCount(8) <= 6);
 });
 
 test('getEventPageIndices: preserva a ordem das páginas dos eventos', () => {

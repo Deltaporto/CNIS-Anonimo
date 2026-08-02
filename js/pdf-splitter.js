@@ -12,9 +12,9 @@ const OCR_RENDER_TARGET_SCALE = 0.95;
 const OCR_RENDER_MIN_SCALE = 0.7;
 const OCR_RENDER_MAX_PIXELS = 1_000_000;
 const OCR_PARALLEL_PAGE_THRESHOLD = 8;
-// Até quatro workers aproveitam máquinas modernas sem multiplicar o consumo
-// de memória indefinidamente. Lotes pequenos continuam usando um só worker.
-const OCR_MAX_WORKERS = 4;
+// Seis workers aproveitam máquinas modernas sem a contenção observada com
+// oito. Lotes pequenos continuam usando um só worker.
+const OCR_MAX_WORKERS = 6;
 
 // ── Funções internas ──────────────────────────────────────────────────────────
 
