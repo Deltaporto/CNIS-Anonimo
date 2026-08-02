@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 
 // ── Loader ────────────────────────────────────────────────────────────────────
 
-async function loadPdfSplitterApi() {
+async function loadPdfSplitterApi(overrides = {}) {
   const source = await fs.readFile(
     new URL('../js/pdf-splitter.js', import.meta.url),
     'utf8'
@@ -21,7 +21,7 @@ async function loadPdfSplitterApi() {
   };
 
   return new Function('deps', `
-    const { pdfjsLib, JSZip, document, window, mapearSubstitutos, contarAchados } = deps;
+    const { pdfjsLib, JSZip, document, window, navigator, mapearSubstitutos, contarAchados } = deps;
     ${source}
     return {
       flattenOutline,
@@ -40,13 +40,16 @@ async function loadPdfSplitterApi() {
       buildIndexMarkdown,
       normalizeMissingTextMode,
       calculateOcrRenderScale,
-      getOcrWorkerCount
+      getOcrWorkerCount,
+      getEventPageIndices,
+      splitEprocPdf
     };
   `)({
-    pdfjsLib: mockPdfjsLib,
-    JSZip: mockJSZip,
-    document: null,
-    window: {},
+    pdfjsLib: overrides.pdfjsLib || mockPdfjsLib,
+    JSZip: overrides.JSZip || mockJSZip,
+    document: overrides.document === undefined ? null : overrides.document,
+    window: overrides.window || {},
+    navigator: overrides.navigator,
     mapearSubstitutos(texto) {
       const pares = [];
       if (texto.includes('913.665.347-00')) {
@@ -384,9 +387,125 @@ test('getOcrWorkerCount: usa um worker para poucos OCRs', () => {
   assert.equal(api.getOcrWorkerCount(7), 1);
 });
 
-test('getOcrWorkerCount: usa no máximo dois workers para muitos OCRs', () => {
+test('getOcrWorkerCount: usa no máximo quatro workers para muitos OCRs', () => {
   assert.ok(api.getOcrWorkerCount(8) >= 1);
-  assert.ok(api.getOcrWorkerCount(8) <= 2);
+  assert.ok(api.getOcrWorkerCount(8) <= 4);
+});
+
+test('getEventPageIndices: preserva a ordem das páginas dos eventos', () => {
+  assert.deepEqual(api.getEventPageIndices([
+    { startPageIndex: 0, endPageIndexExclusive: 2 },
+    { startPageIndex: 2, endPageIndexExclusive: 4 }
+  ]), [0, 1, 2, 3]);
+});
+
+test('splitEprocPdf: ocupa o pool OCR com páginas de eventos distintos', async () => {
+  const totalPages = 8;
+  let activeJobs = 0;
+  let peakJobs = 0;
+  const workers = [];
+  class CapturingJSZip {
+    static lastInstance = null;
+
+    constructor() {
+      this.files = {};
+      CapturingJSZip.lastInstance = this;
+    }
+
+    file(name, content) {
+      this.files[name] = content;
+      return this;
+    }
+
+    async generateAsync() { return new Uint8Array(); }
+  }
+  const tesseract = {
+    async createWorker() {
+      const worker = { setParameters: async () => {}, terminate: async () => {} };
+      workers.push(worker);
+      return worker;
+    },
+    createScheduler() {
+      return {
+        addWorker() {},
+        async addJob(_name, canvas) {
+          activeJobs++;
+          peakJobs = Math.max(peakJobs, activeJobs);
+          await new Promise(resolve => setTimeout(resolve, 10 + (totalPages - canvas.pageIndex) * 2));
+          activeJobs--;
+          return { data: { text: `Texto OCR da página ${canvas.pageIndex + 1}` } };
+        },
+        async terminate() {}
+      };
+    }
+  };
+  const document = {
+    createElement() {
+      const canvas = {
+        width: 0,
+        height: 0,
+        getContext() { return { canvas }; }
+      };
+      return canvas;
+    }
+  };
+  const pages = Array.from({ length: totalPages }, (_, pageIndex) => ({
+    async getTextContent() { return { items: [] }; },
+    getViewport({ scale }) { return { width: 100 * scale, height: 100 * scale }; },
+    render({ canvasContext }) {
+      canvasContext.canvas.pageIndex = pageIndex;
+      return { promise: Promise.resolve() };
+    }
+  }));
+  const pdfjsLib = {
+    getDocument() {
+      return {
+        promise: Promise.resolve({
+          numPages: totalPages,
+          getPage(pageNumber) { return Promise.resolve(pages[pageNumber - 1]); },
+          getOutline() {
+            return Promise.resolve(Array.from({ length: totalPages }, (_, pageIndex) => ({
+              title: `Evento. ${pageIndex + 1}`,
+              dest: [pageIndex]
+            })));
+          },
+          getPageIndex(destination) { return Promise.resolve(destination); }
+        })
+      };
+    }
+  };
+  const splitApi = await loadPdfSplitterApi({
+    pdfjsLib,
+    JSZip: CapturingJSZip,
+    document,
+    window: { Tesseract: tesseract },
+    navigator: { hardwareConcurrency: 4 }
+  });
+
+  const result = await splitApi.splitEprocPdf(new ArrayBuffer(), () => {}, 'processo.pdf');
+
+  assert.equal(workers.length, 3);
+  assert.equal(peakJobs, 3);
+  assert.equal(result.ocrCount, totalPages);
+  assert.equal(result.ocrFailCount, 0);
+  assert.equal(result.eventos.length, totalPages);
+  assert.deepEqual(result.eventos.map(evento => evento.startPageIndex), [0, 1, 2, 3, 4, 5, 6, 7]);
+  for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+    assert.match(
+      CapturingJSZip.lastInstance.files[`eventos/Evento.${pageIndex + 1}.md`],
+      new RegExp(`Texto OCR da página ${pageIndex + 1}`)
+    );
+  }
+
+  const skippedResult = await splitApi.splitEprocPdf(new ArrayBuffer(), () => {}, 'processo.pdf', {
+    enableOcr: false,
+    missingTextMode: 'omit'
+  });
+  assert.equal(skippedResult.ocrCount, 0);
+  assert.equal(skippedResult.ocrFailCount, 0);
+  assert.equal(skippedResult.ocrSkippedCount, totalPages);
+  assert.equal(skippedResult.omittedPageCount, totalPages);
+  assert.ok(skippedResult.eventos.every(evento => evento.ocr === false));
 });
 
 // ── inferProcessNumber ────────────────────────────────────────────────────────

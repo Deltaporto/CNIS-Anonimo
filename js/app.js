@@ -404,13 +404,52 @@ function gerarNomeZipSplit(resultado, anonimizado = true) {
   return anonimizado ? 'Pecas_anonimizadas.zip' : 'Pecas_texto_fiel.zip';
 }
 
-function atualizarLogSplit(progresso) {
-  if (!_splitLogEl) return;
+function deveRegistrarProgressoSplit(progresso = {}) {
+  if (progresso.type !== 'page' && progresso.type !== 'event' && progresso.type !== 'ocr') return true;
+
+  const isEvent = progresso.type === 'event';
+  const isOcr = progresso.type === 'ocr';
+  const index = isEvent
+    ? progresso.eventIndex
+    : isOcr
+      ? progresso.ocrIndex
+      : progresso.pageIndex;
+  const total = isEvent
+    ? progresso.eventTotal
+    : isOcr
+      ? progresso.ocrTotal
+      : progresso.pageTotal;
+
+  if (!Number.isInteger(index) || !Number.isInteger(total) || total <= 0) return true;
+
+  return index === 0 || index + 1 === total || (index + 1) % 10 === 0;
+}
+
+function deveAtualizarInterfaceSplit(progresso = {}, agora = Date.now(), estado = {}) {
+  const tipo = progresso.type;
+  const frequente = tipo === 'scan' || tipo === 'ocr';
+  const transicao = estado.ultimoTipo !== tipo;
+  const intervaloCumprido = !Number.isFinite(estado.ultimaAtualizacao)
+    || agora - estado.ultimaAtualizacao >= 250;
+  const terminal = tipo === 'done';
+
+  if (frequente && !transicao && !intervaloCumprido && !terminal) return false;
+
+  estado.ultimoTipo = tipo;
+  estado.ultimaAtualizacao = agora;
+  return true;
+}
+
+function atualizarLogSplit(progresso, logEl = _splitLogEl) {
+  if (!logEl) return;
   if (!progresso || !progresso.message) return;
+  if (!deveRegistrarProgressoSplit(progresso)) {
+    return;
+  }
   const p = document.createElement('p');
   p.textContent = progresso.message;
-  _splitLogEl.appendChild(p);
-  _splitLogEl.scrollTop = _splitLogEl.scrollHeight;
+  logEl.appendChild(p);
+  logEl.scrollTop = logEl.scrollHeight;
 }
 
 function renderizarCardsSplit(resultado) {
@@ -555,8 +594,10 @@ async function iniciarSplitEproc(arquivos) {
       await inicializarRedactorPadrao();
     }
 
+    const estadoProgressoSplit = {};
     const resultado = await splitEprocPdf(arrayBuffer, (progresso) => {
       atualizarLogSplit(progresso);
+      if (!deveAtualizarInterfaceSplit(progresso, Date.now(), estadoProgressoSplit)) return;
       if (Number.isFinite(progresso.percent)) setProgresso(item, progresso.percent);
       if (progresso.message) setDetalheProcessamento(item, progresso.message);
       if (progresso.type === 'event') {

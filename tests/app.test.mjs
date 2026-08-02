@@ -50,6 +50,17 @@ test('modo extrair-pecas: config tem isSplit = true e campos corretos', () => {
   assert.equal(config.zipNome, 'Pecas_do_processo.zip');
 });
 
+test('Processo Judicial aceita PDFs de até 70 MB', () => {
+  assert.equal(appApi.obterLimitePdfMb('extrair-pecas'), 70);
+  assert.equal(appApi.obterLimitePdfMb('processo-judicial'), 70);
+  assert.equal(appApi.obterLimitePdfBytes('extrair-pecas'), 70 * 1024 * 1024);
+});
+
+test('modos CNIS e carta mantêm o limite padrão de 50 MB', () => {
+  assert.equal(appApi.obterLimitePdfMb('cnis'), 50);
+  assert.equal(appApi.obterLimitePdfMb('carta-concessao'), 50);
+});
+
 test('modo extrair-pecas: obterConfigModo com modo desconhecido retorna config cnis', () => {
   const config = appApi.obterConfigModo('modo-inexistente');
   assert.equal(config.id, 'cnis');
@@ -84,6 +95,33 @@ test('modo extrair-pecas: OCR ligado e aviso para páginas sem texto são padrã
     enableOcr: true,
     missingTextMode: 'placeholder'
   });
+});
+
+test('log de split: limita atualizações de página e evento em processos grandes', () => {
+  const total = 421;
+  const eventLogs = Array.from({ length: total }, (_, eventIndex) =>
+    appApi.deveRegistrarProgressoSplit({ type: 'event', eventIndex, eventTotal: total })
+  ).filter(Boolean).length;
+  const pageLogs = Array.from({ length: total }, (_, pageIndex) =>
+    appApi.deveRegistrarProgressoSplit({ type: 'page', pageIndex, pageTotal: total })
+  ).filter(Boolean).length;
+
+  assert.equal(eventLogs, 44);
+  assert.equal(pageLogs, 44);
+  assert.equal(appApi.deveRegistrarProgressoSplit({ type: 'ocr' }), true);
+  assert.equal(appApi.deveRegistrarProgressoSplit({ type: 'ocr', ocrIndex: 0, ocrTotal: total }), true);
+  assert.equal(appApi.deveRegistrarProgressoSplit({ type: 'ocr', ocrIndex: 1, ocrTotal: total }), false);
+  assert.equal(appApi.deveRegistrarProgressoSplit({ type: 'ocr', ocrIndex: total - 1, ocrTotal: total }), true);
+});
+
+test('interface de split: limita atualizações frequentes sem atrasar transições', () => {
+  const estado = {};
+
+  assert.equal(appApi.deveAtualizarInterfaceSplit({ type: 'ocr' }, 100, estado), true);
+  assert.equal(appApi.deveAtualizarInterfaceSplit({ type: 'ocr' }, 200, estado), false);
+  assert.equal(appApi.deveAtualizarInterfaceSplit({ type: 'ocr' }, 350, estado), true);
+  assert.equal(appApi.deveAtualizarInterfaceSplit({ type: 'event' }, 351, estado), true);
+  assert.equal(appApi.deveAtualizarInterfaceSplit({ type: 'done' }, 352, estado), true);
 });
 
 test('modo extrair-pecas: nome do ZIP deixa claro se Markdown está anonimizado ou fiel', () => {

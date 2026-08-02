@@ -12,7 +12,9 @@ const OCR_RENDER_TARGET_SCALE = 0.95;
 const OCR_RENDER_MIN_SCALE = 0.7;
 const OCR_RENDER_MAX_PIXELS = 1_000_000;
 const OCR_PARALLEL_PAGE_THRESHOLD = 8;
-const OCR_MAX_WORKERS = 2;
+// Até quatro workers aproveitam máquinas modernas sem multiplicar o consumo
+// de memória indefinidamente. Lotes pequenos continuam usando um só worker.
+const OCR_MAX_WORKERS = 4;
 
 // ── Funções internas ──────────────────────────────────────────────────────────
 
@@ -109,10 +111,18 @@ function normalizarTextoPagina(text) {
 
 async function extractAllPageTexts(pdfDoc, totalPages, onProgress = () => {}) {
   const texts = [];
+  const needsOcr = [];
+  const separators = [];
 
   for (let i = 0; i < totalPages; i++) {
     const page = await pdfDoc.getPage(i + 1);
-    texts[i] = await extractPageText(page);
+    const text = await extractPageText(page);
+    const normalized = normalizarTextoPagina(text);
+    texts[i] = text;
+    needsOcr[i] = pageNeedsOcrNormalized(normalized);
+
+    const separator = parseEventSeparatorFromNormalizedText(normalized, i);
+    if (separator) separators.push(separator);
 
     if (i === 0 || i === totalPages - 1 || (i + 1) % 10 === 0) {
       onProgress({
@@ -123,7 +133,7 @@ async function extractAllPageTexts(pdfDoc, totalPages, onProgress = () => {}) {
     }
   }
 
-  return texts;
+  return { texts, needsOcr, separators };
 }
 
 function stripSeparatorTitleNoise(title) {
@@ -134,8 +144,7 @@ function stripSeparatorTitleNoise(title) {
     .trim();
 }
 
-function parseEventSeparatorFromText(text, pageIndex) {
-  const normalized = normalizarTextoPagina(text);
+function parseEventSeparatorFromNormalizedText(normalized, pageIndex) {
   if (!normalized.includes('PÁGINA DE SEPARAÇÃO')) return null;
   if (!/Sequência Evento:/i.test(normalized)) return null;
   if (/\bTipo documento:\b/i.test(normalized) || /\bDocumento\s+\d+\b/i.test(normalized)) return null;
@@ -156,11 +165,18 @@ function parseEventSeparatorFromText(text, pageIndex) {
   };
 }
 
+function parseEventSeparatorFromText(text, pageIndex) {
+  return parseEventSeparatorFromNormalizedText(normalizarTextoPagina(text), pageIndex);
+}
+
 function buildEventSeparatorsFromPageTexts(pageTexts) {
   const separators = [];
 
   for (let i = 0; i < pageTexts.length; i++) {
-    const separator = parseEventSeparatorFromText(pageTexts[i], i);
+    const page = pageTexts[i];
+    const separator = page && typeof page === 'object' && 'separator' in page
+      ? page.separator
+      : parseEventSeparatorFromText(page, i);
     if (separator) separators.push(separator);
   }
 
@@ -231,8 +247,7 @@ async function extractPageText(page) {
   return lines.join('\n');
 }
 
-function pageNeedsOcr(text) {
-  const normalized = normalizarTextoPagina(text);
+function pageNeedsOcrNormalized(normalized) {
   if (!normalized) return true;
   if (normalized.includes('PÁGINA DE SEPARAÇÃO')) return false;
 
@@ -245,6 +260,10 @@ function pageNeedsOcr(text) {
     .trim();
 
   return substantive.length < 50;
+}
+
+function pageNeedsOcr(text) {
+  return pageNeedsOcrNormalized(normalizarTextoPagina(text));
 }
 
 function calculateOcrRenderScale(page) {
@@ -264,6 +283,18 @@ function getOcrWorkerCount(totalOcrPages) {
     ? navigator.hardwareConcurrency
     : OCR_MAX_WORKERS;
   return Math.max(1, Math.min(OCR_MAX_WORKERS, cores - 1));
+}
+
+function getEventPageIndices(eventos) {
+  const pageIndices = [];
+
+  for (const evento of eventos) {
+    for (let pageIndex = evento.startPageIndex; pageIndex < evento.endPageIndexExclusive; pageIndex++) {
+      pageIndices.push(pageIndex);
+    }
+  }
+
+  return pageIndices;
 }
 
 async function mapWithConcurrency(items, concurrency, mapper) {
@@ -672,13 +703,14 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, isEvalSupported: false });
   const pdfDoc = await loadingTask.promise;
   const totalPages = pdfDoc.numPages;
-  const pageTextCache = await extractAllPageTexts(pdfDoc, totalPages, onProgress);
+  const pageScan = await extractAllPageTexts(pdfDoc, totalPages, onProgress);
+  const pageTextCache = pageScan.texts;
 
   // 2. Tentar ler índice do Eproc; fallback para documento único se não houver
   const outline = await pdfDoc.getOutline();
   const allItems = outline ? flattenOutline(outline) : [];
   const eprocItems = allItems.filter(item => isEprocEventTitle(item.title));
-  const separatorItems = buildEventSeparatorsFromPageTexts(pageTextCache);
+  const separatorItems = pageScan.separators;
 
   let eventos;
 
@@ -725,114 +757,93 @@ async function splitEprocPdf(arrayBuffer, onProgress = () => {}, filename = '', 
   let omittedPageCount = 0;
   const enableOcr = options.enableOcr !== false;
   const missingTextMode = normalizeMissingTextMode(options.missingTextMode);
-  const totalEventPages = eventos.reduce((sum, ev) => sum + ev.pageCount, 0);
-  const totalOcrPages = enableOcr
-    ? pageTextCache.reduce((sum, text) => sum + (pageNeedsOcr(text) ? 1 : 0), 0)
-    : 0;
+  const eventPageIndices = getEventPageIndices(eventos);
+  const ocrPageIndices = eventPageIndices.filter(pageIndex => pageScan.needsOcr[pageIndex]);
+  const totalOcrPages = enableOcr ? ocrPageIndices.length : 0;
   const ocrWorkerCount = getOcrWorkerCount(totalOcrPages);
   const ocrLoaded = totalOcrPages > 0 && enableOcr
     ? await ensureTesseractLoaded(onProgress)
     : false;
-  let processedPages = 0;
+  const pageResults = pageTextCache.map(pageText => ({ pageText, ocr: false }));
 
-  // 8. Processar cada evento
+  if (!enableOcr) {
+    for (const pageIndex of ocrPageIndices) {
+      pageResults[pageIndex].pageText = missingTextMode === 'omit' ? null : '';
+      if (missingTextMode === 'omit') omittedPageCount++;
+      ocrSkippedCount++;
+    }
+
+    if (ocrSkippedCount > 0) {
+      onProgress({
+        type: 'warning',
+        message: `${ocrSkippedCount} página(s) sem texto extraível ficaram sem OCR`,
+        percent: 90
+      });
+    }
+  } else if (!ocrLoaded && totalOcrPages > 0) {
+    for (const pageIndex of ocrPageIndices) pageResults[pageIndex].pageText = '';
+    ocrFailCount = totalOcrPages;
+    onProgress({
+      type: 'warning',
+      message: `Não foi possível preparar o leitor de imagens; ${ocrFailCount} página(s) ficaram sem texto`,
+      percent: 90
+    });
+  } else if (ocrPageIndices.length > 0) {
+    let completedOcrPages = 0;
+
+    // A fila cobre o processo inteiro. Antes, o pool reiniciava a ocupação a cada
+    // evento, deixando workers ociosos quando OCRs estavam em peças diferentes.
+    await mapWithConcurrency(ocrPageIndices, ocrWorkerCount, async pageIndex => {
+      const page = await pdfDoc.getPage(pageIndex + 1);
+      const canvas = await renderPageToCanvas(page);
+      const ocrText = await ocrFromCanvas(canvas, ocrWorkerCount);
+      canvas.width = 0;
+      canvas.height = 0;
+
+      if (ocrText.trim()) {
+        pageResults[pageIndex] = { pageText: ocrText, ocr: true };
+        ocrCount++;
+      } else {
+        pageResults[pageIndex] = { pageText: '', ocr: false };
+        ocrFailCount++;
+      }
+
+      completedOcrPages++;
+      onProgress({
+        type: 'ocr',
+        message: ocrWorkerCount > 1
+          ? `OCR: ${completedOcrPages}/${totalOcrPages} página(s) concluída(s) (${ocrWorkerCount} workers)`
+          : `OCR: ${completedOcrPages}/${totalOcrPages} página(s) concluída(s)`,
+        percent: Math.round(5 + (completedOcrPages / totalOcrPages) * 85),
+        pageIndex,
+        pageTotal: totalPages,
+        ocrIndex: completedOcrPages - 1,
+        ocrTotal: totalOcrPages
+      });
+    });
+  }
+
+  // 8. Montar eventos na ordem original somente depois da fila global de OCR.
   for (let evIdx = 0; evIdx < eventos.length; evIdx++) {
     const evento = eventos[evIdx];
+    const pageTexts = [];
+    const ocrFlags = [];
 
+    for (let pageIndex = evento.startPageIndex; pageIndex < evento.endPageIndexExclusive; pageIndex++) {
+      const pageResult = pageResults[pageIndex];
+      pageTexts.push(pageResult ? pageResult.pageText : '');
+      ocrFlags.push(Boolean(pageResult?.ocr));
+    }
+
+    evento.ocr = ocrFlags.some(Boolean);
+    pagesData.push({ evento, pageTexts, ocr: ocrFlags });
     onProgress({
       type: 'event',
       message: `Processando: ${evento.title}`,
-      percent: Math.round(5 + (processedPages / totalEventPages) * 85),
+      percent: 90,
       eventIndex: evIdx,
       eventTotal: eventos.length
     });
-
-    const pageIndices = [];
-    for (let pi = evento.startPageIndex; pi < evento.endPageIndexExclusive; pi++) {
-      pageIndices.push(pi);
-    }
-
-    const pageResults = await mapWithConcurrency(pageIndices, ocrWorkerCount, async (pi) => {
-      let page = null;
-      const text = pageTextCache[pi] !== undefined
-        ? pageTextCache[pi]
-        : await extractPageText(page = await pdfDoc.getPage(pi + 1)); // pdfjs usa 1-based
-      let pageText = text;
-      let ocr = false;
-
-      if (pageNeedsOcr(text)) {
-        if (!enableOcr) {
-          onProgress({
-            type: 'warning',
-            message: `Página ${pi + 1} sem texto extraível; OCR desligado`,
-            percent: Math.round(5 + (processedPages / totalEventPages) * 85)
-          });
-          if (missingTextMode === 'omit') {
-            pageText = null;
-            omittedPageCount++;
-          } else {
-            pageText = '';
-          }
-          ocrSkippedCount++;
-          processedPages++;
-          return { pageText, ocr };
-        }
-
-        if (ocrLoaded) {
-          onProgress({
-            type: 'ocr',
-            message: ocrWorkerCount > 1
-              ? `OCR na página ${pi + 1} (${ocrWorkerCount} workers)...`
-              : `OCR na página ${pi + 1}...`,
-            percent: Math.round(5 + (processedPages / totalEventPages) * 85),
-            pageIndex: pi,
-            pageTotal: totalPages
-          });
-
-          if (!page) page = await pdfDoc.getPage(pi + 1);
-          const canvas = await renderPageToCanvas(page);
-          const ocrText = await ocrFromCanvas(canvas, ocrWorkerCount);
-          // Liberar memória do canvas
-          canvas.width = 0;
-          canvas.height = 0;
-          if (ocrText.trim()) {
-            pageText = ocrText;
-            ocr = true;
-            ocrCount++;
-          } else {
-            pageText = '';
-            ocrFailCount++;
-          }
-        } else {
-          onProgress({
-            type: 'warning',
-            message: `Não foi possível preparar o leitor de imagens (página ${pi + 1} ignorada)`,
-            percent: Math.round(5 + (processedPages / totalEventPages) * 85)
-          });
-          pageText = '';
-          ocrFailCount++;
-        }
-      } else {
-        onProgress({
-          type: 'page',
-          message: `Página ${pi + 1} de ${totalPages}`,
-          percent: Math.round(5 + (processedPages / totalEventPages) * 85),
-          pageIndex: pi,
-          pageTotal: totalPages
-        });
-        pageText = text;
-      }
-
-      processedPages++;
-      return { pageText, ocr };
-    });
-
-    const pageTexts = pageResults.map(result => result.pageText);
-    const ocrFlags = pageResults.map(result => result.ocr);
-
-    // Marcar evento como OCR se qualquer página usou OCR
-    evento.ocr = ocrFlags.some(Boolean);
-    pagesData.push({ evento, pageTexts, ocr: ocrFlags });
   }
 
   // 9. Empacotar ZIP
