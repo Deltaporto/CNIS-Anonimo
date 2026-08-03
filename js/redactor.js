@@ -109,9 +109,16 @@ function redigirNomeComPrefixo(original) {
     return (palavra[0].toUpperCase() + '.').padEnd(palavra.length, ' ');
   });
 }
+// ⚡ Bolt: Fast-path flag deduplication avoids Set and Array allocations
+// in a hot path called repeatedly during regex globalization.
 function _globalizar(pattern, flagsExtras) {
-  const base = pattern.flags + 'g' + (flagsExtras || '');
-  const flags = [...new Set(base.split(''))].join('');
+  let flags = pattern.flags;
+  if (!flags.includes('g')) flags += 'g';
+  if (flagsExtras) {
+    for (let i = 0; i < flagsExtras.length; i++) {
+      if (!flags.includes(flagsExtras[i])) flags += flagsExtras[i];
+    }
+  }
   return new RegExp(pattern.source, flags);
 }
 
