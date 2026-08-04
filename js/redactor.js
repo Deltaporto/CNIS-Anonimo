@@ -110,8 +110,14 @@ function redigirNomeComPrefixo(original) {
   });
 }
 function _globalizar(pattern, flagsExtras) {
-  const base = pattern.flags + 'g' + (flagsExtras || '');
-  const flags = [...new Set(base.split(''))].join('');
+  // avoids array and Set allocation overhead in a hot path
+  let flags = pattern.flags;
+  if (!flags.includes('g')) flags += 'g';
+  if (flagsExtras) {
+    for (let i = 0; i < flagsExtras.length; i++) {
+      if (!flags.includes(flagsExtras[i])) flags += flagsExtras[i];
+    }
+  }
   return new RegExp(pattern.source, flags);
 }
 
