@@ -79,7 +79,11 @@ function adicionarValorUnico(lista, valor, chaveFn = v => v) {
   if (!valor) return;
   const chave = chaveFn(valor);
   if (!chave) return;
-  if (!lista.some(item => chaveFn(item) === chave)) lista.push(valor);
+  // avoids callback allocation overhead in a hot path
+  for (let i = 0; i < lista.length; i++) {
+    if (chaveFn(lista[i]) === chave) return;
+  }
+  lista.push(valor);
 }
 
 function extrairCpfDoTexto(texto) {
