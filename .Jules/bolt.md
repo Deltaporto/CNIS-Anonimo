@@ -28,3 +28,6 @@
 ## 2024-06-13 - O(N*M) calculation within filter loop
 **Learning:** In `js/redactor.js`, recalculating a static property (like `_coletarRangesProtegidos(texto)`) for every match inside a `.filter()` iteration causes a severe $O(N \times M)$ performance bottleneck. Our benchmark showed a ~1000x speedup (from 10.7 seconds down to 11 milliseconds) on large inputs simply by hoisting this single calculation outside of the `filter` loop.
 **Action:** When filtering matches based on a result that depends only on the original input string, calculate and cache the result in a variable *before* the `.filter()` loop, rather than recalculating it inside the callback for every matched item.
+## 2024-06-21 - Optimization loop sorting assumptions
+**Learning:** When refactoring higher-order array methods (like `.some()`) into optimized `for` loops, do not assume the array is always sorted and insert premature early-exit logic (e.g. `if (range.inicio >= fim) break;`) unless it has been mathematically proven for *all* call sites. In JavaScript, introducing unverified sorting assumptions causes functional regressions and will be rejected in code review.
+**Action:** When performing `some` to `for` loop refactors, strictly stick to equivalent logic (linear scan with early return true) unless the arrays sorting is explicitly validated.
