@@ -864,6 +864,7 @@ function criarItemLista(nomeArquivo) {
 
   const status = document.createElement('span');
   status.className = 'arquivo-status status-aguardando';
+  status.setAttribute('role', 'status');
   status.textContent = 'Aguardando';
 
   cab.append(icone, nome, status);
