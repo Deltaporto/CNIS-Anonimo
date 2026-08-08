@@ -393,6 +393,11 @@ body[data-ocr-modo="ligado"] .opcoes-sem-ocr {
   border: 1px solid #e0e0e0;
 }
 
+.split-log:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
 .split-log p {
   margin: 0.25rem 0;
 }
