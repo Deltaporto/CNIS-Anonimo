@@ -309,6 +309,14 @@ window.addEventListener('drop', event => {
 
 // ── LOTE ──────────────────────────────────────────────────────────────────────
 
+function setBotaoBaixarZip(icone, texto) {
+  btnBaixarZip.textContent = '';
+  btnBaixarZip.insertAdjacentHTML('beforeend', icone);
+  const span = document.createElement('span');
+  span.textContent = texto;
+  btnBaixarZip.appendChild(span);
+}
+
 async function iniciarLote(arquivos) {
   {
     const configCheck = obterConfigModo(modoAtual);
@@ -362,17 +370,17 @@ async function iniciarLote(arquivos) {
 
   try {
     if (resultados.length === 1) {
-      btnBaixarZip.innerHTML = ICON_DOWNLOAD + '<span>' + config.botaoDownloadUm + '</span>';
+      setBotaoBaixarZip(ICON_DOWNLOAD, config.botaoDownloadUm);
       baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
     } else {
-      btnBaixarZip.innerHTML = ICON_SPINNER + '<span>Gerando ZIP...</span>';
+      setBotaoBaixarZip(ICON_SPINNER, 'Gerando ZIP...');
       const zip = new JSZip();
       for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
       const zipBytes = await zip.generateAsync({ type: 'uint8array' });
       baixarBlob(zipBytes, 'application/zip', config.zipNome);
     }
   } finally {
-    btnBaixarZip.innerHTML = ICON_DOWNLOAD + '<span>' + (resultados.length === 1 ? config.botaoDownloadUm : config.botaoDownloadVarios) + '</span>';
+    setBotaoBaixarZip(ICON_DOWNLOAD, resultados.length === 1 ? config.botaoDownloadUm : config.botaoDownloadVarios);
     btnBaixarZip.disabled = false;
     btnBaixarZip.removeAttribute('aria-busy');
     btnBaixarZip.removeAttribute('title');
@@ -645,7 +653,7 @@ async function iniciarSplitEproc(arquivos) {
 
     // 10. Configurar botão de rebaixar
     acoesEl.classList.remove('oculto');
-    btnBaixarZip.innerHTML = ICON_DOWNLOAD + '<span>' + config.botaoDownloadUm + '</span>';
+    setBotaoBaixarZip(ICON_DOWNLOAD, config.botaoDownloadUm);
     btnBaixarZip.disabled = false;
 
   } catch (err) {
@@ -1265,12 +1273,11 @@ btnBaixarZip.addEventListener('click', async () => {
     return;
   }
 
-  const htmlOriginal = btnBaixarZip.innerHTML;
   try {
     btnBaixarZip.disabled = true;
     btnBaixarZip.title = 'Aguarde a geração do arquivo para baixar';
     btnBaixarZip.setAttribute('aria-busy', 'true');
-    btnBaixarZip.innerHTML = ICON_SPINNER + '<span>Gerando ZIP...</span>';
+    setBotaoBaixarZip(ICON_SPINNER, 'Gerando ZIP...');
     const zip = new JSZip();
     for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
     const zipBytes = await zip.generateAsync({ type: 'uint8array' });
@@ -1279,7 +1286,8 @@ btnBaixarZip.addEventListener('click', async () => {
     btnBaixarZip.disabled = false;
     btnBaixarZip.removeAttribute('title');
     btnBaixarZip.removeAttribute('aria-busy');
-    btnBaixarZip.innerHTML = htmlOriginal;
+    const config = obterConfigModo(modoResultados);
+    setBotaoBaixarZip(ICON_DOWNLOAD, resultados.length === 1 ? config.botaoDownloadUm : config.botaoDownloadVarios);
   }
 });
 
@@ -1287,19 +1295,22 @@ let limparTimeout;
 btnLimpar.addEventListener('click', () => {
   if (!btnLimpar.dataset.confirm) {
     btnLimpar.dataset.confirm = 'true';
-    btnLimpar.dataset.original = btnLimpar.innerHTML;
-    btnLimpar.innerHTML = 'Tem certeza? <kbd aria-hidden="true">Esc</kbd>';
+    btnLimpar.dataset.originalIcon = btnLimpar.innerHTML;
+    btnLimpar.textContent = 'Tem certeza? ';
+    btnLimpar.insertAdjacentHTML('beforeend', '<kbd aria-hidden="true">Esc</kbd>');
     btnLimpar.title = 'Clique novamente ou pressione Esc para confirmar';
     limparTimeout = setTimeout(() => {
       delete btnLimpar.dataset.confirm;
-      btnLimpar.innerHTML = btnLimpar.dataset.original;
+      btnLimpar.textContent = '';
+      btnLimpar.insertAdjacentHTML('beforeend', btnLimpar.dataset.originalIcon);
       btnLimpar.removeAttribute('title');
     }, 3000);
     return;
   }
   clearTimeout(limparTimeout);
   delete btnLimpar.dataset.confirm;
-  btnLimpar.innerHTML = btnLimpar.dataset.original;
+  btnLimpar.textContent = '';
+  btnLimpar.insertAdjacentHTML('beforeend', btnLimpar.dataset.originalIcon);
   btnLimpar.removeAttribute('title');
 
   limparEstado();
