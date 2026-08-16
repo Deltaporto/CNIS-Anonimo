@@ -580,6 +580,8 @@ async function iniciarSplitEproc(arquivos) {
   // Criar área de log dentro do item
   const logEl = document.createElement('div');
   logEl.className = 'split-log';
+  logEl.setAttribute('tabindex', '0');
+  logEl.setAttribute('aria-label', 'Log de processamento');
   item.appendChild(logEl);
   _splitLogEl = logEl;
 
