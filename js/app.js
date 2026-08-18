@@ -1267,7 +1267,7 @@ btnBaixarZip.addEventListener('click', async () => {
     return;
   }
 
-  const htmlOriginal = btnBaixarZip.innerHTML;
+  const cachedNodes = Array.from(btnBaixarZip.childNodes).map(n => n.cloneNode(true));
   try {
     btnBaixarZip.disabled = true;
     btnBaixarZip.title = 'Aguarde a geração do arquivo para baixar';
@@ -1281,7 +1281,7 @@ btnBaixarZip.addEventListener('click', async () => {
     btnBaixarZip.disabled = false;
     btnBaixarZip.removeAttribute('title');
     btnBaixarZip.removeAttribute('aria-busy');
-    btnBaixarZip.innerHTML = htmlOriginal;
+    btnBaixarZip.replaceChildren(...cachedNodes.map(n => n.cloneNode(true)));
   }
 });
 
@@ -1289,19 +1289,19 @@ let limparTimeout;
 btnLimpar.addEventListener('click', () => {
   if (!btnLimpar.dataset.confirm) {
     btnLimpar.dataset.confirm = 'true';
-    btnLimpar.dataset.original = btnLimpar.innerHTML;
+    btnLimpar._cachedNodes = Array.from(btnLimpar.childNodes).map(n => n.cloneNode(true));
     btnLimpar.innerHTML = 'Tem certeza? <kbd aria-hidden="true">Esc</kbd>';
     btnLimpar.title = 'Clique novamente ou pressione Esc para confirmar';
     limparTimeout = setTimeout(() => {
       delete btnLimpar.dataset.confirm;
-      btnLimpar.innerHTML = btnLimpar.dataset.original;
+      btnLimpar.replaceChildren(...btnLimpar._cachedNodes.map(n => n.cloneNode(true)));
       btnLimpar.removeAttribute('title');
     }, 3000);
     return;
   }
   clearTimeout(limparTimeout);
   delete btnLimpar.dataset.confirm;
-  btnLimpar.innerHTML = btnLimpar.dataset.original;
+  btnLimpar.replaceChildren(...btnLimpar._cachedNodes.map(n => n.cloneNode(true)));
   btnLimpar.removeAttribute('title');
 
   limparEstado();
