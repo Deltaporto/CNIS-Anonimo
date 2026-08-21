@@ -24,7 +24,7 @@ const MODOS_DOCUMENTO = {
   },
   'processo-judicial': {
     id: 'processo-judicial',
-    maxPdfSizeMb: 70,
+    maxPdfSizeMb: 100,
     prefixoArquivo: 'Processo',
     zipNome: 'Processos_anonimizados.zip',
     uploadTitulo: 'Arraste as peças processuais aqui',
@@ -34,7 +34,7 @@ const MODOS_DOCUMENTO = {
   },
   'extrair-pecas': {
     id: 'extrair-pecas',
-    maxPdfSizeMb: 70,
+    maxPdfSizeMb: 100,
     prefixoArquivo: 'Processo',
     zipNome: 'Pecas_do_processo.zip',
     uploadTitulo: 'Arraste a íntegra do processo (Eproc)',

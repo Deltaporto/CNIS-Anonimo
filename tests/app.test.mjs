@@ -50,10 +50,10 @@ test('modo extrair-pecas: config tem isSplit = true e campos corretos', () => {
   assert.equal(config.zipNome, 'Pecas_do_processo.zip');
 });
 
-test('Processo Judicial aceita PDFs de até 70 MB', () => {
-  assert.equal(appApi.obterLimitePdfMb('extrair-pecas'), 70);
-  assert.equal(appApi.obterLimitePdfMb('processo-judicial'), 70);
-  assert.equal(appApi.obterLimitePdfBytes('extrair-pecas'), 70 * 1024 * 1024);
+test('Processo Judicial aceita PDFs de até 100 MB', () => {
+  assert.equal(appApi.obterLimitePdfMb('extrair-pecas'), 100);
+  assert.equal(appApi.obterLimitePdfMb('processo-judicial'), 100);
+  assert.equal(appApi.obterLimitePdfBytes('extrair-pecas'), 100 * 1024 * 1024);
 });
 
 test('modos CNIS e carta mantêm o limite padrão de 50 MB', () => {
