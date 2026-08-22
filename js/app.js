@@ -362,17 +362,29 @@ async function iniciarLote(arquivos) {
 
   try {
     if (resultados.length === 1) {
-      btnBaixarZip.innerHTML = ICON_DOWNLOAD + '<span>' + config.botaoDownloadUm + '</span>';
+      btnBaixarZip.replaceChildren();
+      btnBaixarZip.insertAdjacentHTML('beforeend', ICON_DOWNLOAD);
+      const span = document.createElement('span');
+      span.textContent = config.botaoDownloadUm;
+      btnBaixarZip.appendChild(span);
       baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
     } else {
-      btnBaixarZip.innerHTML = ICON_SPINNER + '<span>Gerando ZIP...</span>';
+      btnBaixarZip.replaceChildren();
+      btnBaixarZip.insertAdjacentHTML('beforeend', ICON_SPINNER);
+      const span = document.createElement('span');
+      span.textContent = 'Gerando ZIP...';
+      btnBaixarZip.appendChild(span);
       const zip = new JSZip();
       for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
       const zipBytes = await zip.generateAsync({ type: 'uint8array' });
       baixarBlob(zipBytes, 'application/zip', config.zipNome);
     }
   } finally {
-    btnBaixarZip.innerHTML = ICON_DOWNLOAD + '<span>' + (resultados.length === 1 ? config.botaoDownloadUm : config.botaoDownloadVarios) + '</span>';
+    btnBaixarZip.replaceChildren();
+    btnBaixarZip.insertAdjacentHTML('beforeend', ICON_DOWNLOAD);
+    const span = document.createElement('span');
+    span.textContent = resultados.length === 1 ? config.botaoDownloadUm : config.botaoDownloadVarios;
+    btnBaixarZip.appendChild(span);
     btnBaixarZip.disabled = false;
     btnBaixarZip.removeAttribute('aria-busy');
     btnBaixarZip.removeAttribute('title');
@@ -647,7 +659,11 @@ async function iniciarSplitEproc(arquivos) {
 
     // 10. Configurar botão de rebaixar
     acoesEl.classList.remove('oculto');
-    btnBaixarZip.innerHTML = ICON_DOWNLOAD + '<span>' + config.botaoDownloadUm + '</span>';
+    btnBaixarZip.replaceChildren();
+    btnBaixarZip.insertAdjacentHTML('beforeend', ICON_DOWNLOAD);
+    const span = document.createElement('span');
+    span.textContent = config.botaoDownloadUm;
+    btnBaixarZip.appendChild(span);
     btnBaixarZip.disabled = false;
 
   } catch (err) {
@@ -1267,12 +1283,16 @@ btnBaixarZip.addEventListener('click', async () => {
     return;
   }
 
-  const htmlOriginal = btnBaixarZip.innerHTML;
+  const cacheBaixarZip = Array.from(btnBaixarZip.childNodes).map(n => n.cloneNode(true));
   try {
     btnBaixarZip.disabled = true;
     btnBaixarZip.title = 'Aguarde a geração do arquivo para baixar';
     btnBaixarZip.setAttribute('aria-busy', 'true');
-    btnBaixarZip.innerHTML = ICON_SPINNER + '<span>Gerando ZIP...</span>';
+    btnBaixarZip.replaceChildren();
+    btnBaixarZip.insertAdjacentHTML('beforeend', ICON_SPINNER);
+    const span = document.createElement('span');
+    span.textContent = 'Gerando ZIP...';
+    btnBaixarZip.appendChild(span);
     const zip = new JSZip();
     for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
     const zipBytes = await zip.generateAsync({ type: 'uint8array' });
@@ -1281,27 +1301,35 @@ btnBaixarZip.addEventListener('click', async () => {
     btnBaixarZip.disabled = false;
     btnBaixarZip.removeAttribute('title');
     btnBaixarZip.removeAttribute('aria-busy');
-    btnBaixarZip.innerHTML = htmlOriginal;
+    btnBaixarZip.replaceChildren(...cacheBaixarZip);
   }
 });
 
 let limparTimeout;
+let cacheLimpar = [];
 btnLimpar.addEventListener('click', () => {
   if (!btnLimpar.dataset.confirm) {
     btnLimpar.dataset.confirm = 'true';
-    btnLimpar.dataset.original = btnLimpar.innerHTML;
-    btnLimpar.innerHTML = 'Tem certeza? <kbd aria-hidden="true">Esc</kbd>';
+    cacheLimpar = Array.from(btnLimpar.childNodes).map(n => n.cloneNode(true));
+
+    btnLimpar.replaceChildren();
+    btnLimpar.appendChild(document.createTextNode('Tem certeza? '));
+    const kbd = document.createElement('kbd');
+    kbd.setAttribute('aria-hidden', 'true');
+    kbd.textContent = 'Esc';
+    btnLimpar.appendChild(kbd);
+
     btnLimpar.title = 'Clique novamente ou pressione Esc para confirmar';
     limparTimeout = setTimeout(() => {
       delete btnLimpar.dataset.confirm;
-      btnLimpar.innerHTML = btnLimpar.dataset.original;
+      btnLimpar.replaceChildren(...cacheLimpar.map(n => n.cloneNode(true)));
       btnLimpar.removeAttribute('title');
     }, 3000);
     return;
   }
   clearTimeout(limparTimeout);
   delete btnLimpar.dataset.confirm;
-  btnLimpar.innerHTML = btnLimpar.dataset.original;
+  btnLimpar.replaceChildren(...cacheLimpar.map(n => n.cloneNode(true)));
   btnLimpar.removeAttribute('title');
 
   limparEstado();
