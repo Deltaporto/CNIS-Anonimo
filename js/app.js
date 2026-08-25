@@ -1286,16 +1286,32 @@ btnBaixarZip.addEventListener('click', async () => {
 });
 
 let limparTimeout;
+function anunciarAcessibilidade(mensagem) {
+  let region = document.getElementById('a11y-live-region');
+  if (!region) {
+    region = document.createElement('div');
+    region.id = 'a11y-live-region';
+    region.setAttribute('role', 'status');
+    region.setAttribute('aria-live', 'polite');
+    region.style.cssText = 'position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;';
+    document.body.appendChild(region);
+  }
+  region.textContent = '';
+  setTimeout(() => { region.textContent = mensagem; }, 50);
+}
+
 btnLimpar.addEventListener('click', () => {
   if (!btnLimpar.dataset.confirm) {
     btnLimpar.dataset.confirm = 'true';
     btnLimpar.dataset.original = btnLimpar.innerHTML;
     btnLimpar.innerHTML = 'Tem certeza? <kbd aria-hidden="true">Esc</kbd>';
     btnLimpar.title = 'Clique novamente ou pressione Esc para confirmar';
+    anunciarAcessibilidade('Ação requer confirmação. Clique novamente ou pressione Escape para limpar e recomeçar.');
     limparTimeout = setTimeout(() => {
       delete btnLimpar.dataset.confirm;
       btnLimpar.innerHTML = btnLimpar.dataset.original;
       btnLimpar.removeAttribute('title');
+      anunciarAcessibilidade('Confirmação expirada.');
     }, 3000);
     return;
   }
