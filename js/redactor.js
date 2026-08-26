@@ -184,33 +184,16 @@ function _escapeRegExp(valor) {
   return valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+const _DETECTAR_NOMES_TEXTO_CONECTIVOS = new Set(['de', 'da', 'das', 'do', 'dos']);
+const _DETECTAR_NOMES_TEXTO_ROTULOS_PARADA = new Set([
+  'CPF', 'OAB', 'CRM', 'RG', 'PROCESSO', 'CONTATO', 'EMAIL', 'E-MAIL', 'ENDERECO', 'ENDEREÇO',
+  'ÓRGÃO', 'ORGAO', 'JULGADOR', 'JUIZ', 'JUIZA', 'RELATOR', 'RELATORA', 'LOCALIZADOR', 'LOCALIZADORES',
+  'RECORRENTE', 'RECORRIDO', 'PAGINA', 'PÁGINA'
+]);
+
 function detectarNomesNoTexto(texto) {
-  const conectivos = new Set(['de', 'da', 'das', 'do', 'dos']);
-  const rotulosParada = new Set([
-    'CPF',
-    'OAB',
-    'CRM',
-    'RG',
-    'PROCESSO',
-    'CONTATO',
-    'EMAIL',
-    'E-MAIL',
-    'ENDERECO',
-    'ENDEREÇO',
-    'ÓRGÃO',
-    'ORGAO',
-    'JULGADOR',
-    'JUIZ',
-    'JUIZA',
-    'RELATOR',
-    'RELATORA',
-    'LOCALIZADOR',
-    'LOCALIZADORES',
-    'RECORRENTE',
-    'RECORRIDO',
-    'PAGINA',
-    'PÁGINA'
-  ]);
+  const conectivos = _DETECTAR_NOMES_TEXTO_CONECTIVOS;
+  const rotulosParada = _DETECTAR_NOMES_TEXTO_ROTULOS_PARADA;
   const tokens = texto.match(/[A-ZÀ-ÿa-zà-ÿ]+|\s+|[^\wA-ZÀ-ÿ\s]+/g) || [];
   const nomes = [];
   let i = 0;
@@ -269,65 +252,34 @@ function detectarNomesJuridicosEmCaixaAlta(texto) {
   return nomes;
 }
 
+const _DETECTAR_NOMES_ROTULO_CONECTIVOS = new Set(['DE', 'DA', 'DAS', 'DO', 'DOS', 'E']);
+const _DETECTAR_NOMES_ROTULO_ROTULOS_PARTE = [
+  'PARTE\\s+AUTORA', 'PARTE\\s+R[ÉE]', 'AUTOR(?:A)?', 'AUTOR\\s+PRINCIPAL',
+  'R[ÉE]U', 'REU', 'REQUERENTE', 'REQUERID[OA]',
+  'BENEFICI[ÁA]RIO(?:\\s+DOS\\s+HONOR[ÁA]RIOS)?', 'RECORRENTE', 'RECORRID[OA]',
+  'APELANTE', 'APELAD[OA]', 'AGRAVANTE', 'AGRAVAD[OA]', 'IMPETRANTE',
+  'IMPETRAD[OA]', 'EXEQUENTE', 'EXECUTAD[OA]', 'EMBARGANTE', 'EMBARGAD[OA]',
+  'INTERESSAD[OA]', 'ASSISTID[OA]', 'NOME'
+];
+const _DETECTAR_NOMES_ROTULO_PARTE = `(?:${_DETECTAR_NOMES_ROTULO_ROTULOS_PARTE.join('|')})`;
+const _DETECTAR_NOMES_ROTULO_ROTULOS_PARADA = [
+  _DETECTAR_NOMES_ROTULO_PARTE, 'ADVOGAD[OA]', 'PROCURADOR(?:A)?', 'REPRESENTANTE', 'CPF',
+  'CNPJ', 'NIT', 'NIS', 'OAB', 'CRM', 'RG', 'PROCESSO', 'PROCEDIMENTO',
+  'SENTEN[ÇC]A', 'PODER', 'JUSTI[ÇC]A', 'JUIZ(?:A)?', 'VARA', 'SUBSE[ÇC][AÃ]O'
+].join('|');
+const _DETECTAR_NOMES_ROTULO_PALAVRA_NOME = '[A-ZÀ-Ý]{2,}';
+const _DETECTAR_NOMES_ROTULO_TRECHO_NOME = `${_DETECTAR_NOMES_ROTULO_PALAVRA_NOME}(?:\\s+(?:DE|DA|DAS|DO|DOS|E|${_DETECTAR_NOMES_ROTULO_PALAVRA_NOME})){1,10}`;
+const _DETECTAR_NOMES_ROTULO_PATTERN = new RegExp(
+  `\\b${_DETECTAR_NOMES_ROTULO_PARTE}\\b(?:\\(S\\))?\\s*(?::|-)?\\s*(${_DETECTAR_NOMES_ROTULO_TRECHO_NOME})(?=\\s+(?:${_DETECTAR_NOMES_ROTULO_ROTULOS_PARADA})\\b|\\s*[,;.]|$)`,
+  'gi'
+);
+
 function detectarNomesPorRotuloProcessual(texto) {
   const nomes = [];
-  const conectivos = new Set(['DE', 'DA', 'DAS', 'DO', 'DOS', 'E']);
-  const rotulosParte = [
-    'PARTE\\s+AUTORA',
-    'PARTE\\s+R[ÉE]',
-    'AUTOR(?:A)?',
-    'AUTOR\\s+PRINCIPAL',
-    'R[ÉE]U',
-    'REU',
-    'REQUERENTE',
-    'REQUERID[OA]',
-    'BENEFICI[ÁA]RIO(?:\\s+DOS\\s+HONOR[ÁA]RIOS)?',
-    'RECORRENTE',
-    'RECORRID[OA]',
-    'APELANTE',
-    'APELAD[OA]',
-    'AGRAVANTE',
-    'AGRAVAD[OA]',
-    'IMPETRANTE',
-    'IMPETRAD[OA]',
-    'EXEQUENTE',
-    'EXECUTAD[OA]',
-    'EMBARGANTE',
-    'EMBARGAD[OA]',
-    'INTERESSAD[OA]',
-    'ASSISTID[OA]',
-    'NOME'
-  ];
-  const rotuloParte = `(?:${rotulosParte.join('|')})`;
-  const rotulosParada = [
-    rotuloParte,
-    'ADVOGAD[OA]',
-    'PROCURADOR(?:A)?',
-    'REPRESENTANTE',
-    'CPF',
-    'CNPJ',
-    'NIT',
-    'NIS',
-    'OAB',
-    'CRM',
-    'RG',
-    'PROCESSO',
-    'PROCEDIMENTO',
-    'SENTEN[ÇC]A',
-    'PODER',
-    'JUSTI[ÇC]A',
-    'JUIZ(?:A)?',
-    'VARA',
-    'SUBSE[ÇC][AÃ]O'
-  ].join('|');
-  const palavraNome = '[A-ZÀ-Ý]{2,}';
-  const trechoNome = `${palavraNome}(?:\\s+(?:DE|DA|DAS|DO|DOS|E|${palavraNome})){1,10}`;
-  const pattern = new RegExp(
-    `\\b${rotuloParte}\\b(?:\\(S\\))?\\s*(?::|-)?\\s*(${trechoNome})(?=\\s+(?:${rotulosParada})\\b|\\s*[,;.]|$)`,
-    'gi'
-  );
+  const conectivos = _DETECTAR_NOMES_ROTULO_CONECTIVOS;
+  _DETECTAR_NOMES_ROTULO_PATTERN.lastIndex = 0;
 
-  for (const match of texto.matchAll(pattern)) {
+  for (const match of texto.matchAll(_DETECTAR_NOMES_ROTULO_PATTERN)) {
     const nome = match[1].trim().replace(/[.,;:]+$/g, '').trim();
     const semConectivos = nome.split(/\s+/).filter(p => !conectivos.has(_chaveToken(p)));
     const entePublico = /\b(?:INSS|INSTITUTO\s+NACIONAL|UNI[AÃ]O|FAZENDA\s+NACIONAL|MUNIC[IÍ]PIO|ESTADO\s+(?:DO|DA|DE)|DISTRITO\s+FEDERAL|MINIST[ÉE]RIO\s+P[ÚU]BLICO|DEFENSORIA\s+P[ÚU]BLICA|PROCURADORIA)\b/i.test(nome);
