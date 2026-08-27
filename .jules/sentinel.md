@@ -1,0 +1,4 @@
+## 2025-02-18 - Prevent DOM-based XSS via innerHTML injection
+**Vulnerability:** The application was using `.innerHTML` to insert configuration strings dynamically, which is insecure and could lead to DOM-based XSS if the config values were influenced by user input. Additionally, `.innerHTML` was used for state preservation (caching original button contents) and reloading.
+**Learning:** Using `innerHTML` for structural injection and state preservation is risky. The safer approach for state preservation is to cache the node array and restore using `.replaceChildren(...cachedNodes.map(n => n.cloneNode(true)))`, and using `.textContent` / `.insertAdjacentHTML()` for text/icon updates.
+**Prevention:** Avoid `.innerHTML` entirely for updates. Use `.textContent` for dynamic text and DOM methods like `.replaceChildren()` and `.insertAdjacentHTML()` (with safe input) when formatting or UI structural elements are needed.
