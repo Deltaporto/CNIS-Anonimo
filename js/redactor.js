@@ -184,33 +184,37 @@ function _escapeRegExp(valor) {
   return valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+const CONECTIVOS_DETECTAR = new Set(['de', 'da', 'das', 'do', 'dos']);
+const ROTULOS_PARADA_DETECTAR = new Set([
+  'CPF',
+  'OAB',
+  'CRM',
+  'RG',
+  'PROCESSO',
+  'CONTATO',
+  'EMAIL',
+  'E-MAIL',
+  'ENDERECO',
+  'ENDEREÇO',
+  'ÓRGÃO',
+  'ORGAO',
+  'JULGADOR',
+  'JUIZ',
+  'JUIZA',
+  'RELATOR',
+  'RELATORA',
+  'LOCALIZADOR',
+  'LOCALIZADORES',
+  'RECORRENTE',
+  'RECORRIDO',
+  'PAGINA',
+  'PÁGINA'
+]);
+
 function detectarNomesNoTexto(texto) {
-  const conectivos = new Set(['de', 'da', 'das', 'do', 'dos']);
-  const rotulosParada = new Set([
-    'CPF',
-    'OAB',
-    'CRM',
-    'RG',
-    'PROCESSO',
-    'CONTATO',
-    'EMAIL',
-    'E-MAIL',
-    'ENDERECO',
-    'ENDEREÇO',
-    'ÓRGÃO',
-    'ORGAO',
-    'JULGADOR',
-    'JUIZ',
-    'JUIZA',
-    'RELATOR',
-    'RELATORA',
-    'LOCALIZADOR',
-    'LOCALIZADORES',
-    'RECORRENTE',
-    'RECORRIDO',
-    'PAGINA',
-    'PÁGINA'
-  ]);
+  // ⚡ Bolt: Hoisted static Sets to prevent repeated allocation overhead on every function call
+  const conectivos = CONECTIVOS_DETECTAR;
+  const rotulosParada = ROTULOS_PARADA_DETECTAR;
   const tokens = texto.match(/[A-ZÀ-ÿa-zà-ÿ]+|\s+|[^\wA-ZÀ-ÿ\s]+/g) || [];
   const nomes = [];
   let i = 0;
