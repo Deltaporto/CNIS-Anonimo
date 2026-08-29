@@ -581,6 +581,7 @@ async function iniciarSplitEproc(arquivos) {
   const logEl = document.createElement('div');
   logEl.className = 'split-log';
   logEl.setAttribute('tabindex', '0');
+  logEl.setAttribute('aria-live', 'polite');
   logEl.setAttribute('aria-label', 'Log de processamento');
   item.appendChild(logEl);
   _splitLogEl = logEl;
