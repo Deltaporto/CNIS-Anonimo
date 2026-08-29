@@ -1,3 +1,7 @@
 ## 2026-08-03 - Optimize _globalizar RegExp flags deduplication
 **Learning:** In hot path functions like `_globalizar` that run inside nested loops for regex construction, using `[...new Set(string.split(''))].join('')` introduces critical memory allocation overhead due to continuous Array and Set creations.
 **Action:** Always replace small string deduplications with string concatenation and `.includes()` checks when operating inside performance-sensitive processing loops to avoid excessive GC pressure and CPU churn.
+
+## 2025-02-28 - Regex Caching and Set Hoisting
+**Learning:** Frequent instantiations of `Set` objects on every function call for static word lists (like name connectives) introduces unnecessary CPU overhead and GC pressure. Caching stateful `RegExp` objects that use the global `g` flag is a critical anti-pattern because their `lastIndex` is mutated, leading to shared mutable state bugs; additionally, dynamically caching regexes based on document content requires bounding to avoid memory leaks.
+**Action:** Hoist static arrays and `Set`s to the module-level scope. For string processing routines like `_chaveToken`, use bounded `Map` caches to limit memory while accelerating hot paths, and rely on V8's native regex compilation optimizations instead of manual global caching for dynamic regexes.
