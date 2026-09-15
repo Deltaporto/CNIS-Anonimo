@@ -1594,21 +1594,50 @@ async function verificarSubstituicoesNoPDF(pdfBytes, specs) {
   const unreplaced = [];
 
   for (const spec of specs) {
-    const encontrouOriginalLiteral = spec.verifyOriginals.some(original =>
-      original && textos.some(texto => texto.includes(original))
-    );
+    let encontrouOriginalLiteral = false;
+    // avoids callback allocation overhead in a hot path
+    for (let i = 0; i < spec.verifyOriginals.length; i++) {
+      const original = spec.verifyOriginals[i];
+      if (!original) continue;
+      for (let j = 0; j < textos.length; j++) {
+        if (textos[j].includes(original)) {
+          encontrouOriginalLiteral = true;
+          break;
+        }
+      }
+      if (encontrouOriginalLiteral) break;
+    }
 
     const specHex = specsHex.find(item => item.id === spec.id);
-    const encontrouOriginalHex = specHex
-      ? (
-          specHex.verifyOriginals.some(original =>
-            original && textos.some(texto => texto.includes(original))
-          ) ||
-          specHex.verifyOriginalsRaw.some(original =>
-            original && textos.some(texto => texto.includes(original))
-          )
-        )
-      : false;
+    let encontrouOriginalHex = false;
+    if (specHex) {
+      // avoids callback allocation overhead in a hot path
+      for (let i = 0; i < specHex.verifyOriginals.length; i++) {
+        const original = specHex.verifyOriginals[i];
+        if (!original) continue;
+        for (let j = 0; j < textos.length; j++) {
+          if (textos[j].includes(original)) {
+            encontrouOriginalHex = true;
+            break;
+          }
+        }
+        if (encontrouOriginalHex) break;
+      }
+      if (!encontrouOriginalHex) {
+        // avoids callback allocation overhead in a hot path
+        for (let i = 0; i < specHex.verifyOriginalsRaw.length; i++) {
+          const original = specHex.verifyOriginalsRaw[i];
+          if (!original) continue;
+          for (let j = 0; j < textos.length; j++) {
+            if (textos[j].includes(original)) {
+              encontrouOriginalHex = true;
+              break;
+            }
+          }
+          if (encontrouOriginalHex) break;
+        }
+      }
+    }
 
     if (encontrouOriginalLiteral || encontrouOriginalHex) unreplaced.push(spec.label);
   }
@@ -1718,9 +1747,15 @@ async function verificarSubstituicoesNoTextoExtraido(pdfBytes, specs) {
   const unreplaced = [];
 
   for (const spec of specs) {
-    const encontrou = spec.verifyOriginals.some(original =>
-      original && texto.includes(normalizarEspacos(original))
-    );
+    let encontrou = false;
+    // avoids callback allocation overhead in a hot path
+    for (let i = 0; i < spec.verifyOriginals.length; i++) {
+      const original = spec.verifyOriginals[i];
+      if (original && texto.includes(normalizarEspacos(original))) {
+        encontrou = true;
+        break;
+      }
+    }
 
     if (encontrou && !unreplaced.includes(spec.label)) unreplaced.push(spec.label);
   }
