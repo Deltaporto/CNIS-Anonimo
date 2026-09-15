@@ -362,17 +362,29 @@ async function iniciarLote(arquivos) {
 
   try {
     if (resultados.length === 1) {
-      btnBaixarZip.innerHTML = ICON_DOWNLOAD + '<span>' + config.botaoDownloadUm + '</span>';
+      btnBaixarZip.textContent = '';
+      btnBaixarZip.insertAdjacentHTML('beforeend', ICON_DOWNLOAD);
+      const spanUm = document.createElement('span');
+      spanUm.textContent = config.botaoDownloadUm;
+      btnBaixarZip.appendChild(spanUm);
       baixarBlob(resultados[0].bytes, 'application/pdf', resultados[0].nome);
     } else {
-      btnBaixarZip.innerHTML = ICON_SPINNER + '<span>Gerando ZIP...</span>';
+      btnBaixarZip.textContent = '';
+      btnBaixarZip.insertAdjacentHTML('beforeend', ICON_SPINNER);
+      const spanSpin = document.createElement('span');
+      spanSpin.textContent = 'Gerando ZIP...';
+      btnBaixarZip.appendChild(spanSpin);
       const zip = new JSZip();
       for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
       const zipBytes = await zip.generateAsync({ type: 'uint8array' });
       baixarBlob(zipBytes, 'application/zip', config.zipNome);
     }
   } finally {
-    btnBaixarZip.innerHTML = ICON_DOWNLOAD + '<span>' + (resultados.length === 1 ? config.botaoDownloadUm : config.botaoDownloadVarios) + '</span>';
+    btnBaixarZip.textContent = '';
+    btnBaixarZip.insertAdjacentHTML('beforeend', ICON_DOWNLOAD);
+    const spanFin = document.createElement('span');
+    spanFin.textContent = resultados.length === 1 ? config.botaoDownloadUm : config.botaoDownloadVarios;
+    btnBaixarZip.appendChild(spanFin);
     btnBaixarZip.disabled = false;
     btnBaixarZip.removeAttribute('aria-busy');
     btnBaixarZip.removeAttribute('title');
@@ -647,7 +659,11 @@ async function iniciarSplitEproc(arquivos) {
 
     // 10. Configurar botão de rebaixar
     acoesEl.classList.remove('oculto');
-    btnBaixarZip.innerHTML = ICON_DOWNLOAD + '<span>' + config.botaoDownloadUm + '</span>';
+    btnBaixarZip.textContent = '';
+    btnBaixarZip.insertAdjacentHTML('beforeend', ICON_DOWNLOAD);
+    const spanBtn = document.createElement('span');
+    spanBtn.textContent = config.botaoDownloadUm;
+    btnBaixarZip.appendChild(spanBtn);
     btnBaixarZip.disabled = false;
 
   } catch (err) {
@@ -1272,7 +1288,11 @@ btnBaixarZip.addEventListener('click', async () => {
     btnBaixarZip.disabled = true;
     btnBaixarZip.title = 'Aguarde a geração do arquivo para baixar';
     btnBaixarZip.setAttribute('aria-busy', 'true');
-    btnBaixarZip.innerHTML = ICON_SPINNER + '<span>Gerando ZIP...</span>';
+    btnBaixarZip.textContent = '';
+    btnBaixarZip.insertAdjacentHTML('beforeend', ICON_SPINNER);
+    const spanSpin = document.createElement('span');
+    spanSpin.textContent = 'Gerando ZIP...';
+    btnBaixarZip.appendChild(spanSpin);
     const zip = new JSZip();
     for (const resultado of resultados) zip.file(resultado.nome, resultado.bytes);
     const zipBytes = await zip.generateAsync({ type: 'uint8array' });
@@ -1289,19 +1309,21 @@ let limparTimeout;
 btnLimpar.addEventListener('click', () => {
   if (!btnLimpar.dataset.confirm) {
     btnLimpar.dataset.confirm = 'true';
-    btnLimpar.dataset.original = btnLimpar.innerHTML;
-    btnLimpar.innerHTML = 'Tem certeza? <kbd aria-hidden="true">Esc</kbd>';
+    btnLimpar.textContent = 'Tem certeza? ';
+    btnLimpar.insertAdjacentHTML('beforeend', '<kbd aria-hidden="true">Esc</kbd>');
     btnLimpar.title = 'Clique novamente ou pressione Esc para confirmar';
     limparTimeout = setTimeout(() => {
       delete btnLimpar.dataset.confirm;
-      btnLimpar.innerHTML = btnLimpar.dataset.original;
+      btnLimpar.textContent = 'Limpar e recomeçar ';
+      btnLimpar.insertAdjacentHTML('beforeend', '<kbd aria-hidden="true">Esc</kbd>');
       btnLimpar.removeAttribute('title');
     }, 3000);
     return;
   }
   clearTimeout(limparTimeout);
   delete btnLimpar.dataset.confirm;
-  btnLimpar.innerHTML = btnLimpar.dataset.original;
+  btnLimpar.textContent = 'Limpar e recomeçar ';
+  btnLimpar.insertAdjacentHTML('beforeend', '<kbd aria-hidden="true">Esc</kbd>');
   btnLimpar.removeAttribute('title');
 
   limparEstado();
