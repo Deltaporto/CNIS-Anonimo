@@ -157,12 +157,26 @@ function _sobrepoeRangeProtegido(match, ranges) {
   return ranges.some(range => inicio < range.fim && fim > range.inicio);
 }
 
+const _semAcentosCache = new Map();
 function _semAcentos(valor) {
-  return valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // ⚡ Bolt: Memoize string normalization to avoid repeated expensive .normalize() and regex replacement calls in hot loops
+  let cached = _semAcentosCache.get(valor);
+  if (cached !== undefined) return cached;
+  const result = valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (_semAcentosCache.size > 2000) _semAcentosCache.clear();
+  _semAcentosCache.set(valor, result);
+  return result;
 }
 
+const _chaveTokenCache = new Map();
 function _chaveToken(token) {
-  return _semAcentos(token).toUpperCase().replace(/[^A-Z]/g, '');
+  // ⚡ Bolt: Memoize token key generation, capping cache size at 2000 to bound memory overhead during large document processing
+  let cached = _chaveTokenCache.get(token);
+  if (cached !== undefined) return cached;
+  const result = _semAcentos(token).toUpperCase().replace(/[^A-Z]/g, '');
+  if (_chaveTokenCache.size > 2000) _chaveTokenCache.clear();
+  _chaveTokenCache.set(token, result);
+  return result;
 }
 
 function _ehPrimeiroNomeComum(token) {
