@@ -18,6 +18,17 @@ for (let i = 48; i <= 57; i++) HEX_CHAR_TO_INT[i] = i - 48; // 0-9
 for (let i = 65; i <= 70; i++) HEX_CHAR_TO_INT[i] = i - 55; // A-F
 for (let i = 97; i <= 102; i++) HEX_CHAR_TO_INT[i] = i - 87; // a-f
 
+// ⚡ Bolt: Fast path for overlapping checks without allocating array callbacks in tight loops
+function _verificaSobreposicao(pos, fim, rangesAplicados) {
+  for (let i = 0; i < rangesAplicados.length; i++) {
+    const range = rangesAplicados[i];
+    if (pos < range.fim && fim > range.inicio) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function bytesToLatin1String(bytes) {
   let str = '';
   const chunk = 8192;
