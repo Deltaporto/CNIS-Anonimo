@@ -877,6 +877,7 @@ function criarItemLista(nomeArquivo) {
   const nome = document.createElement('span');
   nome.className = 'arquivo-nome';
   nome.textContent = nomeArquivo;
+  nome.title = nomeArquivo;
 
   const status = document.createElement('span');
   status.className = 'arquivo-status status-aguardando';
