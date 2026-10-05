@@ -168,8 +168,17 @@ function _semAcentos(valor) {
   return valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+// ⚡ Bolt: Cache string normalization and regex replacements for hot path tokens.
+// Eliminates repetitive CPU overhead for processing common connective words.
+// Limits cache size to 2000 to prevent memory leaks on large documents.
+const _chaveTokenCache = new Map();
 function _chaveToken(token) {
-  return _semAcentos(token).toUpperCase().replace(/[^A-Z]/g, '');
+  let cached = _chaveTokenCache.get(token);
+  if (cached !== undefined) return cached;
+  cached = token.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, '');
+  if (_chaveTokenCache.size > 2000) _chaveTokenCache.clear();
+  _chaveTokenCache.set(token, cached);
+  return cached;
 }
 
 function _ehPrimeiroNomeComum(token) {
