@@ -73,17 +73,17 @@
     <fieldset class="saida-extrair">
       <legend>Saída do ZIP</legend>
       <label class="saida-opcao saida-opcao-ativa" for="saida-md-anonimizado">
-        <input type="radio" id="saida-md-anonimizado" name="saida-md" value="anonimizado" checked />
+        <input type="radio" id="saida-md-anonimizado" name="saida-md" value="anonimizado" aria-describedby="desc-md-anon" checked />
         <span>
           <strong>Markdown anonimizado</strong>
-          <small>Remove dados sensíveis detectáveis e preserva o número do processo</small>
+          <small id="desc-md-anon">Remove dados sensíveis detectáveis e preserva o número do processo</small>
         </span>
       </label>
       <label class="saida-opcao" for="saida-md-fiel">
-        <input type="radio" id="saida-md-fiel" name="saida-md" value="fiel" />
+        <input type="radio" id="saida-md-fiel" name="saida-md" value="fiel" aria-describedby="desc-md-fiel" />
         <span>
           <strong>Markdown fiel ao PDF</strong>
-          <small>Mantém o texto extraído como está, incluindo dados sensíveis</small>
+          <small id="desc-md-fiel">Mantém o texto extraído como está, incluindo dados sensíveis</small>
         </span>
       </label>
     </fieldset>
@@ -91,17 +91,17 @@
     <fieldset class="saida-extrair ocr-extrair">
       <legend>Páginas sem texto</legend>
       <label class="saida-opcao saida-opcao-ativa" for="ocr-ligado">
-        <input type="radio" id="ocr-ligado" name="ocr-modo" value="ligado" checked />
+        <input type="radio" id="ocr-ligado" name="ocr-modo" value="ligado" aria-describedby="desc-ocr-ligado" checked />
         <span>
           <strong>Usar OCR</strong>
-          <small>Padrão completo para páginas escaneadas, mas pode demorar bastante em processos grandes</small>
+          <small id="desc-ocr-ligado">Padrão completo para páginas escaneadas, mas pode demorar bastante em processos grandes</small>
         </span>
       </label>
       <label class="saida-opcao" for="ocr-desligado">
-        <input type="radio" id="ocr-desligado" name="ocr-modo" value="desligado" />
+        <input type="radio" id="ocr-desligado" name="ocr-modo" value="desligado" aria-describedby="desc-ocr-desligado" />
         <span>
           <strong>Sem OCR</strong>
-          <small>Mais rápido; páginas escaneadas sem texto pesquisável podem aparecer como aviso ou ser omitidas</small>
+          <small id="desc-ocr-desligado">Mais rápido; páginas escaneadas sem texto pesquisável podem aparecer como aviso ou ser omitidas</small>
         </span>
       </label>
 
