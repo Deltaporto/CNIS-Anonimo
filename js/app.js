@@ -51,6 +51,7 @@ const listaEl = document.getElementById('lista-arquivos');
 const acoesEl = document.getElementById('acoes-globais');
 const btnBaixarZip = document.getElementById('btn-baixar-zip');
 const btnLimpar = document.getElementById('btn-limpar');
+const anunciadorAcao = document.getElementById('anunciador-acao');
 const btnModoCnis = document.getElementById('btn-modo-cnis');
 const btnModoCarta = document.getElementById('btn-modo-carta');
 const btnModoProcesso = document.getElementById('btn-modo-processo');
@@ -1310,10 +1311,12 @@ btnLimpar.addEventListener('click', () => {
     btnLimpar.replaceChildren();
     btnLimpar.insertAdjacentHTML('beforeend', 'Tem certeza? <kbd aria-hidden="true">Esc</kbd>');
     btnLimpar.title = 'Clique novamente ou pressione Esc para confirmar';
+    anunciadorAcao.textContent = 'Ação requer confirmação. Clique novamente ou pressione Esc para confirmar.';
     limparTimeout = setTimeout(() => {
       delete btnLimpar.dataset.confirm;
       btnLimpar.replaceChildren(...originalNodesBtnLimpar.map(n => n.cloneNode(true)));
       btnLimpar.removeAttribute('title');
+      anunciadorAcao.textContent = '';
     }, 3000);
     return;
   }
@@ -1321,6 +1324,7 @@ btnLimpar.addEventListener('click', () => {
   delete btnLimpar.dataset.confirm;
   btnLimpar.replaceChildren(...originalNodesBtnLimpar.map(n => n.cloneNode(true)));
   btnLimpar.removeAttribute('title');
+  anunciadorAcao.textContent = '';
 
   limparEstado();
   atualizarModoUI();
