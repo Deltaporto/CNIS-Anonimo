@@ -1,3 +1,14 @@
+
+const _CONECTIVOS_MINUSCULOS = new Set(['de', 'da', 'das', 'do', 'dos']);
+const _CONECTIVOS_MINUSCULOS_E = new Set(['de', 'da', 'das', 'do', 'dos', 'e']);
+const _TRATAMENTOS = new Set(['sr', 'sr.', 'sra', 'sra.', 'senhor', 'senhora']);
+const _ROTULOS_PARADA = new Set([
+    'CPF', 'OAB', 'CRM', 'RG', 'PROCESSO', 'CONTATO', 'EMAIL', 'E-MAIL',
+    'ENDERECO', 'ENDEREÇO', 'ÓRGÃO', 'ORGAO', 'JULGADOR', 'JUIZ', 'JUIZA',
+    'RELATOR', 'RELATORA', 'LOCALIZADOR', 'LOCALIZADORES', 'RECORRENTE',
+    'RECORRIDO', 'PAGINA', 'PÁGINA'
+]);
+const _CONECTIVOS_MAIUSCULOS_E = new Set(['DE', 'DA', 'DAS', 'DO', 'DOS', 'E']);
 const NUMERO_DE_PROCESSO_PATTERN = /\b\d{7}-?\d{2}\.?\d{4}\.?\d{1}\.?\d{2}\.?\d{4}\b/;
 const CPF_PATTERN = /\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/;
 const NIT_PATTERN = /\b\d{3}\.?\d{5}\.?\d{2}-?\d\b/;
@@ -91,7 +102,7 @@ function redigirCodigo(original) {
   return original.replace(/[A-Z]/gi, 'X').replace(/\d/g, '0');
 }
 function redigirNome(original) {
-  const conectivos = new Set(['de', 'da', 'das', 'do', 'dos']);
+  const conectivos = _CONECTIVOS_MINUSCULOS;
   const palavras = original.trim().split(/\s+/);
   const iniciais = palavras
     .filter(p => !conectivos.has(p.toLowerCase()))
@@ -100,8 +111,8 @@ function redigirNome(original) {
   return iniciais.padEnd(original.length, ' ');
 }
 function redigirNomeComPrefixo(original) {
-  const conectivos = new Set(['de', 'da', 'das', 'do', 'dos', 'e']);
-  const tratamentos = new Set(['sr', 'sr.', 'sra', 'sra.', 'senhor', 'senhora']);
+  const conectivos = _CONECTIVOS_MINUSCULOS_E;
+  const tratamentos = _TRATAMENTOS;
   return original.replace(/[A-ZÀ-ÿ][A-ZÀ-ÿ.]+/g, palavra => {
     const normalizada = palavra.toLowerCase();
     if (tratamentos.has(normalizada)) return palavra;
@@ -192,32 +203,8 @@ function _escapeRegExp(valor) {
 }
 
 function detectarNomesNoTexto(texto) {
-  const conectivos = new Set(['de', 'da', 'das', 'do', 'dos']);
-  const rotulosParada = new Set([
-    'CPF',
-    'OAB',
-    'CRM',
-    'RG',
-    'PROCESSO',
-    'CONTATO',
-    'EMAIL',
-    'E-MAIL',
-    'ENDERECO',
-    'ENDEREÇO',
-    'ÓRGÃO',
-    'ORGAO',
-    'JULGADOR',
-    'JUIZ',
-    'JUIZA',
-    'RELATOR',
-    'RELATORA',
-    'LOCALIZADOR',
-    'LOCALIZADORES',
-    'RECORRENTE',
-    'RECORRIDO',
-    'PAGINA',
-    'PÁGINA'
-  ]);
+  const conectivos = _CONECTIVOS_MINUSCULOS;
+  const rotulosParada = _ROTULOS_PARADA;
   const tokens = texto.match(/[A-ZÀ-ÿa-zà-ÿ]+|\s+|[^\wA-ZÀ-ÿ\s]+/g) || [];
   const nomes = [];
   let i = 0;
@@ -278,7 +265,7 @@ function detectarNomesJuridicosEmCaixaAlta(texto) {
 
 function detectarNomesPorRotuloProcessual(texto) {
   const nomes = [];
-  const conectivos = new Set(['DE', 'DA', 'DAS', 'DO', 'DOS', 'E']);
+  const conectivos = _CONECTIVOS_MAIUSCULOS_E;
   const rotulosParte = [
     'PARTE\\s+AUTORA',
     'PARTE\\s+R[ÉE]',
@@ -365,7 +352,7 @@ function adicionarNomeComVariantes(pares, nome) {
 }
 
 function adicionarAliasesConservadoresNomeDetectado(pares, texto, nome) {
-  const conectivos = new Set(['DE', 'DA', 'DAS', 'DO', 'DOS', 'E']);
+  const conectivos = _CONECTIVOS_MAIUSCULOS_E;
   const principais = nome.trim().split(/\s+/).filter(p => !conectivos.has(_chaveToken(p)));
   if (principais.length < 2) return;
 
@@ -406,7 +393,7 @@ function _adicionarAliasesComTratamento(pares, texto, alvos) {
 }
 
 function adicionarAliasesNomeParte(pares, texto, nome) {
-  const conectivos = new Set(['DE', 'DA', 'DAS', 'DO', 'DOS', 'E']);
+  const conectivos = _CONECTIVOS_MAIUSCULOS_E;
   const palavras = nome.trim().split(/\s+/);
   const principais = palavras.filter(p => !conectivos.has(_chaveToken(p)));
   if (principais.length < 2) return;
