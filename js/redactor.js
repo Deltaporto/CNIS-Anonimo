@@ -17,6 +17,18 @@ const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const ENDERECO_PATTERN = /\b(?:Rua|R\.|Avenida|Av\.?|Travessa|Trav\.?|Pra[cç]a|Rodovia|Rod\.?|Estrada|Estr\.?)\b(?!\s+PERICIAL\b)\s+.+?(?=\s+(?:Processo|CPF|OAB|CRM|Contato|E-?mail|Endere[cç]o|Parte|P[aá]gina|C[aá]lcul[oa])\b|[,;\n]|$)/i;
 const CODIGO_VERIFICADOR_PATTERN = /\b(c[oó]digo\s+verificador\s+)(\d{8,14})(v\d+)?\b/i;
 const CODIGO_VERIFICADOR_RODAPE_PATTERN = /\b(\d{8,14})(\s*\.?\s*V\d+)\b/i;
+// ⚡ Bolt: Hoist static Sets to module scope to avoid reallocation overhead during hot path execution
+const CONECTIVOS_MINUSCULOS = new Set(['de', 'da', 'das', 'do', 'dos']);
+const CONECTIVOS_MINUSCULOS_E = new Set(['de', 'da', 'das', 'do', 'dos', 'e']);
+const CONECTIVOS_MAIUSCULOS_E = new Set(['DE', 'DA', 'DAS', 'DO', 'DOS', 'E']);
+const TRATAMENTOS = new Set(['sr', 'sr.', 'sra', 'sra.', 'senhor', 'senhora']);
+const ROTULOS_PARADA = new Set([
+  'CPF', 'OAB', 'CRM', 'RG', 'PROCESSO', 'CONTATO', 'EMAIL', 'E-MAIL',
+  'ENDERECO', 'ENDEREÇO', 'ÓRGÃO', 'ORGAO', 'JULGADOR', 'JUIZ', 'JUIZA',
+  'RELATOR', 'RELATORA', 'LOCALIZADOR', 'LOCALIZADORES', 'RECORRENTE',
+  'RECORRIDO', 'PAGINA', 'PÁGINA'
+]);
+
 const SOBRENOMES_COMUNS = new Set([
   'ALMEIDA',
   'ALVES',
@@ -91,7 +103,7 @@ function redigirCodigo(original) {
   return original.replace(/[A-Z]/gi, 'X').replace(/\d/g, '0');
 }
 function redigirNome(original) {
-  const conectivos = new Set(['de', 'da', 'das', 'do', 'dos']);
+  const conectivos = CONECTIVOS_MINUSCULOS;
   const palavras = original.trim().split(/\s+/);
   const iniciais = palavras
     .filter(p => !conectivos.has(p.toLowerCase()))
@@ -100,8 +112,8 @@ function redigirNome(original) {
   return iniciais.padEnd(original.length, ' ');
 }
 function redigirNomeComPrefixo(original) {
-  const conectivos = new Set(['de', 'da', 'das', 'do', 'dos', 'e']);
-  const tratamentos = new Set(['sr', 'sr.', 'sra', 'sra.', 'senhor', 'senhora']);
+  const conectivos = CONECTIVOS_MINUSCULOS_E;
+  const tratamentos = TRATAMENTOS;
   return original.replace(/[A-ZÀ-ÿ][A-ZÀ-ÿ.]+/g, palavra => {
     const normalizada = palavra.toLowerCase();
     if (tratamentos.has(normalizada)) return palavra;
@@ -192,32 +204,8 @@ function _escapeRegExp(valor) {
 }
 
 function detectarNomesNoTexto(texto) {
-  const conectivos = new Set(['de', 'da', 'das', 'do', 'dos']);
-  const rotulosParada = new Set([
-    'CPF',
-    'OAB',
-    'CRM',
-    'RG',
-    'PROCESSO',
-    'CONTATO',
-    'EMAIL',
-    'E-MAIL',
-    'ENDERECO',
-    'ENDEREÇO',
-    'ÓRGÃO',
-    'ORGAO',
-    'JULGADOR',
-    'JUIZ',
-    'JUIZA',
-    'RELATOR',
-    'RELATORA',
-    'LOCALIZADOR',
-    'LOCALIZADORES',
-    'RECORRENTE',
-    'RECORRIDO',
-    'PAGINA',
-    'PÁGINA'
-  ]);
+  const conectivos = CONECTIVOS_MINUSCULOS;
+  const rotulosParada = ROTULOS_PARADA;
   const tokens = texto.match(/[A-ZÀ-ÿa-zà-ÿ]+|\s+|[^\wA-ZÀ-ÿ\s]+/g) || [];
   const nomes = [];
   let i = 0;
@@ -278,7 +266,7 @@ function detectarNomesJuridicosEmCaixaAlta(texto) {
 
 function detectarNomesPorRotuloProcessual(texto) {
   const nomes = [];
-  const conectivos = new Set(['DE', 'DA', 'DAS', 'DO', 'DOS', 'E']);
+  const conectivos = CONECTIVOS_MAIUSCULOS_E;
   const rotulosParte = [
     'PARTE\\s+AUTORA',
     'PARTE\\s+R[ÉE]',
@@ -365,7 +353,7 @@ function adicionarNomeComVariantes(pares, nome) {
 }
 
 function adicionarAliasesConservadoresNomeDetectado(pares, texto, nome) {
-  const conectivos = new Set(['DE', 'DA', 'DAS', 'DO', 'DOS', 'E']);
+  const conectivos = CONECTIVOS_MAIUSCULOS_E;
   const principais = nome.trim().split(/\s+/).filter(p => !conectivos.has(_chaveToken(p)));
   if (principais.length < 2) return;
 
@@ -406,7 +394,7 @@ function _adicionarAliasesComTratamento(pares, texto, alvos) {
 }
 
 function adicionarAliasesNomeParte(pares, texto, nome) {
-  const conectivos = new Set(['DE', 'DA', 'DAS', 'DO', 'DOS', 'E']);
+  const conectivos = CONECTIVOS_MAIUSCULOS_E;
   const palavras = nome.trim().split(/\s+/);
   const principais = palavras.filter(p => !conectivos.has(_chaveToken(p)));
   if (principais.length < 2) return;
