@@ -4,3 +4,6 @@
 ## 2023-10-27 - PR Scope Creep
 **Learning:** When attempting to run tests to verify a micro-optimization, I encountered failures due to outdated import paths in the test files. I bundled the test fixes into the optimization PR, which violated the single responsibility principle and caused the code review to be marked as partially correct.
 **Action:** When a PR is focused on a specific feature or optimization, do not bundle unrelated structural or test fixes. If tests are broken prior to the change and the changes don't introduce new failures, it's safer to leave the unrelated fixes out or create a separate PR for them.
+## 2024-05-18 - Overlapping Ranges Binary Search Optimization
+**Learning:** Sequential linear search over overlapping protected ranges in `_sobrepoeRangeProtegido` becomes an O(N*M) bottleneck when processing large numbers of parsed elements against many ranges. Since `matchAll()` outputs matches in strictly sequential index order, the resulting ranges array is already naturally sorted.
+**Action:** Replace linear iterations with a Binary Search when checking intersections against naturally sorted range arrays derived from regex matches to reduce time complexity from O(N) to O(log N).
