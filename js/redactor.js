@@ -191,33 +191,37 @@ function _escapeRegExp(valor) {
   return valor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+const _NOMES_CONECTIVOS = new Set(['de', 'da', 'das', 'do', 'dos']);
+const _NOMES_ROTULOS_PARADA = new Set([
+  'CPF',
+  'OAB',
+  'CRM',
+  'RG',
+  'PROCESSO',
+  'CONTATO',
+  'EMAIL',
+  'E-MAIL',
+  'ENDERECO',
+  'ENDEREÇO',
+  'ÓRGÃO',
+  'ORGAO',
+  'JULGADOR',
+  'JUIZ',
+  'JUIZA',
+  'RELATOR',
+  'RELATORA',
+  'LOCALIZADOR',
+  'LOCALIZADORES',
+  'RECORRENTE',
+  'RECORRIDO',
+  'PAGINA',
+  'PÁGINA'
+]);
+
 function detectarNomesNoTexto(texto) {
-  const conectivos = new Set(['de', 'da', 'das', 'do', 'dos']);
-  const rotulosParada = new Set([
-    'CPF',
-    'OAB',
-    'CRM',
-    'RG',
-    'PROCESSO',
-    'CONTATO',
-    'EMAIL',
-    'E-MAIL',
-    'ENDERECO',
-    'ENDEREÇO',
-    'ÓRGÃO',
-    'ORGAO',
-    'JULGADOR',
-    'JUIZ',
-    'JUIZA',
-    'RELATOR',
-    'RELATORA',
-    'LOCALIZADOR',
-    'LOCALIZADORES',
-    'RECORRENTE',
-    'RECORRIDO',
-    'PAGINA',
-    'PÁGINA'
-  ]);
+  // ⚡ Bolt: Use globally hoisted sets to avoid O(N) reallocation overhead in a hot path
+  const conectivos = _NOMES_CONECTIVOS;
+  const rotulosParada = _NOMES_ROTULOS_PARADA;
   const tokens = texto.match(/[A-ZÀ-ÿa-zà-ÿ]+|\s+|[^\wA-ZÀ-ÿ\s]+/g) || [];
   const nomes = [];
   let i = 0;
