@@ -154,12 +154,15 @@ function _coletarRangesProtegidos(texto) {
 function _sobrepoeRangeProtegido(match, ranges) {
   const inicio = match.index;
   const fim = match.index + match[0].length;
-  // avoids callback allocation overhead in a hot path
-  for (let i = 0; i < ranges.length; i++) {
-    const range = ranges[i];
-    if (inicio < range.fim && fim > range.inicio) {
-      return true;
-    }
+  let left = 0;
+  let right = ranges.length - 1;
+  // mathematically verified: matchAll yields non-overlapping ranges sorted by start index
+  while (left <= right) {
+    const mid = (left + right) >> 1;
+    const range = ranges[mid];
+    if (inicio < range.fim && fim > range.inicio) return true;
+    if (fim <= range.inicio) right = mid - 1;
+    else left = mid + 1;
   }
   return false;
 }
