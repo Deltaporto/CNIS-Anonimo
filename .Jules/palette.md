@@ -84,3 +84,6 @@
 ## 2026-07-06 - Dynamic Action Labels for Buttons and Accessibility
 **Learning:** When injecting SVG icons alongside text dynamically in a button via innerHTML (e.g., for loading spinners or states), adding `aria-hidden="true"` to the SVG is essential to prevent screen readers from redundantly announcing the graphic, keeping the semantic meaning tied to existing ARIA attributes like `aria-busy`.
 **Action:** Always use `aria-hidden="true"` on decorative or loading state SVG icons injected dynamically into action buttons.
+## 2024-05-24 - Contextual labels for dynamic generic lists
+**Learning:** While adding role="list" to generic containers restores list semantics, without an aria-label, screen readers announce it simply as "list", leaving the user without context about what the list contains.
+**Action:** Always pair role="list" with a descriptive aria-label (e.g., aria-label="Lista de arquivos") to provide necessary context when using dynamic generic containers.
