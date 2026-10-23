@@ -28,3 +28,7 @@
 ## 2024-06-13 - O(N*M) calculation within filter loop
 **Learning:** In `js/redactor.js`, recalculating a static property (like `_coletarRangesProtegidos(texto)`) for every match inside a `.filter()` iteration causes a severe $O(N \times M)$ performance bottleneck. Our benchmark showed a ~1000x speedup (from 10.7 seconds down to 11 milliseconds) on large inputs simply by hoisting this single calculation outside of the `filter` loop.
 **Action:** When filtering matches based on a result that depends only on the original input string, calculate and cache the result in a variable *before* the `.filter()` loop, rather than recalculating it inside the callback for every matched item.
+
+## $(date +%Y-%m-%d) - Optimizing large hex decoding in PDFs
+**Learning:** During PDF processing, large streams require massive conversions of hex strings to text. In tight loops (like `decodeUtf16BeHex`), appending characters one by one via `+= String.fromCharCode(code)` incurs heavy memory reallocation and string processing overhead due to JavaScript's immutable string mechanics.
+**Action:** Use chunked array batching and `String.fromCharCode.apply(null, chars)` for large hex buffers to bypass millions of intermediate allocations. However, maintain a basic `+=` loop for small strings (<= 256 characters) to avoid the overhead of array allocation entirely, as benchmarks show it is faster for small fragments.
