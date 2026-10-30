@@ -154,11 +154,21 @@ function _coletarRangesProtegidos(texto) {
 function _sobrepoeRangeProtegido(match, ranges) {
   const inicio = match.index;
   const fim = match.index + match[0].length;
-  // avoids callback allocation overhead in a hot path
-  for (let i = 0; i < ranges.length; i++) {
-    const range = ranges[i];
+  // ⚡ Bolt: Ranges from matchAll are naturally sorted by index and non-overlapping.
+  // Using binary search O(log N) instead of linear search O(N) significantly
+  // improves performance when processing documents with many protected ranges.
+  let left = 0;
+  let right = ranges.length - 1;
+  while (left <= right) {
+    const mid = (left + right) >> 1;
+    const range = ranges[mid];
     if (inicio < range.fim && fim > range.inicio) {
       return true;
+    }
+    if (fim <= range.inicio) {
+      right = mid - 1;
+    } else {
+      left = mid + 1;
     }
   }
   return false;
