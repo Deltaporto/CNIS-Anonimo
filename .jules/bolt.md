@@ -4,3 +4,6 @@
 ## 2023-10-27 - PR Scope Creep
 **Learning:** When attempting to run tests to verify a micro-optimization, I encountered failures due to outdated import paths in the test files. I bundled the test fixes into the optimization PR, which violated the single responsibility principle and caused the code review to be marked as partially correct.
 **Action:** When a PR is focused on a specific feature or optimization, do not bundle unrelated structural or test fixes. If tests are broken prior to the change and the changes don't introduce new failures, it's safer to leave the unrelated fixes out or create a separate PR for them.
+## 2023-10-28 - Regex Matches overlap check O(N)
+**Learning:** Checking for overlap using a loop `for (let i = 0; i < ranges.length; i++)` in `_sobrepoeRangeProtegido` when checking a large number of regex matches introduces O(N*M) performance degradation, which can be improved using binary search since the match ranges don't overlap.
+**Action:** Use binary search `O(log N)` when checking for overlap with protected ranges.
