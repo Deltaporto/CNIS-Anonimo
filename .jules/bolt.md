@@ -4,3 +4,6 @@
 ## 2023-10-27 - PR Scope Creep
 **Learning:** When attempting to run tests to verify a micro-optimization, I encountered failures due to outdated import paths in the test files. I bundled the test fixes into the optimization PR, which violated the single responsibility principle and caused the code review to be marked as partially correct.
 **Action:** When a PR is focused on a specific feature or optimization, do not bundle unrelated structural or test fixes. If tests are broken prior to the change and the changes don't introduce new failures, it's safer to leave the unrelated fixes out or create a separate PR for them.
+## 2024-11-07 - Optimizing Linear Searches on Regex Matches
+**Learning:** Ranges extracted via `String.prototype.matchAll()` are inherently sorted by their occurrence in the text. This allows operations matching text spans (like overlapping range detection) to use binary search instead of linear search, significantly improving performance on large documents without needing a prior sorting pass.
+**Action:** Always check if linear searches in hot paths involve datasets that are naturally sorted by their generation method (like regex match indices) and replace them with binary search when applicable.
