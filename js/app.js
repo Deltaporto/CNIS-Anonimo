@@ -516,6 +516,7 @@ function renderizarCardsSplit(resultado) {
 
   const listaEventos = document.createElement('div');
   listaEventos.setAttribute('role', 'list');
+  listaEventos.setAttribute('aria-label', 'Lista de eventos do processo');
 
   for (const evento of resultado.eventos) {
     const card = document.createElement('div');
@@ -525,6 +526,7 @@ function renderizarCardsSplit(resultado) {
     const titulo = document.createElement('span');
     titulo.className = 'evento-titulo';
     titulo.textContent = evento.title;
+    titulo.title = evento.title;
 
     const paginas = document.createElement('span');
     paginas.className = 'evento-paginas';
