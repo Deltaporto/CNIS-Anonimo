@@ -4,3 +4,6 @@
 ## 2023-10-27 - PR Scope Creep
 **Learning:** When attempting to run tests to verify a micro-optimization, I encountered failures due to outdated import paths in the test files. I bundled the test fixes into the optimization PR, which violated the single responsibility principle and caused the code review to be marked as partially correct.
 **Action:** When a PR is focused on a specific feature or optimization, do not bundle unrelated structural or test fixes. If tests are broken prior to the change and the changes don't introduce new failures, it's safer to leave the unrelated fixes out or create a separate PR for them.
+## 2024-05-24 - Optimization of protected range check
+**Learning:** Checking overlap against linearly generated matchAll() ranges can be safely optimized using binary search because matches are inherently non-overlapping and sorted by index. This prevents severe O(N*M) degradation.
+**Action:** Use binary search instead of linear search when checking for overlaps in arrays of matched text ranges.
