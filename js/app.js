@@ -516,6 +516,7 @@ function renderizarCardsSplit(resultado) {
 
   const listaEventos = document.createElement('div');
   listaEventos.setAttribute('role', 'list');
+  listaEventos.setAttribute('aria-label', 'Lista de eventos extraídos');
 
   for (const evento of resultado.eventos) {
     const card = document.createElement('div');
